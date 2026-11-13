@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.github.com; img-src 'self' data: blob:; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#09090b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Run Plan">
+<title>Run Plan</title>
+<meta name="description" content="Personal running and strength plan that adapts to your Garmin recovery data.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/*CSS*/
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="iconbtn" id="backBtn" data-act="back" aria-label="Back" hidden></button>
+  <span id="backSpacer"></span>
+  <div class="title" id="title">Run Plan</div>
+  <div class="right">
+    <button class="iconbtn" id="searchBtn" data-act="search" aria-label="Search"></button>
+    <a class="syncchip" id="syncChip" href="#/sync" aria-label="Sync status"><i></i><span>Local</span></a>
+  </div>
+</header>
+<main id="main" tabindex="-1"></main>
+
+<nav class="tabbar" aria-label="Main">
+  <a href="#/today" data-v="today" data-ic="today">Today</a>
+  <a href="#/plan" data-v="plan" data-ic="plan">Plan</a>
+  <a href="#/coach" data-v="coach" data-ic="coach">Coach</a>
+  <a href="#/progress" data-v="progress" data-ic="progress">Progress</a>
+  <a href="#/you" data-v="you" data-ic="you">You</a>
+</nav>
+
+<div class="sheet" id="sheet" hidden><div class="sheet-card" id="sheetCard" role="dialog" aria-modal="true"></div></div>
+<div class="sheet" id="searchSheet" hidden><div class="sheet-card" role="dialog" aria-modal="true" aria-label="Search"><div class="grabber"></div><div class="searchbox"><input id="searchIn" placeholder="Search workouts, exercises, topics…" autocomplete="off"></div><div class="search-results" id="searchRes"></div></div></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+/*ENGINE*/
+</script>
+<script>
+/*STORE*/
+</script>
+<script>
+/*COACH*/
+</script>
+<script>
+/*UI*/
+</script>
+</body>
+</html>
