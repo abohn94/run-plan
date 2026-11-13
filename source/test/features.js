@@ -11,8 +11,8 @@ const state0 = JSON.parse(fs.readFileSync(stateF, 'utf8'));
 const garmin = JSON.parse(fs.readFileSync(dataF, 'utf8'));
 // simulate the v2 sync: best efforts + vo2 on runs, but no threshold (so the weekly prompt shows)
 garmin.version = 2;
-garmin.activities.forEach((a, i) => { if (a.run && a.distM > 5000 && a.movS) { const p = a.movS / a.distM; a.best = { '1k': Math.round(p * 1000 * 0.93), '1mi': Math.round(p * 1609 * 0.95), '5k': Math.round(p * 5000 * 0.98) }; if (i % 3 === 0) a.vo2 = 54 + (i % 3); } });
-garmin.fitness = { vo2: { [E.addD(today, -9)]: 55 }, weight: { [E.addD(today, -20)]: 176.2, [E.addD(today, -3)]: 175.0 } };
+if (process.env.REAL !== '1') garmin.activities.forEach((a, i) => { if (a.run && a.distM > 5000 && a.movS) { const p = a.movS / a.distM; a.best = { '1k': Math.round(p * 1000 * 0.93), '1mi': Math.round(p * 1609 * 0.95), '5k': Math.round(p * 5000 * 0.98) }; if (i % 3 === 0) a.vo2 = 54 + (i % 3); } });
+if (process.env.REAL !== '1') garmin.fitness = { vo2: { [E.addD(today, -9)]: 55 }, weight: { [E.addD(today, -20)]: 176.2, [E.addD(today, -3)]: 175.0 } };
 const server = http.createServer((req, res) => { let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html'; const f = path.join(DIST, p); if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': { '.html': 'text/html' }[path.extname(f)] || 'application/octet-stream' }); res.end(fs.readFileSync(f)); }).listen(8814);
 const repo = { state: state0, sha: 1, puts: 0 };
 function gh(route) { const req = route.request(), url = new URL(req.url()), m = req.method(); const p = url.pathname.replace('/repos/abohn94/run-plan-data', '');
@@ -33,7 +33,7 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   const go = async (h, wait) => { await pg.goto(U + h); await pg.waitForTimeout(wait || 900); };
   const text = () => pg.innerText('#main');
   await go('#/today', 1500); await shot('01-today', true);
-  log('today prompt:', /Weekly fitness check/i.test(await text()), '| tabs:', (await pg.$$eval('.tabbar a', a => a.map(x => x.textContent.trim()))).join(','));
+  log('today prompt:', ((await text()).match(/Update your [^\n]*/) || [''])[0], /Weekly fitness check/i.test(await text()), '| tabs:', (await pg.$$eval('.tabbar a', a => a.map(x => x.textContent.trim()))).join(','));
   await go('#/calendar'); await shot('02-calendar', true);
   await pg.click('a[aria-label="Previous month"]'); await pg.waitForTimeout(400); await shot('03-calendar-prev');
   log('calendar prev:', (await text()).slice(0, 80).replace(/\n/g, ' '));
