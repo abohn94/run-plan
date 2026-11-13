@@ -383,3 +383,30 @@ table.sets tr.dn td:first-child { border-radius: 10px 0 0 10px; } table.sets tr.
 .ltgrid span i { width: 9px; height: 9px; border-radius: 2px; }
 .promptcard { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--violet) 60%, transparent); }
 textarea.i { min-height: 80px; padding: 10px 12px; resize: vertical; font: inherit; }
+/* ---- features 2 ---- */
+.feelrow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+.feelrow button { border: 0; background: var(--card2); color: var(--muted); border-radius: 14px; padding: 8px 2px; font-size: .66rem; font-weight: 800; display: grid; justify-items: center; gap: 2px; }
+.feelrow button span { font-size: 1.4rem; line-height: 1.1; }
+.feelrow button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+.overload { background: var(--card2); border-radius: 14px; padding: 10px 12px; margin-top: 10px; display: grid; gap: 4px; }
+.fuel .kcal { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 10px; }
+.fuel .kcal b { font-size: 2.3rem; font-weight: 800; letter-spacing: -.04em; }
+.fuel .kcal span { color: var(--muted); font-weight: 700; }
+.honest { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--amber) 70%, transparent); }
+.edweek { padding: 4px 12px; }
+.edday { display: grid; grid-template-columns: 44px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); min-height: 58px; border-radius: 12px; transition: background .12s; }
+.edday:first-child { border-top: 0; }
+.edday .d { font-size: .7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; display: grid; align-content: center; }
+.edday .d b { font-size: 1.1rem; color: var(--ink); }
+.edday.today .d b { color: var(--green); }
+.edday.past { opacity: .6; }
+.edday.over { background: color-mix(in srgb, var(--blue) 18%, transparent); }
+.edday .items { display: grid; gap: 6px; align-content: center; min-width: 0; }
+.edday .restlbl { color: var(--dim); font-weight: 700; font-size: .9rem; }
+.edchip { display: flex; align-items: center; gap: 10px; background: var(--card2); border-radius: 14px; padding: 9px 12px; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; box-shadow: inset 4px 0 0 var(--c); }
+.edchip .grip { color: var(--dim); font-weight: 900; letter-spacing: -2px; }
+.edchip .tx { display: grid; min-width: 0; } .edchip .tx b { font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .edchip .tx small { color: var(--muted); font-size: .76rem; }
+.edchip.sel { outline: 2px solid var(--blue); }
+.edchip.dn { opacity: .55; }
+.edchip.lifted { opacity: .3; }
+.edchip.ghost { position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none; box-shadow: inset 4px 0 0 var(--c), 0 12px 30px rgba(0,0,0,.45); opacity: .95; }

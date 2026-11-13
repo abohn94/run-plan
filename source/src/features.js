@@ -383,7 +383,7 @@ VIEWS.calendar = function () {
   for (var w0 = start; w0 <= end; w0 = E.addD(w0, 7)) {
     var w1 = E.addD(w0, 6), wr = all.filter(function (a) { return a.date >= w0 && a.date <= w1 && a.kind === 'run'; });
     var pw = App.plan ? E.weekOf(App.plan, w0) : null;
-    html += '<div class="sechead"><h2 style="font-size:1.05rem">' + fmtD(w0, { month: 'short', day: 'numeric' }) + ' – ' + fmtD(w1, { month: 'short', day: 'numeric' }) + '</h2><span class="small muted">' + mi(sumMi(wr)) + (pw ? ' of ' + mi(pw.tot.mi) : '') + ' mi' + (pw ? ' · wk ' + pw.n : '') + '</span></div><section class="card calweek">';
+    html += '<div class="sechead"><h2 style="font-size:1.05rem">' + fmtD(w0, { month: 'short', day: 'numeric' }) + ' – ' + fmtD(w1, { month: 'short', day: 'numeric' }) + '</h2><span class="small muted">' + mi(sumMi(wr)) + (pw ? ' of ' + mi(pw.tot.mi) : '') + ' mi' + (pw ? ' · <a href="#/editweek/' + pw.n + '">Edit</a>' : '') + '</span></div><section class="card calweek">';
     for (var dd = w0; dd <= w1; dd = E.addD(dd, 1)) {
       var dy = dayOf(dd), ac = (byD[dd] || []).slice().reverse(), items = '';
       ac.forEach(function (a) { items += actRow(a, { date: false }).replace('class="actrow"', 'class="actrow done"'); });

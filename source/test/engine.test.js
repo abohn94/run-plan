@@ -84,3 +84,24 @@ console.log(bad ? 'FAILED ' + bad : 'ALL OK (engine)');
   console.log('fitness vdot from LT 7:16 =', E.vdotFromThreshold(436).toFixed(1), ' VO2 55 ->', E.vdotFromVo2(55));
 }
 console.log(bad ? 'FAILURES ' + bad : 'ALL OK (fitness)');
+// ---- consistency cap, drag-and-drop arrangement, intensity check ----
+{
+  const t = E.today(); const s5 = JSON.parse(JSON.stringify(seed)); s5.profile.startDate = E.monday(E.addD(t, -28)); s5.logs = {};
+  const q0 = E.generate(s5); const cw = E.weekOf(q0, t);
+  // ran only one 3 mi run in each of the last two weeks
+  [1, 2].forEach(k => { const w = q0.weeks[cw.n - 1 - k]; s5.logs[w.days[1].date] = { run: { ptype: 'easy', mi: 3, sec: 1800 } }; });
+  const q = E.generate(s5); E.adapt(q, s5, E.analyze(q, s5, null));
+  ok(q.compliance && q.compliance.level === 'verylow' && q.compliance.cap, 'compliance cap ' + JSON.stringify(q.compliance && q.compliance.cap));
+  const w = E.weekOf(q, t); ok(w.mod && w.mod.phase === 'compliance' && w.tot.mi <= q.compliance.cap.mi + 1.5, 'week capped ' + w.tot.mi + ' vs ' + q.compliance.cap.mi);
+  // drag the long run onto the day after a key workout -> back-to-back warning with a fix
+  const s6 = JSON.parse(JSON.stringify(seed)); const q6 = E.generate(s6); E.adapt(q6, s6, E.analyze(q6, s6, null));
+  const w6 = q6.weeks[6]; const sp = w6.days.find(d => d.parts.some(p => p.type === 'speed')); const lg = w6.days.find(d => d.parts.some(p => p.type === 'long'));
+  const target = w6.days[(sp.i + 1) % 7]; const lp = lg.parts.find(p => p.type === 'long');
+  s6.arr = { [E.partKey(lg.date, lp)]: target.date };
+  const q7 = E.generate(s6); E.adapt(q7, s6, E.analyze(q7, s6, null)); const w7 = q7.weeks[6];
+  ok(w7.days[target.i].parts.some(p => p.type === 'long' && p.akey), 'long run moved to ' + target.dow);
+  ok(!w7.days[lg.i].parts.some(p => p.type === 'long'), 'long run left its day');
+  const warns = E.weekIntensity(w7, s6.profile); ok(warns.some(x => /back to back/.test(x.text) && x.fix), 'back-to-back warning: ' + warns.map(x => x.text).join(' | '));
+  ok(E.weekIntensity(w6, s6.profile).filter(x => x.level === 'warn').length === 0, 'generated week has no warnings: ' + E.weekIntensity(w6, s6.profile).map(x => x.text).join(' | '));
+}
+console.log(bad ? 'FAILURES ' + bad : 'ALL OK (week tools)');
