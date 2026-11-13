@@ -7,13 +7,13 @@ var LS = {
   set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage off */ } },
   del: function (k) { try { localStorage.removeItem(k); } catch (e) { /* storage off */ } }
 };
-var K = { conn: 'rp-conn', state: 'rp-state', garmin: 'rp-garmin', sha: 'rp-sha' };
+var K = { conn: 'rp-conn', state: 'rp-state', garmin: 'rp-garmin', sha: 'rp-sha', touched: 'rp-touched' };
 var STATE_PATH = 'user/state.json', GARMIN_PATH = 'garmin/data.json', WORKFLOW = 'garmin-sync.yml';
 
 function b64enc(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64dec(b64) { return decodeURIComponent(escape(atob(String(b64).replace(/\s/g, '')))); }
 function emptyState() {
-  return { v: 1, profile: null, events: [], logs: {}, status: {}, life: [], overrides: {}, moves: {}, checkins: [], metrics: [], coach: [], seen: {}, updatedAt: null };
+  return { v: 1, profile: null, events: [], logs: {}, status: {}, life: [], overrides: {}, moves: {}, checkins: [], metrics: [], coach: [], seen: {}, shoes: [], gear: {}, orm: [], anotes: {}, prefs: {}, updatedAt: null };
 }
 function normalize(s) {
   var e = emptyState();
@@ -44,6 +44,8 @@ var Store = {
     try { this.state = normalize(JSON.parse(LS.get(K.state) || 'null')); } catch (e) { this.state = normalize(null); }
     try { this.garmin = JSON.parse(LS.get(K.garmin) || 'null'); } catch (e) { this.garmin = null; }
     this.sha = LS.get(K.sha);
+    /* edits made just before the app was closed and not yet saved to GitHub */
+    try { this.touched = this.mode === 'github' ? (JSON.parse(LS.get(K.touched) || '{}') || {}) : {}; } catch (e) { this.touched = {}; }
     return this.mode === 'github' ? this.pull() : Promise.resolve();
   },
   setStatus: function (s, err) { this.status = s; this.error = err || ''; if (this.onstatus) this.onstatus(s, err); },
@@ -106,6 +108,7 @@ var Store = {
     var s = this.state;
     fn(s);
     this.touched[sub != null ? key + '|' + sub : key] = true;
+    this.keepTouched();
     s.updatedAt = new Date().toISOString();
     LS.set(K.state, JSON.stringify(s));
     this.queueSave(1200);
@@ -116,6 +119,7 @@ var Store = {
     var self = this, s = this.state;
     fn(s);
     touches.forEach(function (t) { self.touched[t[1] != null ? t[0] + '|' + t[1] : t[0]] = true; });
+    this.keepTouched();
     s.updatedAt = new Date().toISOString();
     LS.set(K.state, JSON.stringify(s));
     this.queueSave(1200);
@@ -138,6 +142,7 @@ var Store = {
     });
     return remote;
   },
+  keepTouched: function () { LS.set(K.touched, JSON.stringify(this.touched)); },
   queueSave: function (ms) {
     var self = this;
     clearTimeout(this._timer);
@@ -164,9 +169,10 @@ var Store = {
         });
       }
       if (!r.ok) throw new Error('Could not save to GitHub (' + r.status + ')');
-      return r.json().then(function (j) { self.sha = j.content && j.content.sha; LS.set(K.sha, self.sha || ''); self.setStatus('ok'); });
+      return r.json().then(function (j) { self.sha = j.content && j.content.sha; LS.set(K.sha, self.sha || ''); self.keepTouched(); self.setStatus('ok'); });
     }).catch(function (e) {
       Object.keys(touchedNow).forEach(function (k) { self.touched[k] = true; });
+      self.keepTouched();
       self.setStatus(navigator.onLine === false ? 'offline' : 'error', e.message);
     }).then(function () {
       self._saving = null;
@@ -190,7 +196,7 @@ var Store = {
       return self.pull();
     }).catch(function (e) { self.conn = prev; throw e; });
   },
-  disconnect: function () { LS.del(K.conn); LS.del(K.sha); this.conn = null; this.mode = 'local'; this.sha = null; this.setStatus('ok'); },
+  disconnect: function () { LS.del(K.conn); LS.del(K.sha); LS.del(K.touched); this.conn = null; this.mode = 'local'; this.sha = null; this.setStatus('ok'); },
   syncNow: function () {
     var self = this;
     if (this.mode !== 'github') return Promise.reject(new Error('Connect GitHub first.'));

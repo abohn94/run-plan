@@ -100,7 +100,7 @@ function render() {
   $('#title').textContent = top ? '' : (TITLES[App.view] || 'Run Plan');
   $('#backBtn').hidden = top; $('#backSpacer').hidden = !top;
   document.body.classList.toggle('onboarding', App.view === 'setup');
-  var tab = App.view === 'day' ? 'plan' : TOP[App.view] ? App.view : 'you';
+  var tab = (typeof TABOF !== 'undefined' && TABOF[App.view]) || (TOP[App.view] ? App.view : 'you');
   $$('.tabbar a').forEach(function (a) { a.setAttribute('aria-current', a.dataset.v === tab ? 'page' : 'false'); });
   var fn = VIEWS[App.view] || VIEWS.today;
   var html;
@@ -1337,7 +1337,7 @@ function renderSyncChip(force) {
 var SEARCH_INDEX = null;
 function buildIndex() {
   var items = [];
-  Object.keys(TITLES).forEach(function (k) { if (k !== 'day' && k !== 'setup') items.push({ t: TITLES[k], s: 'Page', h: '#/' + k }); });
+  Object.keys(TITLES).forEach(function (k) { if (['day', 'setup', 'activity', 'shoe', 'workout'].indexOf(k) < 0) items.push({ t: TITLES[k], s: 'Page', h: '#/' + k }); });
   C.KB.forEach(function (k) { items.push({ t: k.title, s: 'Coach topic', h: '#/coach', ask: k.title }); });
   Object.keys(E.LIFT).forEach(function (k) { var m = E.LIFT[k]; items.push({ t: (k.length === 1 ? 'Strength ' + k + ': ' : '') + m.name, s: 'Strength session', h: '#/strength/' + k }); m.blocks.forEach(function (b) { b.ex.forEach(function (x) { items.push({ t: x.n, s: 'Exercise · ' + m.name, h: '#/strength/' + k }); }); }); });
   ROUTINE.forEach(function (g) { g[1].forEach(function (r) { items.push({ t: r[0], s: 'Shin routine', h: '#/shins' }); }); });
@@ -1418,6 +1418,8 @@ function importFile(kind, text) {
     if (msg) { msg.className = 'ok-msg'; msg.textContent = 'Imported ' + n + ' rows.'; }
   } catch (e) { if (msg) { msg.className = 'err'; msg.textContent = e.message; } else toast(e.message); }
 }
+
+/*FEATURES*/
 
 /* ---------------- Garmin polling ---------------- */
 function pollGarmin(n) {

@@ -8,7 +8,8 @@ Build: `python3 build.py` writes `dist/index.html` (plus manifest and icons). Co
 - `src/store.js`: GitHub storage and Garmin data loading
 - `src/coach.js`: rule-based coach
 - `src/ui.js`: all screens and the onboarding wizard
+- `src/features.js`: lift logger (sets, rest timer, 1RM), shoes, calendar, activity pages, progress tabs, health trends, VO2 max & threshold (inlined into ui.js at the FEATURES marker)
 - `src/style.css`, `src/shell.html`: look and page shell
-- `test/`: engine tests and an end-to-end browser flow (Playwright, mocked GitHub and Garmin)
+- `test/`: engine tests (`node test/engine.test.js`), the onboarding flow (`test/flow.js`) and the features walkthrough (`node test/features.js state.json data.json shots/`), all with mocked GitHub and Garmin
 
 User data is not stored here. It lives in the private `run-plan-data` repository.

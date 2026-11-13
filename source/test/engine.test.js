@@ -62,3 +62,25 @@ const adds = E.matchGarmin({ logs: {} }, p, ga); ok(adds.length === 2 && adds[0]
 // FIT
 p.weeks.forEach(w => w.days.forEach(d => d.parts.forEach(x => { if (E.isRun(x)) { const f = E.workoutFile(x, w.zones, 'W' + w.n + ' ' + x.title); ok(f.length > 50 && E.fitCrc(f, 0, f.length - 2) === (f[f.length - 2] | f[f.length - 1] << 8), 'fit ' + w.n); } })));
 console.log(bad ? 'FAILED ' + bad : 'ALL OK (engine)');
+// ---- fitness readings: Garmin VO2max/threshold merge and anchor priority ----
+{
+  const s2 = JSON.parse(JSON.stringify(seed)); const q = E.generate(s2); const t = E.today();
+  const g = { activities: [{ id: 1, run: true, date: E.addD(t, -3), distM: 8000, movS: 2700, vo2: 54 }], days: {}, fitness: { vo2: { [E.addD(t, -1)]: 55 }, ltSpeed: { [E.addD(t, -2)]: 0.3691, [t]: 0.3691 }, ltHr: { [t]: 178 } } };
+  ok(E.ltSpeedToPace(0.3691) === 436, 'lt speed 0.3691 -> 436 s/mi got ' + E.ltSpeedToPace(0.3691));
+  ok(E.ltSpeedToPace(3.691) === 436, 'lt speed m/s');
+  const a = E.analyze(q, s2, g);
+  ok(a.lt && a.lt.pace === 436 && a.lt.hr === 178, 'lt merged ' + JSON.stringify(a.lt));
+  ok(a.vo2 && a.vo2.v === 55, 'vo2 latest 55');
+  ok(a.anchor && a.anchor.src === 'lt', 'lt beats newer vo2: ' + (a.anchor && a.anchor.src));
+  ok(a.ltPin === 436, 'threshold pinned');
+  // a race in the last 12 weeks wins over a threshold reading
+  const s3 = JSON.parse(JSON.stringify(s2)); s3.logs = s3.logs || {}; s3.logs[E.addD(t, -20)] = { run: { ptype: 'race', mi: 3.11, sec: 1260, seg: { mi: 3.11, sec: 1260, race: true } } };
+  const b = E.analyze(q, s3, g);
+  ok(b.anchor && b.anchor.src === 'race', 'race wins: ' + (b.anchor && b.anchor.src));
+  // manual entries still work and count as 'you'
+  const s4 = JSON.parse(JSON.stringify(s2)); s4.metrics = [{ id: 'm1', date: t, ltPace: '7:30', ltHr: 175, vo2: 50 }];
+  const c = E.analyze(q, s4, null);
+  ok(c.lt.pace === 450 && c.lt.src === 'you' && c.vo2.v === 50, 'manual reading ' + JSON.stringify(c.lt));
+  console.log('fitness vdot from LT 7:16 =', E.vdotFromThreshold(436).toFixed(1), ' VO2 55 ->', E.vdotFromVo2(55));
+}
+console.log(bad ? 'FAILURES ' + bad : 'ALL OK (fitness)');

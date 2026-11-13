@@ -951,6 +951,32 @@ function mainZone(p) {
   return z;
 }
 
+/* VO2max and lactate threshold readings: yours (entered in the app) plus whatever Garmin syncs. Oldest first. */
+function ltSpeedToPace(v) { v = +v; if (!(v > 0)) return null; if (v < 1.5) v *= 10; return v > 1.5 && v < 8 ? Math.round(MI_M / v) : null; }
+function fitnessReadings(st, garmin) {
+  var out = [];
+  (st && st.metrics || []).forEach(function (m) {
+    if (!m || !m.date) return;
+    var lt = parseClock(m.ltPace);
+    out.push({ date: m.date, src: 'you', id: m.id, vo2: +m.vo2 > 20 ? +m.vo2 : null, ltPace: lt > 0 ? lt : null, ltHr: +m.ltHr > 0 ? +m.ltHr : null, ltPower: +m.ltPower || null, ltWkg: +m.ltWkg || null });
+  });
+  var f = garmin && garmin.fitness, by = {};
+  function row(d) { return by[d] = by[d] || { date: d, src: 'garmin', vo2: null, ltPace: null, ltHr: null }; }
+  if (garmin && garmin.activities) garmin.activities.forEach(function (a) { if (a.run && a.date && +a.vo2 > 20) row(a.date).vo2 = +a.vo2; });
+  if (f) {
+    Object.keys(f.vo2 || {}).forEach(function (d) { if (+f.vo2[d] > 20) row(d).vo2 = +f.vo2[d]; });
+    Object.keys(f.ltSpeed || {}).forEach(function (d) { var pc = ltSpeedToPace(f.ltSpeed[d]); if (pc) row(d).ltPace = pc; });
+    Object.keys(f.ltHr || {}).forEach(function (d) { if (+f.ltHr[d] > 80) row(d).ltHr = +f.ltHr[d]; });
+  }
+  Object.keys(by).forEach(function (d) { out.push(by[d]); });
+  out.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : (a.src === 'you' ? 1 : -1); });
+  return out;
+}
+function latestReading(list, key, src) {
+  for (var i = list.length - 1; i >= 0; i--) if (list[i][key] && (!src || list[i].src === src)) return list[i];
+  return null;
+}
+
 function analyze(plan, st, garmin) {
   var runs = runLogs(st);
   var res = { off: { E: 0, S: 0, T: 0, I: 0 }, notes: [], vdot: null, result: null, proj: null, dv: 0, dvFrom: null, easy: null, hr: null };
@@ -959,19 +985,26 @@ function analyze(plan, st, garmin) {
   /* 1. the latest fitness anchor: a race or time trial, a lactate threshold test, or a VO2max reading */
   var anchors = [];
   runs.forEach(function (r) { if (r.seg && r.seg.race && r.seg.mi >= 1 && r.seg.sec > 0) anchors.push({ date: r.date, src: 'race', v: vdotOf(r.seg.mi, r.seg.sec), w: 1, mi: r.seg.mi, sec: r.seg.sec }); });
-  (st.metrics || []).forEach(function (m) {
-    if (!m || !m.date) return;
-    var lt = parseClock(m.ltPace);
-    if (lt > 0) anchors.push({ date: m.date, src: 'lt', v: vdotFromThreshold(lt), w: 0.9, ltPace: lt, ltHr: +m.ltHr || null });
-    else if (+m.vo2 > 20) anchors.push({ date: m.date, src: 'vo2', v: vdotFromVo2(+m.vo2), w: 0.5, vo2: +m.vo2 });
+  var fr = fitnessReadings(st, garmin);
+  res.readings = fr;
+  /* one anchor per source per day; a Garmin threshold reading repeats daily, so only changes count */
+  var lastLt = null;
+  fr.forEach(function (m) {
+    if (m.ltPace) { if (!(m.src === 'garmin' && lastLt && lastLt.pace === m.ltPace)) anchors.push({ date: m.date, src: 'lt', v: vdotFromThreshold(m.ltPace), w: 0.9, ltPace: m.ltPace, ltHr: m.ltHr, from: m.src }); lastLt = { pace: m.ltPace }; }
+    else if (m.vo2) anchors.push({ date: m.date, src: 'vo2', v: vdotFromVo2(m.vo2), w: 0.5, vo2: m.vo2, from: m.src });
   });
   anchors.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
-  var ltm = (st.metrics || []).filter(function (m) { return m && (+m.ltHr > 0 || parseClock(m.ltPace) > 0); }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
-  if (ltm.length) { var lm = ltm[ltm.length - 1]; res.lt = { date: lm.date, pace: parseClock(lm.ltPace) > 0 ? parseClock(lm.ltPace) : null, hr: +lm.ltHr || null }; }
-  var vo2m = (st.metrics || []).filter(function (m) { return m && +m.vo2 > 20; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
-  if (vo2m.length) res.vo2 = { date: vo2m[vo2m.length - 1].date, v: +vo2m[vo2m.length - 1].vo2, hist: vo2m.map(function (m) { return { date: m.date, v: +m.vo2 }; }) };
+  var lm = latestReading(fr, 'ltPace') || latestReading(fr, 'ltHr');
+  if (lm) { var lhr = latestReading(fr, 'ltHr'); res.lt = { date: lm.date, pace: lm.ltPace || null, hr: lhr ? lhr.ltHr : null, src: lm.src }; }
+  var vo2m = fr.filter(function (m) { return m.vo2; });
+  if (vo2m.length) { var vh = {}; vo2m.forEach(function (m) { vh[m.date] = m.vo2; }); res.vo2 = { date: vo2m[vo2m.length - 1].date, v: vo2m[vo2m.length - 1].vo2, src: vo2m[vo2m.length - 1].src, hist: Object.keys(vh).sort().map(function (d) { return { date: d, v: vh[d] }; }) }; }
   if (anchors.length) {
-    var last = anchors[anchors.length - 1];
+    /* Priority: a race or time trial in the last 12 weeks, then a threshold reading in the last 12 weeks, then the newest reading of any kind.
+       Watch VO2max alone moves paces at half weight. */
+    var tday = today(), recent = function (a) { return diffD(a.date, tday) <= 84; };
+    var pick = function (f) { for (var i = anchors.length - 1; i >= 0; i--) if (f(anchors[i])) return anchors[i]; return null; };
+    var last = pick(function (a) { return a.src === 'race' && recent(a); }) || pick(function (a) { return a.src === 'lt' && recent(a); }) || anchors[anchors.length - 1];
+    res.anchor = last;
     var w = weekOf(plan, last.date);
     var exp = w ? w.vPlan : plan.v0;
     res.vdot = exp + (last.v - exp) * last.w;
@@ -1029,7 +1062,7 @@ function analyze(plan, st, garmin) {
   res.proj = { k5: predict(vNow, 3.10686), k10: predict(vNow, 6.21371), half: predict(vNow, 13.1094), full: predict(vNow, 26.2188) };
   if (res.result) {
     var rr = res.result, d = rr.vdot - rr.exp;
-    var what = rr.src === 'race' ? 'Your ' + round1(rr.mi) + ' mi in ' + clock(rr.sec) : rr.src === 'lt' ? 'Your lactate threshold pace of ' + fmtPace(rr.ltPace) + '/mi' : 'Your VO2max reading of ' + rr.vo2;
+    var what = rr.src === 'race' ? 'Your ' + round1(rr.mi) + ' mi in ' + clock(rr.sec) : rr.src === 'lt' ? 'Your lactate threshold pace of ' + fmtPace(rr.ltPace) + '/mi' : 'Your VO2max of ' + rr.vo2;
     note(d >= 0.5 ? 'good' : d <= -1 ? 'warn' : 'good', d >= 0.5 ? 'Ahead of the plan' : d <= -1 ? 'Paces eased to match your fitness' : 'Right on plan',
       what + ' (' + fmtDate(rr.date) + ') puts your fitness (VDOT) at ' + rr.vdot.toFixed(1) + ' against ' + rr.exp.toFixed(1) + ' planned. Every pace from then on updates' + (rr.src === 'vo2' ? ', with half weight because watch VO2max is an estimate.' : '.'));
   }
@@ -1321,7 +1354,7 @@ var api = {
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
   vdotOf: vdotOf, paceAt: paceAt, predict: predict, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
-  analyze: analyze, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
+  analyze: analyze, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
   weekOf: weekOf, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,
   loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
