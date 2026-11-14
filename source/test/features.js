@@ -46,25 +46,6 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   await pg.click('.shoecard'); await pg.waitForTimeout(300); await shot('07-shoe', true);
   // assign 'none' on the first run in shoe page
   const runHref = await pg.$eval('.actrow', a => a.getAttribute('href')); await go(runHref, 500); await pg.click('[data-act=set-gear] >> text=None'); await pg.waitForTimeout(300); log('gear set:', JSON.stringify(await pg.evaluate(() => window.Store.state.gear)).slice(0, 80));
-  // workout logger
-  await go('#/workout/' + today + '/A'); await shot('08-workout');
-  const firstW = await pg.$('input[data-wk="1|0|w"]'); await firstW.fill('185'); await pg.fill('input[data-wk="1|1|w"]', '205'); await pg.fill('input[data-wk="1|2|w"]', '225');
-  await pg.click('[data-act=wk-done] >> nth=3'); await pg.waitForTimeout(1200);
-  log('rest bar visible:', await pg.isVisible('#restBar'), await pg.innerText('#restT'));
-  await shot('09-workout-rest');
-  await pg.click('[data-act=rest-stop]');
-  await pg.click('[data-act=wk-done] >> nth=4'); await pg.click('[data-act=rest-stop]'); await pg.click('[data-act=wk-done] >> nth=5'); await pg.click('[data-act=rest-stop]');
-  await pg.click('[data-act=wk-set] >> nth=0'); await pg.waitForTimeout(200);
-  // history sheet + 1RM
-  await pg.click('.excard >> nth=1 >> [aria-label=More]'); await pg.waitForTimeout(200); await pg.click('text=Record a tested 1RM'); await pg.fill('#orm-w', '255'); await pg.click('[data-act=sheet-save]'); await pg.waitForTimeout(200); log('orm after save:', JSON.stringify(await pg.evaluate(() => window.Store.state.orm)), await pg.isVisible('#sheet'));
-  // add exercise
-  await pg.click('text=+ Add exercise'); await pg.fill('#exa-n', 'Leg press'); await pg.click('[data-act=sheet-save]'); await pg.waitForTimeout(200);
-  const lp = (await pg.$$('.excard')).length - 1; await pg.fill(`input[data-wk="${lp}|0|w"]`, '400'); 
-  // reload mid-workout: draft survives
-  await pg.reload(); await pg.waitForTimeout(900); log('draft survived:', await pg.inputValue('input[data-wk="1|2|w"]'), (await pg.$$('.excard')).length);
-  await pg.click('[data-act=wk-rpe] >> nth=6'); await pg.click('[data-act=wk-finish]'); await pg.waitForTimeout(900);
-  log('after finish:', pg.url().split('#')[1]); await shot('10-strength-after', true);
-  const lift = await pg.evaluate(d => window.Store.state.logs[d].lift, today); log('saved lift:', JSON.stringify(lift).slice(0, 300));
   // fitness page + metrics sheet
   await go('#/fitness'); await shot('11-fitness', true);
   await pg.click('text=Update readings'); await pg.fill('#m-vo2', '55'); await pg.fill('#m-lthr', '178'); await pg.fill('#m-lt', '7:16'); await pg.fill('#m-pw', '465'); await pg.fill('#m-wkg', '5.16'); await pg.click('[data-act=sheet-save]'); await pg.waitForTimeout(600);

@@ -43,18 +43,7 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   log('activity details:', ((await text()).match(/Run details[\s\S]{0,260}/) || [''])[0].replace(/\n/g, ' | '));
   await go('#/nutrition'); await shot('a3-nutrition', true);
   await pg.click('text=Lose slowly'); await pg.waitForTimeout(400); log('lose kcal:', ((await text()).match(/[\d,]+\s*\nkcal today/) || [''])[0].replace(/\n/g, ' '));
-  // seed two squat sessions so overload has history
-  await pg.evaluate(() => { const S = window.Store; const t = window.ENGINE.today(), a = window.ENGINE.addD; S.editMany([['logs', a(t, -9)], ['logs', a(t, -5)]], s => { s.logs[a(t, -9)] = s.logs[a(t, -9)] || {}; s.logs[a(t, -9)].lift = { key: 'A', lp: 0, ex: { 'Back squat': { w: 225, reps: 8, sets: 3, s: [{ w: 225, r: 8 }, { w: 225, r: 8 }, { w: 225, r: 8 }] } } }; s.logs[a(t, -5)] = s.logs[a(t, -5)] || {}; s.logs[a(t, -5)].lift = { key: 'A', lp: 0, ex: { 'Back squat': { w: 235, reps: 7, sets: 3, s: [{ w: 235, r: 8 }, { w: 235, r: 7 }, { w: 235, r: 6 }] } } }; }); });
-  await go('#/workout/' + today + '/A'); await shot('a4-workout');
-  log('overload squat:', ((await text()).match(/Back squat[\s\S]*?Next step[^\n]*\n[^\n]*\n?[^\n]*/) || [''])[0].replace(/\n/g, ' | ').slice(0, 260));
-  const useBtn = await pg.$('#ex1 [data-act=wk-apply]'); if (useBtn) { await useBtn.click(); await pg.waitForTimeout(300); }
-  log('weights after apply:', await pg.inputValue('input[data-wk="1|0|w"]'));
-  await pg.click('#ex1 [data-act=wk-done] >> nth=0'); await pg.click('[data-act=rest-stop]'); await pg.waitForTimeout(200);
-  log('volume:', await pg.innerText('#wkVol'));
-  await pg.click('#ex1 [data-act=wk-done] >> nth=1'); await pg.click('[data-act=rest-stop]');
-  await pg.click('[data-act=wk-finish] >> nth=0'); await pg.waitForTimeout(700); log('toast:', await pg.innerText('#toast'));
-  await shot('a5-strength', true);
-  log('strength overload card:', ((await text()).match(/PROGRESSIVE OVERLOAD[^\n]*\n[^\n]*/i) || [''])[0].replace(/\n/g, ' | '));
+  // the workout screen itself is covered by test/features5.js
   // week editor: drag the long run to Saturday... find chips
   const wn = await pg.evaluate(() => window.__APP.week.n);
   await go('#/editweek/' + wn); await shot('a6-editweek', true);

@@ -655,7 +655,7 @@ VIEWS.today = function () {
   var def = shoes().filter(function (s) { return s.def && !s.retired; })[0];
   if (def) { var x = shoeStats(def), goal = +def.goalMi || 400; if (x.mi >= goal * 0.9) extra += '<a class="banner warn" href="#/shoe/' + def.id + '" style="text-decoration:none;color:inherit;display:block"><b>' + esc(shoeName(def)) + ': ' + Math.round(x.mi) + ' of ' + goal + ' mi.</b> ' + (x.mi >= goal ? 'Time to retire them.' : 'Nearly worn out; line up the next pair.') + ' ›</a>'; }
   var td = dayOf(App.today), sp = td && td.parts.filter(function (x) { return x.type === 'strength'; })[0];
-  if (sp && td.parts[0] !== sp) { var ll = logOf(App.today).lift, has = ll && ll.ex && Object.keys(ll.ex).length; extra = '<a class="btn primary block" href="#/workout/' + App.today + '">' + (has ? 'View logged lifts' : (wkLoad(App.today) ? 'Resume ' : 'Start ') + esc(sp.title.replace(/^Strength [A-C]: /, '')) + ' workout') + '</a>' + extra; }
+  /* lifts are opened from their bubble now */
   if (!extra) return h;
   var at = h.indexOf('<section class="card lv-');
   return at >= 0 ? h.slice(0, at) + extra + h.slice(at) : h + extra;

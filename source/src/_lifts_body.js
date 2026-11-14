@@ -93,7 +93,7 @@ var LIFT_VARS = {
 var LIFT = {
   A: LIFT_VARS.A[0], B: LIFT_VARS.B[0], C: LIFT_VARS.C[0],
   UB: {
-    key: 'UB', name: 'Upper Body & Core', focus: 'No-impact strength for weeks when running or jumping is off the table. Skip anything that provokes pain.',
+    key: 'UB', name: 'Upper Body & Core', focus: 'Upper body, core and hips with no impact: presses, rows and pulldowns, then core and glute work. Gives the legs a break between run days, and is the go-to session when an injury keeps you off your feet.',
     blocks: [
       { min: 5, t: 'Dynamic stretch', ex: DYN[0] },
       { min: 8, t: 'Push', ex: [
@@ -101,7 +101,7 @@ var LIFT = {
         ex('Push-up', 'Body in one line. Stop two reps before form breaks.', same('2×12'), '60 s')] },
       { min: 8, t: 'Pull', ex: [
         ex('Chest-supported dumbbell row', 'Pull the elbows to your hips, pause at the top.', same('3×10'), '60 s'),
-        ex('Lat pulldown or assisted pull-up', 'Chest up, pull the elbows down.', same('3×8'), '60 s')] },
+        ex('Lat pulldown', 'Chest up, pull the elbows down to your ribs.', same('3×8'), '60 s')] },
       { min: 6, t: 'Shoulders', ex: [ex('Seated dumbbell overhead press', 'Ribs down, press straight up.', same('3×10'), '60 s')] },
       { min: 10, t: 'Core', ex: [
         ex('Dead bug', 'Lower back stays glued to the floor.', same('3×8/side'), '30 s'),

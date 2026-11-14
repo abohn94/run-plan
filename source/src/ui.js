@@ -1432,6 +1432,7 @@ function importFile(kind, text) {
 /*FEATURES2*/
 /*FEATURES3*/
 /*FEATURES4*/
+/*FEATURES5*/
 
 /* ---------------- Garmin polling ---------------- */
 function pollGarmin(n) {

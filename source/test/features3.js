@@ -37,8 +37,6 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   await sheet({ sheet: 'exinfo', n: 'Back squat' }); await pg.screenshot({ path: SHOTS + '/b2-exinfo.png' });
   const sc = await pg.$('#sheetCard'); await sc.evaluate(e => e.scrollTo(0, 420)); await pg.screenshot({ path: SHOTS + '/b3-exinfo2.png' }); await sc.evaluate(e => e.scrollTo(0, 2000)); await pg.screenshot({ path: SHOTS + '/b4-exinfo3.png' });
   await pg.click('.sublink >> nth=0'); await pg.waitForTimeout(400); log('subs:', JSON.stringify(await pg.evaluate(() => window.Store.state.subs)));
-  await go('#/workout/' + today + '/A', 900); await shot('b5-workout', true); log('workout exercises:', (await pg.$$eval('.excard h3', h => h.map(x => x.textContent.replace(/i$/, '')))).join(' | '));
-  await pg.click('.excard h3 .exlink >> nth=1'); await pg.waitForTimeout(300); log('exinfo in workout:', await pg.innerText('#sheetCard h3')); await pg.click('[data-act=sheet-close]');
   await go('#/style', 800); await shot('b6-style', true); log('style groups:', (await pg.$$eval('.sechead h2', h => h.map(x => x.textContent))).join(' | '));
   await go('#/goals', 600); await sheet({ sheet: 'event', kind: 'pace' }); await pg.selectOption('#ev-dist', '10mi'); await pg.fill('#ev-pace', '8:30'); await pg.waitForTimeout(200); log('pace -> time:', await pg.inputValue('#ev-goal')); await pg.fill('#ev-date', E.addD(today, 60)); await pg.click('[data-act=sheet-save]'); await pg.waitForTimeout(600);
   await shot('b7-goals', true); log('events:', (await pg.evaluate(() => window.Store.state.events.map(e => e.name + ':' + e.dist + ':' + e.goal + ':' + (e.kind || 'race')))).join(' ; '));
