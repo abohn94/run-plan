@@ -188,6 +188,14 @@ function heatmap(weeks) {
   return s + '</div><div class="legend" style="margin-top:8px"><span><i class="dot" style="background:var(--green)"></i>Run (darker = longer)</span><span><i class="dot" style="background:var(--blue)"></i>Gym only</span></div>';
 }
 function dcard(cls, title, body, link) { return '<section class="card ' + cls + '"><div class="spread"><h3>' + title + '</h3>' + (link ? '<a class="small muted" href="' + link[0] + '">' + link[1] + ' ›</a>' : '') + '</div>' + body + '</section>'; }
+function runBubble(a) {
+  var gg = a.g || {}, l = a.log || {}, pt = l.ptype || a.ptype, feel = l.feel || gg.feel, eff = l.rpe || gg.rpe, d = E.pd(a.date);
+  var stats = [['Miles', mi(a.mi)], ['Time', a.sec ? E.clock(a.sec) : '–'], ['Pace', a.sec && a.mi ? pace(a.sec / a.mi) : '–'], ['Avg HR', a.hr || '–']];
+  var extra = [gg.cadence ? gg.cadence + ' spm' : '', gg.pwr ? gg.pwr + ' W' : '', gg.te ? 'TE ' + gg.te : '', gg.load ? 'Load ' + gg.load : '', feel ? FEEL[feel] : '', eff ? 'Effort ' + eff + '/10' : ''].filter(Boolean);
+  return '<a class="runbub t-' + (pt === 'speed' || pt === 'long' || pt === 'race' || pt === 'recovery' ? pt : 'easy') + '" href="#/activity/' + encodeURIComponent(a.key) + '"><div class="rd"><span>' + E.DOW_ABS[(d.getDay() + 6) % 7] + '</span><b>' + d.getDate() + '</b><span>' + d.toLocaleString(undefined, { month: 'short' }) + '</span></div>' +
+    '<div class="rb"><div class="rh">' + (pt ? '<span class="rt">' + esc(TYPE_LABEL[pt] || pt) + '</span>' : '') + '<div class="rn">' + esc(a.name) + '</div></div><div class="rs">' + stats.map(function (x) { return '<div><b>' + x[1] + '</b><span>' + x[0] + '</span></div>'; }).join('') + '</div>' +
+    (extra.length ? '<div class="rx">' + extra.map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('') + '</div>' : '') + '</div><span class="chev">›</span></a>';
+}
 VIEWS.dash = function () {
   var p = App.plan; if (!p) return setupNeeded();
   var t = App.today, w = App.week, an = App.an || {}, runs = activities().filter(function (a) { return a.kind === 'run'; });
@@ -244,7 +252,7 @@ VIEWS.dash = function () {
   /* consistency */
   html += dcard(names.length ? 'c6' : 'c12', 'Consistency, last ' + (names.length ? 20 : 30) + ' weeks', heatmap(names.length ? 20 : 30), ['#/calendar', 'Calendar']);
   /* activity table */
-  html += dcard('c12', 'Recent runs', '<div class="scroll"><table class="t" style="margin-top:6px"><thead><tr><th>Date</th><th>Run</th><th class="num">Miles</th><th class="num">Time</th><th class="num">Pace</th><th class="num">HR</th><th class="num">Cadence</th><th class="num">Power</th><th class="num">TE</th><th class="num">Load</th><th>Feel</th><th class="num">Effort</th></tr></thead><tbody>' + runs.slice(0, 25).map(function (a) { var gg = a.g || {}, l = a.log || {}; return '<tr><td>' + fmtD(a.date, { month: 'short', day: 'numeric' }) + '</td><td><a href="#/activity/' + encodeURIComponent(a.key) + '">' + esc(a.name) + '</a></td><td class="num">' + mi(a.mi) + '</td><td class="num">' + (a.sec ? E.clock(a.sec) : '–') + '</td><td class="num">' + (a.sec ? pace(a.sec / a.mi) : '–') + '</td><td class="num">' + (a.hr || '–') + '</td><td class="num">' + (gg.cadence || '–') + '</td><td class="num">' + (gg.pwr || '–') + '</td><td class="num">' + (gg.te || '–') + '</td><td class="num">' + (gg.load || '–') + '</td><td>' + (l.feel ? FEEL[l.feel] : gg.feel ? FEEL[gg.feel] : '–') + '</td><td class="num">' + (l.rpe || gg.rpe || '–') + '</td></tr>'; }).join('') + '</tbody></table></div>', ['#/progress/workouts', 'All workouts']);
+  html += dcard('c12', 'Recent runs', '<div class="runbubs">' + runs.slice(0, 12).map(runBubble).join('') + '</div>', ['#/progress/workouts', 'All workouts']);
   return '<div class="dash">' + html + '</div>';
 };
 

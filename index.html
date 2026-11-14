@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.github.com; img-src 'self' data: blob:; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.github.com https://ntfy.sh; img-src 'self' data: blob:; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#09090b">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -436,14 +436,13 @@ textarea.i { min-height: 80px; padding: 10px 12px; resize: vertical; font: inher
 .deskonly { display: none !important; }
 .method .tags { display: flex; flex-wrap: wrap; gap: 5px; }
 .method .tags i { font-style: normal; font-size: .7rem; font-weight: 800; background: var(--card2); border-radius: 999px; padding: 2px 9px; color: var(--muted); }
-.cdstrip { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
-.cdstrip::-webkit-scrollbar { display: none; }
-.cdstrip .cd { flex: 0 0 auto; min-width: 132px; display: grid; grid-template-columns: auto 1fr; column-gap: 6px; align-items: baseline; background: var(--card); border-radius: 18px; padding: 12px 14px; text-decoration: none; color: inherit; }
+.cdstrip { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 10px; }
+.cdstrip .cd { min-width: 0; display: grid; grid-template-columns: auto 1fr; column-gap: 6px; align-items: baseline; background: var(--card); border-radius: 18px; padding: 12px 14px; text-decoration: none; color: inherit; }
 .cdstrip .cd.a { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--violet) 60%, transparent); }
 .cdstrip .cd b { font-size: 1.7rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
 .cdstrip .cd small { color: var(--muted); font-weight: 700; font-size: .78rem; }
-.cdstrip .cd span { grid-column: 1 / -1; font-weight: 800; font-size: .9rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
-.cdstrip .cd em { grid-column: 1 / -1; font-style: normal; font-size: .72rem; color: var(--muted); white-space: nowrap; }
+.cdstrip .cd span { grid-column: 1 / -1; font-weight: 800; font-size: .9rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cdstrip .cd em { grid-column: 1 / -1; font-style: normal; font-size: .72rem; color: var(--muted); line-height: 1.35; }
 .dash { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
 .dash > * { min-width: 0; }
 .splitbar { display: flex; height: 16px; border-radius: 999px; overflow: hidden; margin-top: 10px; background: var(--card2); }
@@ -568,6 +567,113 @@ table.sets th:first-child, table.sets td:first-child { width: 34px; }
 @media (min-width: 1024px) { .stickybtns, .secnav { bottom: 20px; } }
 .nw { white-space: nowrap; display: inline-block; margin-right: 4px; }
 
+/* ===== features 6: week preview, offers, zones, run bubbles, load focus ===== */
+.pvstats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.pvstats > div { background: var(--card); border-radius: 18px; padding: 12px 8px; text-align: center; display: grid; gap: 2px; }
+.pvstats b { font-size: 1.45rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+.pvstats span { font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.pvhint { margin: 2px 2px 10px; }
+.pvdays { display: grid; gap: 8px; }
+.pvday { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 10px; background: var(--card); border-radius: 20px; padding: 10px; min-height: 64px; transition: background .12s, box-shadow .12s; }
+.pvday.rest { background: color-mix(in srgb, var(--card) 55%, transparent); }
+.pvday .pvd { display: grid; align-content: center; justify-items: center; gap: 0; border-radius: 14px; background: var(--card2); padding: 6px 0; }
+.pvday .pvd span { font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pvday .pvd b { font-size: 1.15rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+.pvday.today .pvd { background: var(--ink); } .pvday.today .pvd span, .pvday.today .pvd b { color: var(--inv); }
+.pvday.past { opacity: .5; }
+.pvday.over { box-shadow: inset 0 0 0 2px var(--blue); background: color-mix(in srgb, var(--blue) 14%, var(--card)); }
+.pvday.sel { box-shadow: inset 0 0 0 2px var(--blue); }
+.pvday .restlbl { color: var(--dim); font-weight: 700; font-size: .9rem; align-self: center; }
+.pvitems { display: grid; gap: 6px; align-content: center; min-width: 0; }
+.pvitems.cluster { position: relative; }
+.pvitems.cluster .pvchip + .pvchip { margin-top: -2px; }
+.pvchip { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; background: var(--card2); border-radius: 15px; padding: 9px 8px 9px 10px; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; box-shadow: inset 4px 0 0 var(--c); }
+.pvchip .tico { width: 32px; height: 32px; border-radius: 10px; }
+.pvchip .tico svg { width: 17px; height: 17px; }
+.pvchip .tx { display: grid; min-width: 0; line-height: 1.3; }
+.pvchip .tx b { font-size: .93rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pvchip .tx small { color: var(--muted); font-size: .76rem; font-weight: 700; }
+.pvchip .tx em { font-style: normal; color: var(--dim); font-size: .74rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pvchip.sel { outline: 2px solid var(--blue); outline-offset: 1px; }
+.pvchip.dn { opacity: .55; }
+.pvchip.lifted { opacity: .25; }
+.pvx { width: 32px; height: 32px; border-radius: 50%; border: 0; background: transparent; color: var(--dim); font-size: .9rem; font-weight: 800; display: grid; place-items: center; }
+.pvx:hover, .pvx:focus-visible { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }
+.pvsplit { justify-self: start; border: 0; background: none; color: var(--muted); font-size: .76rem; font-weight: 800; padding: 2px 4px; text-decoration: underline; text-underline-offset: 3px; }
+.pvghost { position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none; display: grid; gap: 6px; padding: 6px; border-radius: 18px; background: color-mix(in srgb, var(--bg2) 85%, transparent); box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+.pvghost .pvchip { grid-template-columns: auto minmax(0, 1fr); }
+.pvrem { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; background: var(--card); border-radius: 16px; padding: 10px 10px 10px 14px; box-shadow: inset 4px 0 0 var(--c); }
+.pvrem .tx, .mrow .tx { display: grid; min-width: 0; } .pvrem .tx b, .mrow .tx b { font-size: .92rem; text-decoration: line-through; text-decoration-color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .pvrem small, .mrow small { color: var(--muted); font-size: .76rem; }
+.mrow .tx b { text-decoration: none; }
+.mrow { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; padding: 8px 8px 8px 12px; border-radius: 14px; background: var(--card2); box-shadow: inset 4px 0 0 var(--c); }
+.pvfoot { margin-top: 14px; }
+.pvmini { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+.pvmini > div { display: grid; justify-items: center; gap: 3px; background: var(--card2); border-radius: 10px; padding: 6px 0 7px; }
+.pvmini span { font-size: .68rem; font-weight: 800; color: var(--muted); }
+.pvmini i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); } .pvmini i.none { background: var(--line2); }
+.reviewcard { display: block; text-decoration: none; color: inherit; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--blue) 45%, transparent); }
+.reviewcard h3 { margin-top: 3px; font-size: 1.12rem; }
+.offer { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--green) 45%, transparent); }
+.offer h3 { margin-top: 3px; }
+.altlist { display: grid; gap: 8px; }
+.alt { text-align: left; border: 0; background: var(--card); border-radius: 16px; padding: 12px 14px; display: grid; gap: 3px; color: var(--ink); }
+.alt b { font-size: .98rem; } .alt span { color: var(--muted); font-size: .84rem; line-height: 1.4; }
+.alt:hover, .alt:focus-visible { background: var(--card2); }
+.step { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; align-items: start; }
+.step > span { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--inv); display: grid; place-items: center; font-weight: 800; font-size: .9rem; }
+.topicrow { display: flex; gap: 8px; align-items: center; margin-top: 8px; min-width: 0; }
+.topicrow code { flex: 1; min-width: 0; overflow-wrap: anywhere; background: var(--card2); border-radius: 10px; padding: 8px 10px; font-size: .86rem; }
+/* zones */
+.zbasis { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.zgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); margin-bottom: 14px; }
+.zb { background: var(--card); border-radius: 20px; padding: 14px 14px 12px 18px; position: relative; overflow: hidden; display: grid; gap: 10px; }
+.zb::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--c); }
+.zh { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.zh b { font-size: 1.05rem; font-weight: 800; letter-spacing: -.01em; }
+.zc { font-size: .7rem; font-weight: 800; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); border-radius: 999px; padding: 3px 9px; }
+.zv { display: grid; grid-template-columns: 1.35fr 1fr .8fr; gap: 6px; }
+.zv > div { background: var(--card2); border-radius: 12px; padding: 7px 9px; display: grid; gap: 1px; min-width: 0; }
+.zv span { font-size: .64rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.zv b { font-size: .98rem; font-weight: 800; white-space: nowrap; letter-spacing: -.01em; }
+.zv b small { font-size: .7rem; color: var(--muted); font-weight: 700; }
+.zf { font-size: .84rem; color: var(--muted); line-height: 1.45; }
+/* recent runs */
+.runbubs { display: grid; gap: 8px; margin-top: 8px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.runbub { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; background: var(--card2); border-radius: 18px; padding: 10px 12px 10px 10px; text-decoration: none; color: inherit; position: relative; overflow: hidden; }
+.runbub::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c); }
+.runbub .rd { display: grid; justify-items: center; line-height: 1.1; }
+.runbub .rd span { font-size: .64rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.runbub .rd b { font-size: 1.3rem; font-weight: 800; letter-spacing: -.03em; }
+.runbub .rb { display: grid; gap: 6px; min-width: 0; }
+.runbub .rn { font-weight: 800; font-size: .95rem; display: flex; gap: 8px; align-items: center; min-width: 0; }
+.runbub .rn { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; }
+.runbub .rh { display: grid; min-width: 0; line-height: 1.25; }
+.runbub .rt { font-size: .62rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--c); }
+.runbub .rs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.runbub .rs div { display: grid; min-width: 0; }
+.runbub .rs b { font-size: .92rem; font-weight: 800; white-space: nowrap; }
+.runbub .rs span { font-size: .62rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.runbub .rx { display: flex; flex-wrap: wrap; gap: 4px; }
+.runbub .rx span { font-size: .7rem; font-weight: 700; color: var(--muted); background: var(--card); border-radius: 999px; padding: 2px 8px; }
+.runbub .chev { color: var(--dim); font-weight: 800; }
+/* load focus */
+.lfrow { display: grid; gap: 5px; }
+.lfbar { position: relative; height: 22px; border-radius: 8px; background: var(--card2); overflow: hidden; }
+.lfbar .band { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--green) 22%, transparent); border-left: 1.5px dashed color-mix(in srgb, var(--green) 70%, transparent); border-right: 1.5px dashed color-mix(in srgb, var(--green) 70%, transparent); }
+.lfbar .val { position: absolute; left: 0; top: 5px; bottom: 5px; border-radius: 0 6px 6px 0; opacity: .95; }
+.lfbar span { position: absolute; right: 8px; top: 0; line-height: 22px; font-size: .74rem; font-weight: 800; }
+@media (max-width: 380px) { .pvstats b { font-size: 1.2rem; } .zv { grid-template-columns: 1fr 1fr; } .zv > div:last-child { grid-column: 1 / -1; } .runbub .rs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pvpager { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; white-space: nowrap; }
+.pvpager a { color: var(--muted); font-weight: 700; text-decoration: none; }
+.mrow .tx { flex: 1 1 160px; } .mrow .tx b { white-space: normal; }
+.missed, .reviewcard, .offer { margin-bottom: 0; }
+.mread { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; background: var(--card2); border-radius: 14px; padding: 9px 6px 9px 12px; }
+.mread > b { font-size: .86rem; } .mread .mv { grid-row: 2; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .82rem; color: var(--muted); } .mread .mv b { color: var(--ink); }
+.mread .pvx { grid-row: 1 / span 2; grid-column: 2; }
+@media (max-width: 400px) { .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mbtns { display: flex; gap: 6px; margin-left: auto; }
+.pvchip .tx b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+
 </style>
 </head>
 <body>
@@ -608,15 +714,25 @@ table.sets th:first-child, table.sets td:first-child { width: 34px; }
 'use strict';
 
 var MI_M = 1609.344;
-var DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-var DOW_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+var DOW_ABS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], DOW_LONG_ABS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+var DOW = DOW_ABS.slice(), DOW_LONG = DOW_LONG_ABS.slice();
+/* Weeks can start on any day. WS: 0 = Monday ... 6 = Sunday. Day indexes everywhere are relative to it. */
+var WS = 0;
+function setWeekStart(k) { k = ((+k || 0) % 7 + 7) % 7; WS = k; for (var i = 0; i < 7; i++) { DOW[i] = DOW_ABS[(i + k) % 7]; DOW_LONG[i] = DOW_LONG_ABS[(i + k) % 7]; } return k; }
+/* keep the same real weekdays when the week start changes: avail[] and longDay are stored relative to the week start */
+function rotateProfile(p, to) {
+  var from = +p.weekStart || 0, d = ((to - from) % 7 + 7) % 7; if (!d) { p.weekStart = to; return p; }
+  if (p.avail) p.avail = p.avail.map(function (x, i) { return p.avail[(i + d) % 7]; });
+  if (p.longDay != null) p.longDay = ((+p.longDay - d) % 7 + 7) % 7;
+  p.weekStart = to; return p;
+}
 
 /* ---------------- dates (local, as YYYY-MM-DD strings) ---------------- */
 function pad(n) { return (n < 10 ? '0' : '') + n; }
 function ds(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 function pd(s) { var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
 function addD(s, n) { var d = pd(s); d.setDate(d.getDate() + n); return ds(d); }
-function dow(s) { return (pd(s).getDay() + 6) % 7; }
+function dow(s) { return (pd(s).getDay() + 13 - WS) % 7; }
 function monday(s) { return addD(s, -dow(s)); }
 function diffD(a, b) { return Math.round((Date.UTC.apply(null, ymd(b)) - Date.UTC.apply(null, ymd(a))) / 86400000); }
 function ymd(s) { var p = String(s).split('-'); return [+p[0], +p[1] - 1, +p[2]]; }
@@ -1025,7 +1141,21 @@ var LIFT = {
 };
 /* which version of a session a given plan week uses: a new one every four weeks */
 function liftVar(weekN) { return Math.floor(Math.max(0, (weekN || 1) - 1) / 4) % 3; }
-function liftMod(key, v) { var a = LIFT_VARS[key]; return a ? a[(v || 0) % a.length] : LIFT[key]; }
+function liftMod(key, v, mix) {
+  var a = LIFT_VARS[key], m = a ? a[(v || 0) % a.length] : LIFT[key];
+  if (!mix || !LIFT[mix] || mix === key) return m;
+  /* combined session: this day's heavy lower lift and push, plus the other day's heavy lower lift and pull; trimmed finishers keep it near 45 minutes */
+  var o = LIFT_VARS[mix] ? LIFT_VARS[mix][(v || 0) % LIFT_VARS[mix].length] : LIFT[mix];
+  var heavy = function (mm) { var b = mm.blocks.filter(function (x) { return /heavy/i.test(x.t); })[0]; if (b) return b.ex; var ps = mm.blocks.filter(function (x) { return /push|pull|legs/i.test(x.t); }); return ps.map(function (x) { return x.ex[0]; }); };
+  var hm = heavy(m), ho = heavy(o), fin = (m.blocks[3] || m.blocks[m.blocks.length - 1]).ex.slice(0, 1).concat((o.blocks[3] || o.blocks[o.blocks.length - 1]).ex.slice(0, 1));
+  var LOW = /squat|deadlift|lunge|step-up|thrust|split|bridge/i, PUSH = /press|push-up|dip/i, PULL = /row|pull|chin/i;
+  var pick = function (arr, re, not) { return arr.filter(function (x) { return re.test(x.n) && (!not || x.n !== not.n); })[0]; };
+  var all = hm.concat(ho), l1 = pick(hm, LOW) || pick(ho, LOW), l2 = pick(ho, LOW, l1), pu = pick(hm, PUSH) || pick(ho, PUSH), pl = pick(ho, PULL) || pick(hm, PULL);
+  var lifts = [l1, l2, pu, pl].filter(Boolean);
+  var pat = function (x) { return LOW.test(x.n) ? 'l' : PUSH.test(x.n) ? 'p' : PULL.test(x.n) ? 'u' : x.n; };
+  all.forEach(function (x) { if (lifts.length < 4 && !lifts.some(function (y) { return y.n === x.n || (pat(y) === pat(x) && pat(x) !== 'l'); })) lifts.push(x); });
+  return { key: key, name: m.name + ' + ' + o.name, focus: 'Combined full body: the heavy lifts from both sessions so nothing is missed this week. Three working sets per lift; keep rests honest to finish in about 45 minutes.', v: v, mix: mix, blocks: [m.blocks[0], { min: 4, t: 'Dynamic power', ex: m.blocks[1] && /power/i.test(m.blocks[1].t) ? m.blocks[1].ex.slice(0, 1) : [] }, { min: 28, t: 'Heavy compounds', ex: lifts }, { min: 8, t: 'Muscle-specific finishers', ex: fin }].filter(function (b) { return b.ex.length; }) };
+}
 var LIFT_PHASES = [
   { k: 'Base', d: 'Learn the lifts. Moderate loads, higher reps.' },
   { k: 'Build', d: 'Heavier loads, lower reps. Your biggest strength gains come here.' },
@@ -1306,6 +1436,7 @@ function defaultProfile() {
 
 function generate(state) {
   var prof = Object.assign(defaultProfile(), state.profile || {});
+  setWeekStart(prof.weekStart || 0);
   var method = METHODS[prof.method] || METHODS.balanced;
   var start = monday(prof.startDate || today());
   var events = (state.events || []).filter(function (e) { return e && e.date; }).slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; });
@@ -1752,18 +1883,23 @@ function adapt(plan, st, analysis) {
     w.days.forEach(function (d) {
       d.parts.forEach(function (p) {
         if (p.type === 'rest') return;
-        var to = arr[partKey(p.moved || d.date, p)];
-        if (to && to !== d.date && to >= w.start && to <= w.end) moved.push({ p: p, from: d, to: to });
+        var k0 = partKey(p.moved || d.date, p), to = arr[k0];
+        if (to === 'x') moved.push({ p: p, from: d, to: null, key: k0 });
+        else if (to && to !== d.date && to >= w.start && to <= w.end) moved.push({ p: p, from: d, to: to });
       });
     });
+    w.removed = [];
     moved.forEach(function (m) {
       m.from.parts = m.from.parts.filter(function (x) { return x !== m.p; });
       if (!m.from.parts.length) m.from.parts.push(restPart());
+      if (!m.to) { w.removed.push({ p: m.p, from: m.from.date, key: m.key }); return; }
       var b = w.days[dow(m.to)];
       b.parts = b.parts.filter(function (x) { return x.type !== 'rest'; });
       var q = Object.assign({}, m.p, { moved: m.p.moved || m.from.date, akey: partKey(m.p.moved || m.from.date, m.p) });
       if (isRun(q)) b.parts.unshift(q); else b.parts.push(q);
     });
+    var mix = st.liftmix || {};
+    w.days.forEach(function (d) { d.parts = d.parts.map(function (p) { if (p.type !== 'strength') return p; var k = mix[p.akey || partKey(p.moved || d.date, p)]; if (!k || !LIFT[k] || k === p.key) return p; return Object.assign({}, p, { mix: k, title: 'Combined: ' + LIFT[p.key].name.replace(/ Day$| & Core$/, '') + ' + ' + LIFT[k].name.replace(/ Day$| & Core$/, ''), changed: true, note: 'Combined session: covers the main lifts from the session you removed this week.' }); }); });
     /* long run never longer than the cap from the consistency check */
     if (mod && mod.phase === 'compliance' && mod.longCap) w.days.forEach(function (d) { d.parts = d.parts.map(function (p) { if (p.type === 'long' && p.mi > mod.longCap) { var q = scaleRun(p, mod.longCap / p.mi, zz); q.changed = true; q.from = p.title; q.note = 'Capped to ' + mod.longCap + ' mi: build back to longer runs gradually.'; return q; } return p; }); });
     /* unavailable days: move runs to free days in the same week, most important first */
@@ -1800,10 +1936,27 @@ function adapt(plan, st, analysis) {
         if (o.action === 'easy') { var e = toEasy(p, p.type === 'long' ? 0.8 : 0.85, 'Easy run', 'Coach swap: ' + (o.reason || 'easy today.')); return e; }
         if (o.action === 'short') { var s2 = scaleRun(p, 0.7, zz); s2.changed = true; s2.note = 'Shortened: ' + (o.reason || 'lighter today.'); if (p.type === 'speed') { s2 = toEasy(p, 0.7, 'Short easy run', 'Shortened: ' + (o.reason || '')); } return s2; }
         if (o.action === 'rest') return restPart('Rest day', 'Swapped to rest: ' + (o.reason || 'recovery comes first today.'));
+        if (o.action === 'add' && o.mi) { var a2 = scaleRun(p, ((p.mi || 0) + o.mi) / (p.mi || 1), zz); a2.mi = half((p.mi || 0) + o.mi); if (p.type !== 'speed') a2.steps = [run(a2.mi, p.type === 'recovery' ? 'REC' : 'E')]; a2.changed = true; a2.from = p.title; a2.note = 'Longer by ' + o.mi + ' mi: ' + (o.reason || 'picking up miles from a run you dropped.'); return a2; }
+        if (o.action === 'long' && o.mi) return { type: 'long', role: 'long', title: o.title || 'Medium-long run', mi: o.mi, steps: [run(o.mi, 'E')], note: o.reason || 'Easy, conversational: this stands in for the long run this week.', changed: true, from: p.title };
+        if (o.action === 'strides' && p.type !== 'speed') { var sm = Math.max(2, p.mi || 3); return { type: 'easy', role: p.role, title: 'Easy + strides', mi: sm, steps: [run(Math.max(1, sm - 0.4), 'E'), rep(6, { sec: 20 }, 'R', { sec: 40, walk: true }, 'fast but relaxed')], note: o.reason || 'Strides keep your legs quick without real fatigue.', changed: true, from: p.title }; }
         if (o.action === 'cross') return { type: 'cross', role: p.role, title: 'Treadmill walk', min: clamp(Math.round((p.mi || 3) * 10), 20, 45), note: 'Brisk walk on a 4–8% incline instead of running: ' + (o.reason || 'low impact today.'), changed: true, from: p.title };
         return p;
       });
     });
+    /* a workout added to a rest day (readiness offer) */
+    w.days.forEach(function (d) {
+      var o = ov[d.date];
+      if (!o || o.action !== 'addday' || !o.add) return;
+      if (d.parts.some(function (p) { return p.type !== 'rest'; }) && !o.force) return;
+      var add = [];
+      if (o.add.run) add.push(easyPart(o.add.runTitle || 'Easy run', o.add.run, 'easy', zz, 'Added because you are rested and ready. ' + (o.add.why || 'Keep it conversational.')));
+      if (o.add.lift && LIFT[o.add.lift]) add.push(liftPart(o.add.lift, o.add.lp != null ? o.add.lp : liftPhaseFor(w.phase.key, w.phIdx), w, 'Added because you are rested and ready.'));
+      add.forEach(function (p) { p.added = true; });
+      d.parts = add.length ? add : d.parts;
+    });
+    /* training balance from Garmin load focus: small, safe nudges to future sessions this week and next */
+    var lf = analysis && analysis.loadFocus;
+    if (lf && lf.nudge && !(mod && mod.m < 1)) applyLoadFocus(w, lf, zz);
     /* never show two rest cards on one day, and drop rest cards next to real sessions */
     w.days.forEach(function (d) {
       var real = d.parts.filter(function (p) { return p.type !== 'rest'; });
@@ -1820,6 +1973,140 @@ function adapt(plan, st, analysis) {
   plan.statusByWeek = stat;
   plan.mult = mult;
   return plan;
+}
+function applyLoadFocus(w, lf, zz) {
+  var t = today(), next = addD(monday(t), 13);
+  if (w.end < t || w.start > next || w.phase.key === 'race' || w.phase.key === 'taper' || w.phase.key === 'recov') return;
+  var fut = w.days.filter(function (d) { return d.date > t; });
+  var hardNear = function (d) { return w.days.some(function (x) { return Math.abs(x.i - d.i) === 1 && x.parts.some(function (p) { return p.type === 'speed' || p.type === 'long' || p.type === 'race'; }); }); };
+  var easyDays = fut.filter(function (d) { return d.parts.some(function (p) { return (p.type === 'easy' || p.type === 'recovery') && p.role !== 'gym' && !p.changed; }); });
+  var why = function (txt) { return 'Training balance: ' + txt; };
+  if (lf.nudge === 'anaerobic') {
+    if (fut.some(function (d) { return d.parts.some(function (p) { return /strides/i.test(p.title); }); })) return;
+    var d1 = easyDays.filter(function (d) { return !hardNear(d); })[0] || easyDays[0]; if (!d1) return;
+    d1.parts = d1.parts.map(function (p) { if ((p.type === 'easy' || p.type === 'recovery') && p.role !== 'gym') { var sm = Math.max(2, p.mi); return Object.assign({}, p, { type: 'easy', title: 'Easy + strides', steps: [run(Math.max(1, sm - 0.4), 'E'), rep(6, { sec: 20 }, 'R', { sec: 40, walk: true }, 'fast but relaxed')], lf: 'anaerobic', note: why('your Garmin anaerobic load is low. Six short, relaxed strides fix it without real fatigue.') }); } return p; });
+  } else if (lf.nudge === 'high') {
+    if (fut.some(function (d) { return d.parts.some(function (p) { return p.type === 'speed'; }); })) return;
+    var d2 = easyDays.filter(function (d) { return !hardNear(d); })[0]; if (!d2) return;
+    d2.parts = d2.parts.map(function (p) { if ((p.type === 'easy' || p.type === 'recovery') && p.role !== 'gym' && p.mi >= 3) { var mins = clamp(Math.round(p.mi * 3), 10, 25); return { type: 'speed', role: p.role, key: 'steady', title: 'Progression run', mi: p.mi, steps: [run(Math.max(1.5, p.mi - mins / 9), 'E'), runMin(mins, 'S', 'build from easy to steady')], lf: 'high', changed: true, from: p.title, note: why('your Garmin high-aerobic load is low. Finish this run steady to top it up.') }; } return p; });
+  } else if (lf.nudge === 'low') {
+    var q = fut.filter(function (d) { return d.parts.some(function (p) { return p.type === 'speed'; }); });
+    if (q.length < 2) return;
+    var d3 = q[q.length - 1];
+    d3.parts = d3.parts.map(function (p) { if (p.type === 'speed') { var e = toEasy(p, 1, 'Easy run', why('your Garmin low-aerobic base is short of its target, so one workout becomes easy running this week.')); e.lf = 'low'; e.steps = [run(e.mi, 'E')]; return e; } return p; });
+  } else if (lf.nudge === 'anaerobic-excess') {
+    fut.forEach(function (d) { d.parts = d.parts.map(function (p) { if (p.type === 'speed' && (p.key === 'intervals' || p.key === 'hills')) { var nq = mkQuality(w, SESS.tempoMi(Math.max(2, Math.round((p.mi || 5) * 0.45))), p.mi || 5, zz); nq.lf = 'anaerobic-excess'; nq.changed = true; nq.from = p.title; nq.note = why('your anaerobic load is above target, so this week\'s intervals become threshold running.'); return nq; } return p; }); });
+  }
+}
+/* ---------- Garmin-style load focus: last 4 weeks of load split into low aerobic, high aerobic and anaerobic ---------- */
+var LF_DEFAULT = { low: [0.5, 0.72], high: [0.2, 0.38], anaerobic: [0.06, 0.16] };
+function loadFocus(garmin, date) {
+  var acts = (garmin && garmin.activities) || [], from = addD(date, -28), b = { low: 0, high: 0, anaerobic: 0 };
+  acts.forEach(function (a) {
+    if (!a.date || a.date <= from || a.date > date) return;
+    var l = +a.load || (a.run && a.distM ? a.distM / MI_M * 10 : 0); if (!l) return;
+    var lab = a.teLabel || '', k;
+    if (/ANAEROBIC|SPEED/.test(lab)) k = 'anaerobic'; else if (/TEMPO|THRESHOLD|VO2/.test(lab)) k = 'high'; else if (lab) k = 'low';
+    else k = (+a.ane >= 2.5) ? 'anaerobic' : (+a.te >= 3.5) ? 'high' : 'low';
+    b[k] += l;
+  });
+  var tot = b.low + b.high + b.anaerobic;
+  if (tot < 150) return null;
+  var ts = garmin && garmin.fitness && garmin.fitness.trainingStatus, out = { total: Math.round(tot), cats: {}, src: 'app', status: ts && ts.status || null, feedback: ts && ts.balance || null };
+  ['low', 'high', 'anaerobic'].forEach(function (k) {
+    var g = ts && ts.targets && ts.targets[k], val = b[k], lo, hi;
+    if (g && g[1] > 0) { lo = g[0]; hi = g[1]; out.src = 'garmin'; if (ts.loads && ts.loads[k] != null) val = ts.loads[k]; }
+    else { lo = LF_DEFAULT[k][0] * tot; hi = LF_DEFAULT[k][1] * tot; }
+    out.cats[k] = { load: Math.round(val), lo: Math.round(lo), hi: Math.round(hi), state: val < lo ? 'short' : val > hi ? 'over' : 'ok' };
+  });
+  var c = out.cats;
+  out.nudge = c.anaerobic.state === 'short' ? 'anaerobic' : c.high.state === 'short' ? 'high' : c.low.state === 'short' && c.low.load < c.low.lo * 0.85 ? 'low' : c.anaerobic.state === 'over' && c.anaerobic.load > c.anaerobic.hi * 1.25 ? 'anaerobic-excess' : null;
+  return out;
+}
+
+/* ---------- what to do when a session is removed or missed ---------- */
+function sessionAlternatives(plan, st, w, p, fromDate, why) {
+  /* why: 'removed' | 'missed'. Returns [{label, text, ops:[...]}] */
+  var t = today(), opts = [], key = p.akey || partKey(p.moved || fromDate, p);
+  var future = w.days.filter(function (d) { return d.date > (why === 'missed' ? t : fromDate) || (why === 'removed' && d.date >= t && d.date !== fromDate); }).filter(function (d) { return d.date >= t; });
+  var hard = function (d) { return d.parts.some(function (x) { return x.type === 'speed' || x.type === 'long' || x.type === 'race'; }); };
+  var near = function (d) { return w.days.some(function (x) { return Math.abs(x.i - d.i) === 1 && hard(x) && x.date !== fromDate; }); };
+  var runDays = future.filter(function (d) { return d.parts.some(isRun); });
+  var freeDays = future.filter(function (d) { return !d.parts.some(isRun); });
+  var easyRuns = future.map(function (d) { return { d: d, p: d.parts.filter(function (x) { return (x.type === 'easy' || x.type === 'recovery') && x.role !== 'gym'; })[0] }; }).filter(function (x) { return x.p; });
+  var keyOf = function (d, x) { return x.akey || partKey(x.moved || d.date, x); };
+  var skip = why === 'missed' ? [{ t: 'remove', key: key }] : [];
+  if (p.type === 'strength') {
+    var kept = future.concat(why === 'removed' ? w.days.filter(function (d) { return d.date >= t && d.date !== fromDate && future.indexOf(d) < 0; }) : []).map(function (d) { return { d: d, x: d.parts.filter(function (x) { return x.type === 'strength' && !x.mix; })[0] }; }).filter(function (o) { return o.x; });
+    if (kept.length && LIFT[p.key] && kept[0].x.key !== p.key) opts.push({ label: 'Combine it into ' + kept[0].d.dow + '\'s lift', text: 'Turn ' + kept[0].d.dow + '\'s ' + kept[0].x.title.replace(/^Strength (\w+: )?/, '') + ' into a combined session that also covers the main lifts of ' + p.title.replace(/^Strength (\w+: )?/, '') + ', so no muscle group goes untrained this week.', ops: skip.concat([{ t: 'mix', key: keyOf(kept[0].d, kept[0].x), with: p.key }]) });
+    var free = freeDays.filter(function (d) { return !d.parts.some(function (x) { return x.type === 'strength'; }) && !w.days.some(function (x) { return x.i === d.i + 1 && x.parts.some(function (y) { return y.type === 'long'; }); }); })[0];
+    if (free) opts.push({ label: 'Do it on ' + free.dow + ' instead', text: free.dow + ' has no run, so a lift fits without crowding a key session.', ops: [{ t: 'move', key: key, to: free.date }] });
+    opts.push({ label: 'Skip it this week', text: 'One missed lift costs very little. You will hit those muscles again next week.', ops: skip.length ? skip : [] });
+    return opts;
+  }
+  if (p.type === 'easy' || p.type === 'recovery') {
+    opts.push({ label: 'Skip it, keep the key runs', text: 'Easy runs are the most flexible part of the week. Keep the ' + (w.days.some(function (d) { return d.parts.some(function (x) { return x.type === 'speed'; }); }) ? 'workout and ' : '') + 'long run as planned.', ops: skip });
+    if (easyRuns.length && p.mi >= 2) { var add = half(Math.min(2, p.mi / easyRuns.length)); opts.push({ label: 'Spread the miles', text: 'Add ' + add + ' mi to ' + easyRuns.map(function (x) { return x.d.dow; }).join(' and ') + ' so the weekly total stays close.', ops: skip.concat(easyRuns.map(function (x) { return { t: 'ov', date: x.d.date, action: 'add', mi: add, reason: 'picking up miles from a run you dropped.' }; })) }); }
+    var fd = freeDays.filter(function (d) { return !near(d); })[0];
+    if (fd) opts.push({ label: 'Make it up on ' + fd.dow, text: fd.dow + ' is free and not next to a hard day.', ops: [{ t: 'move', key: key, to: fd.date }] });
+    return opts;
+  }
+  if (p.type === 'long') {
+    var fi = dow(fromDate), nextRun = why === 'missed' ? runDays[0] : runDays.filter(function (d) { return !d.parts.some(function (x) { return x.type === 'speed'; }); }).sort(function (a, b) { return Math.abs(a.i - fi) - Math.abs(b.i - fi); })[0] || runDays[0];
+    if (nextRun) {
+      var x0 = nextRun.parts.filter(isRun)[0], ops = [{ t: 'move', key: key, to: nextRun.date }, { t: 'remove', key: keyOf(nextRun, x0) }];
+      var laterQ = future.filter(function (d) { return d.date > nextRun.date && d.parts.some(function (x) { return x.type === 'speed'; }); })[0];
+      if (laterQ) ops.push({ t: 'ov', date: laterQ.date, action: 'easy', reason: 'the long run moved, so this workout becomes easy running.' });
+      if (x0.type === 'speed' || laterQ) opts.push({ label: 'Long run on ' + nextRun.dow + ', ease the workout', text: 'Do the long run on ' + (why === 'missed' ? 'your next run day (' + nextRun.dow + ')' : nextRun.dow) + (x0.type === 'speed' ? ' in place of the ' + x0.title.toLowerCase() : '') + (laterQ ? ' and make ' + laterQ.dow + '\'s workout an easy run' : '') + ', so you are not stacking hard days.', ops: ops });
+      else opts.push({ label: 'Long run on ' + nextRun.dow, text: 'Do the long run on your next run day instead of its ' + x0.title.toLowerCase() + '.', ops: ops });
+    }
+    var fl = freeDays.filter(function (d) { return !near(d); })[0];
+    if (fl) opts.push({ label: 'Move it to ' + fl.dow, text: fl.dow + ' is free and has an easy day either side.', ops: [{ t: 'move', key: key, to: fl.date }] });
+    var erl = easyRuns.filter(function (x) { return x.d !== nextRun; });
+    if (erl.length) { var er = erl[erl.length - 1]; opts.push({ label: 'Medium-long on ' + er.d.dow, text: 'Turn ' + er.d.dow + '\'s easy run into a ' + half(p.mi * 0.75) + ' mi medium-long run and keep everything else.', ops: skip.concat([{ t: 'ov', date: er.d.date, action: 'long', mi: half(p.mi * 0.75), reason: 'stands in for the long run you dropped this week.' }]) }); }
+    opts.push({ label: 'Skip it', text: 'One missed long run is fine. Next week\'s long run stays as planned; do not try to make up the miles.', ops: skip });
+    return opts;
+  }
+  if (p.type === 'speed') {
+    var er2 = easyRuns.filter(function (x) { return !near(x.d) || why === 'missed'; })[0];
+    if (er2) opts.push({ label: 'Do it on ' + er2.d.dow, text: 'Swap it into ' + er2.d.dow + '\'s easy run slot; that easy run drops.', ops: [{ t: 'move', key: key, to: er2.d.date }, { t: 'remove', key: keyOf(er2.d, er2.p) }] });
+    if (easyRuns.length) { var er3 = easyRuns[0]; opts.push({ label: 'Strides on ' + er3.d.dow, text: 'Keep the easy run and add six short strides: a little speed without a full workout.', ops: skip.concat([{ t: 'ov', date: er3.d.date, action: 'strides' }]) }); }
+    opts.push({ label: 'Skip it, keep the long run', text: 'The long run matters more this week. Run it as planned.', ops: skip });
+    return opts;
+  }
+  return [{ label: 'Skip it', text: '', ops: skip }];
+}
+/* sessions this week that were planned before today and not done */
+function missedThisWeek(plan, st, date) {
+  var w = weekOf(plan, date); if (!w) return [];
+  var logs = st.logs || {}, out = [];
+  w.days.forEach(function (d) {
+    if (d.date >= date) return;
+    var l = logs[d.date] || {};
+    d.parts.forEach(function (p) {
+      if (p.type === 'rest' || p.type === 'cross' || p.type === 'race') return;
+      var done = isRun(p) ? !!(l.run && (l.run.skip || +l.run.mi > 0)) : p.type === 'strength' ? !!l.lift : true;
+      if (l.done) done = true;
+      if (!done) out.push({ p: p, date: d.date, day: d });
+    });
+  });
+  return out;
+}
+/* rested on a rest day? offer a workout that fits around the rest of the week */
+function restDayOffer(plan, st, garmin, date, rd) {
+  var w = weekOf(plan, date); if (!w || !rd || !rd.factors) return null;
+  var d = w.days[dow(date)];
+  if (d.parts.some(function (p) { return p.type !== 'rest'; }) || (st.overrides || {})[date]) return null;
+  if (rd.level !== 'green' || rd.score < 70) return null;
+  var logs = st.logs || {}, acts = (garmin && garmin.activities) || [], idle = 0;
+  for (var i = 1; i <= 4; i++) { var dd = addD(date, -i), l = logs[dd] || {}, active = (l.run && +l.run.mi > 0) || l.lift || acts.some(function (a) { return a.date === dd && (a.run || a.strength); }); if (active) break; idle++; }
+  if (idle < 2) return null;
+  var tm = w.days[dow(date) + 1] || null, tmHard = tm && tm.parts.some(function (p) { return p.type === 'speed' || p.type === 'long' || p.type === 'race'; });
+  var liftsPlanned = w.tot.lifts, liftsDone = w.days.filter(function (x) { return x.date < date && logs[x.date] && logs[x.date].lift; }).length;
+  var keys = w.days.map(function (x) { return x.parts.filter(function (p) { return p.type === 'strength'; })[0]; }).filter(Boolean).map(function (p) { return p.key; });
+  var missingLift = liftsDone < liftsPlanned ? (['A', 'B', 'C'].filter(function (k) { return keys.indexOf(k) < 0; })[0] || 'UB') : null;
+  if (tmHard) return { title: 'Rested and ready: an easy run?', body: 'You have had ' + idle + ' days off and your recovery markers look good. Tomorrow is ' + tm.parts.filter(function (p) { return p.type !== 'strength'; })[0].title.toLowerCase() + ', so keep today light: a short easy run, and lift only upper body if at all.', add: { run: 3, lift: missingLift ? 'UB' : null, why: 'Easy only: tomorrow is a key session.' } };
+  return { title: 'Rested and ready: add a session?', body: 'You have had ' + idle + ' days off and your recovery markers look good. ' + (missingLift ? 'You are a lift short this week, so here is a lift and a short easy run.' : 'Here is an easy run to keep the week moving.'), add: { run: missingLift ? 2 : 4, lift: missingLift, why: missingLift ? 'Run first, then lift.' : '' } };
 }
 function partKey(date, p) { return date + '|' + (p.role || p.type) + (p.type === 'strength' ? '' : '|' + (isRunType(p.type) ? 'run' : p.type)); }
 function isRunType(t) { return t === 'easy' || t === 'recovery' || t === 'long' || t === 'speed' || t === 'race'; }
@@ -2056,6 +2343,7 @@ function analyze(plan, st, garmin) {
   }
   var hrMax = maxHrSeen(garmin);
   res.hrMax = hrMax;
+  res.loadFocus = loadFocus(garmin, today());
   var withHr = er.filter(function (r) { return r.hr; });
   if (hrMax && withHr.length >= 3) {
     var hrPct = mean(withHr.map(function (r) { return r.hr; })) / hrMax;
@@ -2196,7 +2484,26 @@ function readiness(st, garmin, date) {
   return { date: date, level: level, score: score, sum: sum, reasons: reasons.sort(function (a, b) { return b.pts - a.pts; }), metrics: metrics, garmin: !!g, checkin: c, flags: flags, factors: f.length };
 }
 /* What should today look like, given readiness? */
-function recommend(rd, day) {
+function recommend(rd, day, ctx) {
+  var r0 = recommend0(rd, day);
+  var m = rd && rd.metrics || {}, sl = m.sleep, bb = m.bb, parts = day ? day.parts : [];
+  var runP = parts.filter(isRun)[0];
+  var poor = sl && sl.score && sl.score < 60 && bb && bb.v != null && bb.v < 50;
+  if (poor && !rd.flags.ill && !rd.flags.pain && (runP || parts.some(function (p) { return p.type === 'strength'; })) && !r0.actions.some(function (a) { return a.action === 'rest'; })) {
+    r0.headline = rd.level === 'green' ? 'Short sleep, low battery' : r0.headline;
+    r0.body = 'Sleep score ' + sl.score + ' and Body Battery peaked at ' + bb.v + '. ' + (rd.level === 'green' ? 'Your other markers are fine, so the choice is yours: ' : '') + 'An extra rest day now is cheaper than a flat week.';
+    r0.actions = [{ action: 'rest', label: 'Take a rest day' }].concat(runP ? [{ action: 'easy', label: 'Easy run only' }] : []).concat([{ action: 'keep', label: 'Keep the plan' }]);
+    if (r0.level === 'green') r0.level = 'amber';
+  }
+  if (ctx && ctx.yesterdayHard && runP && runP.type === 'speed' && rd.level !== 'red') {
+    r0.headline = 'Yesterday was harder than planned';
+    r0.body = 'You trained harder yesterday than the plan had in mind (' + ctx.yesterdayHard + '). Run easy today and keep the hard work for later in the week, so you are not stacking two hard days.';
+    r0.actions = [{ action: 'easy', label: 'Swap to easy run' }, { action: 'keep', label: 'Keep the workout' }];
+    if (r0.level === 'green') r0.level = 'amber';
+  }
+  return r0;
+}
+function recommend0(rd, day) {
   var parts = day ? day.parts : [];
   var runP = parts.filter(isRun)[0], liftP = parts.filter(function (p) { return p.type === 'strength'; })[0];
   var r = { level: rd.level, headline: '', body: '', actions: [], lift: null };
@@ -2466,7 +2773,7 @@ var api = {
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
   vdotOf: vdotOf, paceAt: paceAt, predict: predict, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
-  analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
+  analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
   weekOf: weekOf, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,
   loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
@@ -2492,7 +2799,7 @@ var STATE_PATH = 'user/state.json', GARMIN_PATH = 'garmin/data.json', WORKFLOW =
 function b64enc(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64dec(b64) { return decodeURIComponent(escape(atob(String(b64).replace(/\s/g, '')))); }
 function emptyState() {
-  return { v: 1, profile: null, events: [], logs: {}, status: {}, life: [], overrides: {}, moves: {}, checkins: [], metrics: [], coach: [], seen: {}, shoes: [], gear: {}, orm: [], anotes: {}, prefs: {}, arr: {}, subs: {}, updatedAt: null };
+  return { v: 1, profile: null, events: [], logs: {}, status: {}, life: [], overrides: {}, moves: {}, checkins: [], metrics: [], coach: [], seen: {}, shoes: [], gear: {}, orm: [], anotes: {}, prefs: {}, arr: {}, subs: {}, liftmix: {}, updatedAt: null };
 }
 function normalize(s) {
   var e = emptyState();
@@ -5611,6 +5918,14 @@ function heatmap(weeks) {
   return s + '</div><div class="legend" style="margin-top:8px"><span><i class="dot" style="background:var(--green)"></i>Run (darker = longer)</span><span><i class="dot" style="background:var(--blue)"></i>Gym only</span></div>';
 }
 function dcard(cls, title, body, link) { return '<section class="card ' + cls + '"><div class="spread"><h3>' + title + '</h3>' + (link ? '<a class="small muted" href="' + link[0] + '">' + link[1] + ' ›</a>' : '') + '</div>' + body + '</section>'; }
+function runBubble(a) {
+  var gg = a.g || {}, l = a.log || {}, pt = l.ptype || a.ptype, feel = l.feel || gg.feel, eff = l.rpe || gg.rpe, d = E.pd(a.date);
+  var stats = [['Miles', mi(a.mi)], ['Time', a.sec ? E.clock(a.sec) : '–'], ['Pace', a.sec && a.mi ? pace(a.sec / a.mi) : '–'], ['Avg HR', a.hr || '–']];
+  var extra = [gg.cadence ? gg.cadence + ' spm' : '', gg.pwr ? gg.pwr + ' W' : '', gg.te ? 'TE ' + gg.te : '', gg.load ? 'Load ' + gg.load : '', feel ? FEEL[feel] : '', eff ? 'Effort ' + eff + '/10' : ''].filter(Boolean);
+  return '<a class="runbub t-' + (pt === 'speed' || pt === 'long' || pt === 'race' || pt === 'recovery' ? pt : 'easy') + '" href="#/activity/' + encodeURIComponent(a.key) + '"><div class="rd"><span>' + E.DOW_ABS[(d.getDay() + 6) % 7] + '</span><b>' + d.getDate() + '</b><span>' + d.toLocaleString(undefined, { month: 'short' }) + '</span></div>' +
+    '<div class="rb"><div class="rh">' + (pt ? '<span class="rt">' + esc(TYPE_LABEL[pt] || pt) + '</span>' : '') + '<div class="rn">' + esc(a.name) + '</div></div><div class="rs">' + stats.map(function (x) { return '<div><b>' + x[1] + '</b><span>' + x[0] + '</span></div>'; }).join('') + '</div>' +
+    (extra.length ? '<div class="rx">' + extra.map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('') + '</div>' : '') + '</div><span class="chev">›</span></a>';
+}
 VIEWS.dash = function () {
   var p = App.plan; if (!p) return setupNeeded();
   var t = App.today, w = App.week, an = App.an || {}, runs = activities().filter(function (a) { return a.kind === 'run'; });
@@ -5667,7 +5982,7 @@ VIEWS.dash = function () {
   /* consistency */
   html += dcard(names.length ? 'c6' : 'c12', 'Consistency, last ' + (names.length ? 20 : 30) + ' weeks', heatmap(names.length ? 20 : 30), ['#/calendar', 'Calendar']);
   /* activity table */
-  html += dcard('c12', 'Recent runs', '<div class="scroll"><table class="t" style="margin-top:6px"><thead><tr><th>Date</th><th>Run</th><th class="num">Miles</th><th class="num">Time</th><th class="num">Pace</th><th class="num">HR</th><th class="num">Cadence</th><th class="num">Power</th><th class="num">TE</th><th class="num">Load</th><th>Feel</th><th class="num">Effort</th></tr></thead><tbody>' + runs.slice(0, 25).map(function (a) { var gg = a.g || {}, l = a.log || {}; return '<tr><td>' + fmtD(a.date, { month: 'short', day: 'numeric' }) + '</td><td><a href="#/activity/' + encodeURIComponent(a.key) + '">' + esc(a.name) + '</a></td><td class="num">' + mi(a.mi) + '</td><td class="num">' + (a.sec ? E.clock(a.sec) : '–') + '</td><td class="num">' + (a.sec ? pace(a.sec / a.mi) : '–') + '</td><td class="num">' + (a.hr || '–') + '</td><td class="num">' + (gg.cadence || '–') + '</td><td class="num">' + (gg.pwr || '–') + '</td><td class="num">' + (gg.te || '–') + '</td><td class="num">' + (gg.load || '–') + '</td><td>' + (l.feel ? FEEL[l.feel] : gg.feel ? FEEL[gg.feel] : '–') + '</td><td class="num">' + (l.rpe || gg.rpe || '–') + '</td></tr>'; }).join('') + '</tbody></table></div>', ['#/progress/workouts', 'All workouts']);
+  html += dcard('c12', 'Recent runs', '<div class="runbubs">' + runs.slice(0, 12).map(runBubble).join('') + '</div>', ['#/progress/workouts', 'All workouts']);
   return '<div class="dash">' + html + '</div>';
 };
 
@@ -6067,7 +6382,7 @@ function isTimed(rx) { return /\d+\s*×\s*\d+\s*(s|m)\b/.test(String(rx || '')) 
 function kindOf(n, rx) { var w = needsWeight(n); if (isTimed(rx)) return w ? 'timedw' : 'timed'; return w ? 'wt' : 'bw'; }
 
 /* ---------- brief description for the bubble ---------- */
-function liftModOf(p) { return E.liftMod(p.key, p.v); }
+function liftModOf(p) { return E.liftMod(p.key, p.v, p.mix); }
 function liftDesc(p) {
   var m = liftModOf(p); if (!m) return '';
   var subs = st().subs || {}, lead = { UB: 'Upper body, core and hips', HT: 'Bodyweight, anywhere', ACT: 'Short and light to stay sharp' }[p.key] || (m.focus || '').split(':')[0];
@@ -6131,13 +6446,14 @@ function buildWorkout(date, key) {
   var lp = adv ? adv.lp : p ? p.lp : (l && l.lp) || 0;
   var wkOf = App.plan ? E.weekOf(App.plan, date) : null;
   var v = p && p.key === key && p.v != null ? p.v : E.liftVar(wkOf ? wkOf.n : 1);
-  var wk = { ver: 2, date: date, key: key, v: v, lp: lp, start: Date.now(), sec: 0, ex: [], secs: [], rpe: (l && l.rpe) || null, note: (l && l.note) || '', edit: !!(l && l.ex && Object.keys(l.ex).length) };
+  var mix = p && p.key === key ? p.mix || null : (l && l.mix) || null;
+  var wk = { ver: 2, date: date, key: key, v: v, mix: mix, lp: lp, start: Date.now(), sec: 0, ex: [], secs: [], rpe: (l && l.rpe) || null, note: (l && l.note) || '', edit: !!(l && l.ex && Object.keys(l.ex).length) };
   if (wk.edit) {
     wk.secs = [{ t: 'Your lifts', min: 0 }];
     Object.keys(l.ex).forEach(function (n) { var mod = findEx(n), ss = setsOf(l.ex[n]), w = ss.some(function (s) { return +s.w > 0; }) || needsWeight(n); wk.ex.push({ n: n, sec: 0, kind: w ? 'wt' : 'bw', rx: mod ? mod.rx[lp] : '', rest: mod ? restSec(mod.rest[lp]) : 90, cue: mod ? mod.cue : '', sets: ss.map(function (s) { return { w: s.w || '', r: s.r || '', done: true }; }) }); });
     return wk;
   }
-  var m = E.liftMod(key, v), subs = st().subs || {};
+  var m = E.liftMod(key, v, mix), subs = st().subs || {};
   m.blocks.forEach(function (b, bi) {
     var wu = b.ex.every(function (x) { return x.wu; });
     wk.secs.push({ t: wu && bi === 0 ? 'Warm-up' : b.t, sub: wu && bi === 0 ? b.t : '', min: b.min });
@@ -6188,7 +6504,7 @@ VIEWS.workout = function () {
     if (App.wk.cur == null) App.wk.cur = 0;
     if (!App.wk.edit && !dr) wkSave();
   }
-  var w = App.wk, m = E.liftMod(w.key, w.v), last = w.secs.length - 1, cs = w.secs[w.cur];
+  var w = App.wk, m = E.liftMod(w.key, w.v, w.mix), last = w.secs.length - 1, cs = w.secs[w.cur];
   var vol = wkVolume(w);
   var html = '<div class="wkhead"><div class="spread"><div style="min-width:0"><div class="eyebrow">' + (w.edit ? 'Editing saved workout' : esc(m ? (w.key.length === 1 ? 'Strength ' + w.key + ': ' : '') + m.name : 'Workout')) + '</div><b class="sectitle">' + (w.secs.length > 1 ? (w.cur + 1) + ' of ' + w.secs.length + ' · ' : '') + esc(cs.t) + '</b></div>' + (w.edit ? '' : '<div class="clock" id="wkClock">' + mmss((Date.now() - w.start) / 1000) + '</div>') + '</div>' +
     (w.secs.length > 1 ? '<div class="secdots">' + w.secs.map(function (s, i) { return '<button data-act="wk-sec" data-arg="' + jattr({ s: i }) + '" class="' + (i === w.cur ? 'on ' : '') + (secDone(w, i) ? 'dn' : '') + '" aria-label="' + esc(s.t) + '"><i></i><span>' + esc(s.t.replace('Muscle-specific finishers', 'Finishers').replace('Dynamic power', 'Power').replace('Heavy compounds', 'Heavy')) + '</span></button>'; }).join('') + '</div>' : '') +
@@ -6243,7 +6559,7 @@ ACTIONS['wk-end'] = function () {
   var secs = w.edit ? (old.sec || (old.min || 0) * 60) : Math.min(4 * 3600, Math.round((Date.now() - w.start) / 1000));
   var vol = 0; Object.keys(ex).forEach(function (n) { vol += setsVolume(ex[n].s); });
   var prs = Object.keys(ex).filter(function (n) { var h = liftHistory(n, date); var pb = h.reduce(function (m, x) { return Math.max(m, x.e1); }, 0); return pb && bestE1(ex[n]) > pb; });
-  var rec = Object.assign({}, old, { key: w.key, v: w.v, lp: w.lp, ex: ex, rpe: w.rpe || old.rpe || null, sec: secs, min: old.src === 'garmin' && old.min ? old.min : Math.max(1, Math.round(secs / 60)), vol: Math.round(vol), prs: prs, wu: wuDone, note: (w.note || '').trim() });
+  var rec = Object.assign({}, old, { key: w.key, v: w.v, mix: w.mix || null, lp: w.lp, ex: ex, rpe: w.rpe || old.rpe || null, sec: secs, min: old.src === 'garmin' && old.min ? old.min : Math.max(1, Math.round(secs / 60)), vol: Math.round(vol), prs: prs, wu: wuDone, note: (w.note || '').trim() });
   Store.edit('logs', date, function (S) { S.logs[date] = S.logs[date] || {}; S.logs[date].lift = rec; });
   App.wk = null; App.rest = null; LS.del('rp-wk');
   go('#/wksummary/' + date);
@@ -6256,7 +6572,7 @@ VIEWS.wksummary = function () {
   if (!l) return '<div class="card">No workout logged that day.</div>';
   var ex = l.ex || {}, names = Object.keys(ex), vol = l.vol != null ? l.vol : names.reduce(function (t, n) { return t + setsVolume(setsOf(ex[n])); }, 0);
   var sets = names.reduce(function (t, n) { return t + setsOf(ex[n]).length; }, 0), prs = l.prs || [];
-  var title = l.key && E.LIFT[l.key] ? (l.key.length === 1 ? 'Strength ' + l.key + ': ' : '') + E.liftMod(l.key, l.v).name : 'Strength';
+  var title = l.key && E.LIFT[l.key] ? (l.key.length === 1 ? 'Strength ' + l.key + ': ' : '') + E.liftMod(l.key, l.v, l.mix).name : 'Strength';
   var html = '<div class="donehead"><div class="eyebrow">' + E.fmtDate(date, { weekday: 'long', month: 'short', day: 'numeric' }) + '</div><h1>Workout complete</h1><p>' + esc(title) + '</p></div>';
   html += '<div class="tiles"><div class="tile big"><span>Total volume</span><b>' + Math.round(vol).toLocaleString() + '</b><em>lb lifted</em></div><div class="tile big"><span>Time lifting</span><b>' + (l.sec ? mmss(l.sec) : (l.min || 0) + ' min') + '</b><em>' + (l.sec ? 'h:mm:ss' : '') + '</em></div><div class="tile"><span>Sets</span><b>' + sets + '</b><em>' + plural(names.length, 'exercise') + '</em></div><div class="tile"><span>Effort</span><b>' + (l.rpe || '–') + '</b><em>' + (l.rpe ? 'out of 10' : 'not rated') + '</em></div></div>';
   if (prs.length) html += '<div class="banner good"><b>New best' + (prs.length > 1 ? 's' : '') + ':</b> ' + prs.map(function (n) { return esc(n) + ' (e1RM ' + bestE1(ex[n]) + ' lb)'; }).join(', ') + '</div>';
@@ -6308,6 +6624,406 @@ VIEWS.settings = function () {
 };
 var _data5 = VIEWS.data;
 VIEWS.data = function () { return _data5().replace('<h3>Start over</h3><p class="small muted">Clears your plan setup on this device and in your repository. Logs stay unless you also clear them.</p><div class="btns"><button class="btn sm danger" data-act="reset-plan">Re-run setup</button>', '<h3>Start a fresh plan</h3><p class="small muted">Rebuilds your schedule from scratch. Runs, lifts, races and readings stay.</p><div class="btns"><button class="btn sm" data-act="reset-plan">Start a fresh plan</button>'); };
+
+/* ===================== features 6: week start, weekly preview, smart swaps, readiness offers, load focus, polish ===================== */
+
+/* ---------- week start day ---------- */
+function wsOf(p) { return +((p || st().profile || {}).weekStart) || 0; }
+var _recompute6 = recompute;
+recompute = function () {
+  E.setWeekStart(wsOf());
+  _recompute6();
+  if (!App.plan) return;
+  /* yesterday harder than planned? ease today's workout */
+  try {
+    var y = E.addD(App.today, -1), yd = dayOf(y), why = null;
+    var plannedHard = yd && yd.parts.some(function (p) { return p.type === 'speed' || p.type === 'long' || p.type === 'race'; });
+    if (yd && !plannedHard) {
+      var acts = ((Store.garmin || {}).activities || []).filter(function (a) { return a.date === y && a.run; });
+      acts.forEach(function (a) { if (/TEMPO|THRESHOLD|VO2|ANAEROBIC|SPEED/.test(a.teLabel || '')) why = 'Garmin labelled it ' + a.teLabel.toLowerCase().replace(/_/g, ' '); else if (+a.te >= 3.8) why = 'aerobic training effect ' + a.te; });
+      var lr = (logOf(y).run || {}); if (!why && +lr.rpe >= 7) why = 'you rated it ' + lr.rpe + '/10';
+    }
+    App.rec = E.recommend(App.rd, dayOf(App.today), { yesterdayHard: why });
+  } catch (e) { console.error(e); }
+};
+var _readSettings6 = readSettings;
+readSettings = function (form) {
+  var p = _readSettings6(form), el = form.elements.weekStart;
+  if (el) {
+    var k = +el.value, was = wsOf(p);
+    if (k !== was) { E.rotateProfile(p, k); E.setWeekStart(k); if (p.startDate) p.startDate = E.monday(p.startDate); App.ui.wsChanged = true; }
+  }
+  return p;
+};
+function wsSelect(cur) {
+  return '<label class="f">Week starts on<select class="i" name="weekStart">' + E.DOW_LONG_ABS.map(function (d, i) { return '<option value="' + i + '"' + (cur === i ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></label>';
+}
+var _settings6 = VIEWS.settings;
+VIEWS.settings = function () {
+  var h = _settings6(), p = st().profile || {};
+  h = h.replace('<label class="f">Days you can run', wsSelect(wsOf(p)) + '<p class="tiny muted" style="margin-top:-6px">Your weekly review and every week in the plan begin on this day. Your run days and long run day stay on the same weekdays.</p><label class="f">Days you can run');
+  h = h.replace('Plan start (Monday)', 'Plan start (first day of a week)');
+  return h.replace('<section class="card stack"><h3>App</h3>', '<section class="card stack"><h3>Weekly review</h3><p class="small muted">A push notification the day before each week starts, with a link to preview and rearrange it.</p><div class="btns"><a class="btn sm" href="#/notify">' + (((st().prefs || {}).notify || {}).on ? 'Notifications on · change' : 'Set up notifications') + '</a></div></section><section class="card stack"><h3>App</h3>');
+};
+ACTIONS['wiz-ws'] = function (a) {
+  var z = App.wiz; if (!z) return;
+  E.rotateProfile(z.profile, +a.k); E.setWeekStart(+a.k);
+  var t = App.today; z.profile.startDate = E.dow(t) >= 3 ? E.addD(E.monday(t), 7) : E.monday(t);
+  render();
+};
+var _wizInit6 = wizInit;
+wizInit = function () {
+  var prev = (st().prefs || {}).prevProfile || {};
+  E.setWeekStart(st().profile ? wsOf() : (+prev.weekStart || 0));
+  var z = _wizInit6();
+  if (!st().profile && prev.weekStart != null) z.profile.weekStart = +prev.weekStart;
+  var t = App.today; if (!st().profile) z.profile.startDate = E.dow(t) >= 3 ? E.addD(E.monday(t), 7) : E.monday(t);
+  return z;
+};
+var _setup6 = VIEWS.setup;
+VIEWS.setup = function () {
+  var z = App.wiz; if (z) E.setWeekStart(+z.profile.weekStart || 0);
+  var h = _setup6();
+  if (z && WIZ_STEPS[z.step] === 'days') {
+    var cur = +z.profile.weekStart || 0;
+    h = h.replace('<div class="card stack"><div class="chips">', '<div class="card stack"><label class="f">My week starts on<div class="chips">' + E.DOW_ABS.map(function (d, i) { return '<button type="button" class="chip" data-act="wiz-ws" data-arg="' + jattr({ k: i }) + '" aria-pressed="' + (cur === i) + '">' + d + '</button>'; }).join('') + '</div></label><label class="f" style="margin-top:4px">Days you can run</label><div class="chips">');
+    h = h.replace('Plan starts (a Monday)', 'Plan starts (first day of a week)');
+  }
+  return h;
+};
+
+/* ---------- shared helpers ---------- */
+function weekByStart(s) { var p = App.plan; if (!p) return null; return p.weeks.filter(function (w) { return w.start === s; })[0] || E.weekOf(p, s); }
+function nextWeek() { var p = App.plan; if (!p) return null; var w = E.weekOf(p, E.addD(App.today, 7 - E.dow(App.today))); return w; }
+function partSummary(x) { return E.isRun(x) ? mi(x.mi) + ' mi' : x.min ? x.min + ' min' : x.type === 'strength' ? '45 min' : ''; }
+function partPurpose(x) {
+  if (x.type === 'long') return 'Easy and steady. The most important run of the week.';
+  if (x.type === 'speed') return x.purpose || (x.lf ? 'Training balance session.' : 'Key workout: quality over quantity.');
+  if (x.type === 'strength') return typeof liftDesc === 'function' ? liftDesc(x) : '';
+  if (x.type === 'recovery') return 'Very easy. Shake out the legs.';
+  if (x.type === 'easy') return /strides/i.test(x.title) ? 'Easy with six short, relaxed strides.' : 'Conversational pace.';
+  if (x.type === 'cross') return x.note || '';
+  if (x.type === 'race') return 'Race day.';
+  return '';
+}
+function opTouches(ops) { return ops.map(function (o) { return o.t === 'ov' ? ['overrides', o.date] : o.t === 'mix' ? ['liftmix', o.key] : ['arr', o.key]; }); }
+function applyOps(ops, msg) {
+  if (!ops || !ops.length) { if (msg) toast(msg); return; }
+  Store.editMany(opTouches(ops), function (S) {
+    S.arr = S.arr || {}; S.overrides = S.overrides || {}; S.liftmix = S.liftmix || {};
+    ops.forEach(function (o) {
+      if (o.t === 'move') { if (o.to === o.key.split('|')[0]) delete S.arr[o.key]; else S.arr[o.key] = o.to; }
+      else if (o.t === 'remove') S.arr[o.key] = 'x';
+      else if (o.t === 'restore') delete S.arr[o.key];
+      else if (o.t === 'mix') { if (o.with) S.liftmix[o.key] = o.with; else delete S.liftmix[o.key]; }
+      else if (o.t === 'ov') S.overrides[o.date] = { action: o.action, mi: o.mi || null, reason: o.reason || '', title: o.title || null, at: new Date().toISOString() };
+    });
+  });
+  if (msg) toast(msg);
+}
+function findPart(w, key) {
+  for (var i = 0; i < w.days.length; i++) { var d = w.days[i]; for (var j = 0; j < d.parts.length; j++) { var x = d.parts[j]; if (x.type !== 'rest' && partKeyOf(d, x) === key) return { d: d, p: x }; } }
+  return null;
+}
+
+/* ---------- alternatives sheet: after removing or missing a session ---------- */
+SHEETS.alts = function (a) {
+  var c = App.ui.alts; if (!c) return '';
+  var head = c.why === 'missed' ? 'You missed ' + esc(c.title) : 'Removed: ' + esc(c.title);
+  var lead = c.why === 'missed' ? 'No problem. Here are a few ways to rearrange the rest of the week. Pick one, or leave the week as it is.' : (c.type === 'strength' ? 'Want to cover those muscles another way this week?' : 'Want to rebalance the rest of the week?');
+  return '<h3>' + head + '</h3><p class="small muted">' + lead + '</p><div class="altlist">' + c.alts.map(function (o, i) {
+    return '<button class="alt" data-act="alt-apply" data-arg="' + jattr({ i: i }) + '"><b>' + esc(o.label) + '</b>' + (o.text ? '<span>' + esc(o.text) + '</span>' : '') + '</button>';
+  }).join('') + '</div><div class="btns"><button class="btn ghost" data-act="sheet-close">' + (c.why === 'missed' ? 'Decide later' : 'Leave it removed') + '</button></div>';
+};
+ACTIONS['alt-apply'] = function (a) {
+  var c = App.ui.alts; if (!c) return; var o = c.alts[a.i]; if (!o) return;
+  closeSheet(); App.ui.alts = null;
+  setTimeout(function () { applyOps(o.ops, o.ops.length ? 'Week updated' : 'Got it'); if (c.why === 'missed') dismissMissed(c.key); }, 40);
+};
+function openAlts(w, key, why) {
+  var f = findPart(w, key); if (!f) return false;
+  var alts = E.sessionAlternatives(App.plan, st(), w, f.p, f.d.date, why);
+  App.ui.alts = { why: why, key: key, title: f.p.title + ' (' + f.d.dow + ')', type: f.p.type, alts: alts };
+  openSheet('alts', {});
+  return true;
+}
+function dismissMissed(key) { Store.edit('prefs', 'missedOk', function (S) { S.prefs = S.prefs || {}; S.prefs.missedOk = S.prefs.missedOk || {}; S.prefs.missedOk[key] = App.today; }); }
+
+/* ---------- weekly preview: clustered drag-and-drop, separate, remove, restore ---------- */
+TITLES.preview = 'Week preview'; TABOF.preview = 'plan';
+function pvWeek() {
+  var p = App.plan; if (!p) return null;
+  var a = App.args[0];
+  if (a && /^\d{4}-\d{2}-\d{2}$/.test(a)) return weekByStart(a);
+  if (a) return p.weeks[E.clamp(+a, 1, p.weeks.length) - 1];
+  return nextWeek() || App.week;
+}
+VIEWS.preview = function () {
+  var p = App.plan; if (!p) return setupNeeded();
+  var w = pvWeek(); if (!w) return '<section class="card"><h2>That week is outside your plan</h2><div class="btns" style="margin-top:10px"><a class="btn" href="#/plan">See plan</a></div></section>';
+  var t = App.today, split = App.ui.pvSplit || {}, sel = App.ui.pvSel || null, zz = w.zonesAdj;
+  var long = 0, keys = 0; w.days.forEach(function (d) { d.parts.forEach(function (x) { if (x.type === 'long') long = Math.max(long, x.mi); if (x.type === 'speed') keys++; }); });
+  var html = '<div class="pagehead"><div class="eyebrow">Week ' + w.n + ' of ' + p.weeks.length + ' · ' + esc(w.phase.name) + (w.cut ? ' · cutback' : '') + '</div><h1>Your week ahead</h1><p>' + fmtD(w.start, { weekday: 'long', month: 'short', day: 'numeric' }) + ' – ' + fmtD(w.end, { weekday: 'long', month: 'short', day: 'numeric' }) + '</p></div>';
+  html += '<div class="pvstats"><div><b>' + mi(w.tot.mi) + '</b><span>miles</span></div><div><b>' + w.tot.runs + '</b><span>runs</span></div><div><b>' + w.tot.lifts + '</b><span>lifts</span></div><div><b>' + (long ? mi(long) : '–') + '</b><span>long run</span></div></div>';
+  html += '<p class="tiny muted pvhint">Drag a day\'s sessions to another day, or tap them and then tap a day. Sessions on the same day move together; tap <b>Separate</b> to move them one at a time. ✕ removes a session.</p>';
+  html += '<div class="pvdays">' + w.days.map(function (d) {
+    var real = d.parts.filter(function (x) { return x.type !== 'rest'; }), past = d.date < t;
+    var ks = real.map(function (x) { return partKeyOf(d, x); }), isSplit = !!split[d.date] || real.length < 2, cl = ks.join(',');
+    var daySel = sel && sel.from === d.date && sel.cluster;
+    var chips = real.map(function (x) {
+      var k = partKeyOf(d, x), on = sel && (sel.cluster ? sel.from === d.date : sel.keys[0] === k);
+      return '<div class="pvchip t-' + x.type + (on ? ' sel' : '') + (partDone(d.date, x) ? ' dn' : '') + '" data-pvkeys="' + esc(isSplit ? k : cl) + '" data-from="' + d.date + '"' + (isSplit ? '' : ' data-cluster="1"') + '>' +
+        '<span class="tico">' + (TICON[x.type] || TICON.easy) + '</span><span class="tx"><b>' + esc(x.title) + '</b><small>' + [partSummary(x), x.type === 'speed' && mainPace(x, zz) ? mainPace(x, zz) + '/mi' : '', x.moved ? 'from ' + E.DOW[E.dow(x.moved)] : '', x.lf ? 'training balance' : '', x.added ? 'added' : ''].filter(Boolean).join(' · ') + '</small><em>' + esc(partPurpose(x)) + '</em></span>' +
+        (past ? '' : '<button class="pvx" data-act="pv-rm" data-arg="' + jattr({ key: k, s: w.start }) + '" aria-label="Remove ' + esc(x.title) + '">✕</button>') + '</div>';
+    }).join('');
+    return '<div class="pvday' + (d.date === t ? ' today' : '') + (past ? ' past' : '') + (daySel ? ' sel' : '') + (real.length ? '' : ' rest') + '" data-pvday="' + d.date + '">' +
+      '<div class="pvd"><span>' + d.dow + '</span><b>' + E.pd(d.date).getDate() + '</b></div>' +
+      '<div class="pvitems' + (!isSplit ? ' cluster' : '') + '">' + (chips || '<span class="restlbl">Rest day</span>') +
+      (real.length > 1 && !past ? '<button class="pvsplit" data-act="pv-split" data-arg="' + jattr({ d: d.date }) + '">' + (split[d.date] ? 'Keep together' : 'Separate') + '</button>' : '') + '</div></div>';
+  }).join('') + '</div>';
+  /* removed this week */
+  if (w.removed && w.removed.length) html += '<div class="sechead"><h2>Removed</h2></div><div class="stack tight">' + w.removed.map(function (r) {
+    return '<div class="pvrem t-' + r.p.type + '"><span class="tx"><b>' + esc(r.p.title) + '</b><small>' + E.DOW[E.dow(r.from)] + ' · ' + partSummary(r.p) + '</small></span><button class="btn sm ghost" data-act="pv-alts" data-arg="' + jattr({ key: r.key, s: w.start }) + '">Options</button><button class="btn sm" data-act="pv-restore" data-arg="' + jattr({ key: r.key, type: r.p.type }) + '">Restore</button></div>';
+  }).join('') + '</div>';
+  /* intensity check */
+  var warns = E.weekIntensity(w, st().profile);
+  html += '<div class="sechead"><h2>Check</h2></div>' + (warns.length ? '<div class="stack tight">' + warns.map(function (x) { return '<div class="banner ' + (x.level === 'warn' ? 'warn' : 'info') + ' small">' + esc(x.text) + (x.fix ? '<div class="btns" style="margin-top:8px"><button class="btn sm" data-act="edfix" data-arg="' + jattr(x.fix) + '">' + esc(x.fix.label) + '</button></div>' : '') + '</div>'; }).join('') + '</div>' : '<div class="banner small"><b style="color:var(--green)">Looks balanced.</b> Hard days are spaced out, there is a rest day, and no heavy legs before the long run.</div>');
+  var lfp = []; w.days.forEach(function (d) { d.parts.forEach(function (x) { if (x.lf) lfp.push(x); }); });
+  if (lfp.length) html += '<div class="banner info small" style="margin-top:8px"><b>Training balance.</b> ' + esc(lfp[0].note || '') + ' <a href="#/dash">See load focus</a></div>';
+  var hasArr = Object.keys(st().arr || {}).some(function (k) { var d0 = k.split('|')[0]; return d0 >= w.start && d0 <= w.end; });
+  var reviewed = ((st().prefs || {}).reviewed || {})[w.start];
+  html += '<div class="btns pvfoot"><button class="btn primary" data-act="pv-ok" data-arg="' + jattr({ s: w.start }) + '">' + (reviewed ? 'Done' : 'Looks good') + '</button>' + (hasArr ? '<button class="btn ghost" data-act="ed-reset" data-arg="' + jattr({ start: w.start, end: w.end }) + '">Reset to plan</button>' : '') + '</div>';
+  var n0 = p.weeks.indexOf(w);
+  html += '<div class="pvpager">' + (n0 > 0 ? '<a class="small" href="#/preview/' + p.weeks[n0 - 1].start + '">‹ Week ' + (w.n - 1) + '</a>' : '<span></span>') + (n0 < p.weeks.length - 1 ? '<a class="small" href="#/preview/' + p.weeks[n0 + 1].start + '">Week ' + (w.n + 1) + ' ›</a>' : '<span></span>') + '</div>';
+  return html;
+};
+function pvMove(keys, to, from) {
+  if (!keys.length || to === from) { App.ui.pvSel = null; render(); return; }
+  App.ui.pvSel = null;
+  if (App.ui.pvSplit && App.ui.pvSplit[from] && keys.length > 1) delete App.ui.pvSplit[from];
+  applyOps(keys.map(function (k) { return { t: 'move', key: k, to: to }; }), (keys.length > 1 ? 'Moved together to ' : 'Moved to ') + E.DOW_LONG[E.dow(to)]);
+}
+ACTIONS['pv-split'] = function (a) { App.ui.pvSplit = App.ui.pvSplit || {}; App.ui.pvSplit[a.d] = !App.ui.pvSplit[a.d]; App.ui.pvSel = null; render(); };
+ACTIONS['pv-rm'] = function (a, b, e) {
+  if (e) e.stopPropagation();
+  var w = weekByStart(a.s); if (!w) return;
+  var f = findPart(w, a.key); if (!f) return;
+  var alts = E.sessionAlternatives(App.plan, st(), w, f.p, f.d.date, 'removed').filter(function (o) { return o.ops.length; });
+  applyOps([{ t: 'remove', key: a.key }]);
+  App.ui.pvSel = null;
+  if (alts.length) { App.ui.alts = { why: 'removed', key: a.key, title: f.p.title + ' (' + f.d.dow + ')', type: f.p.type, alts: alts }; setTimeout(function () { openSheet('alts', {}); }, 80); }
+  else toast('Removed');
+};
+ACTIONS['pv-alts'] = function (a) {
+  var w = weekByStart(a.s); if (!w) return;
+  var r = (w.removed || []).filter(function (x) { return x.key === a.key; })[0]; if (!r) return;
+  App.ui.alts = { why: 'removed', key: a.key, title: r.p.title + ' (' + E.DOW[E.dow(r.from)] + ')', type: r.p.type, alts: E.sessionAlternatives(App.plan, st(), w, r.p, r.from, 'removed').filter(function (o) { return o.ops.length; }) };
+  if (!App.ui.alts.alts.length) { toast('Nothing to rebalance: the rest of the week already covers it'); return; }
+  openSheet('alts', {});
+};
+ACTIONS['pv-restore'] = function (a) {
+  var ops = [{ t: 'restore', key: a.key }];
+  if (a.type === 'strength') Object.keys(st().liftmix || {}).forEach(function (k) { var w = App.plan && E.weekOf(App.plan, a.key.split('|')[0]); if (w && k.split('|')[0] >= w.start && k.split('|')[0] <= w.end) ops.push({ t: 'mix', key: k, with: null }); });
+  applyOps(ops, 'Restored');
+};
+ACTIONS['pv-ok'] = function (a) {
+  Store.edit('prefs', 'reviewed', function (S) { S.prefs = S.prefs || {}; S.prefs.reviewed = S.prefs.reviewed || {}; S.prefs.reviewed[a.s] = App.today; var ks = Object.keys(S.prefs.reviewed).sort(); while (ks.length > 12) delete S.prefs.reviewed[ks.shift()]; });
+  toast('Week set. Have a good one'); go('#/today');
+};
+var _edReset6 = ACTIONS['ed-reset'];
+ACTIONS['ed-reset'] = function (a) {
+  _edReset6(a);
+  var ks = Object.keys(st().liftmix || {}).filter(function (k) { var d0 = k.split('|')[0]; return d0 >= a.start && d0 <= a.end; });
+  if (ks.length) Store.editMany(ks.map(function (k) { return ['liftmix', k]; }), function (S) { ks.forEach(function (k) { delete S.liftmix[k]; }); });
+};
+/* pointer drag for the preview: clusters move together unless separated */
+(function () {
+  var drag = null, just = 0;
+  function dayAt(x, y) { var el = document.elementFromPoint(x, y); return el && el.closest ? el.closest('[data-pvday]') : null; }
+  document.addEventListener('pointerdown', function (e) {
+    if (App.view !== 'preview' || (e.target.closest && e.target.closest('button'))) return;
+    var c = e.target.closest && e.target.closest('.pvchip'); if (!c || e.button > 0 || c.closest('.pvday.past')) return;
+    var grp = c.dataset.cluster ? $$('.pvchip', c.parentNode) : [c];
+    drag = { el: c, grp: grp, keys: c.dataset.pvkeys.split(','), from: c.dataset.from, x: e.clientX, y: e.clientY, on: false, id: e.pointerId };
+  });
+  document.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    if (!drag.on && Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 8) {
+      drag.on = true;
+      var box = drag.grp.length > 1 ? drag.el.parentNode : drag.el, r = box.getBoundingClientRect();
+      drag.ghost = document.createElement('div'); drag.ghost.className = 'pvghost';
+      drag.grp.forEach(function (g) { var cl = g.cloneNode(true); var x = cl.querySelector('.pvx'); if (x) x.remove(); drag.ghost.appendChild(cl); });
+      drag.ghost.style.width = Math.min(r.width, 340) + 'px'; drag.dx = Math.min(e.clientX - r.left, 300); drag.dy = e.clientY - drag.el.getBoundingClientRect().top;
+      document.body.appendChild(drag.ghost); drag.grp.forEach(function (g) { g.classList.add('lifted'); });
+      try { drag.el.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
+    }
+    if (!drag.on) return;
+    e.preventDefault();
+    drag.ghost.style.transform = 'translate(' + (e.clientX - drag.dx) + 'px,' + (e.clientY - drag.dy) + 'px)';
+    $$('.pvday.over').forEach(function (d) { d.classList.remove('over'); });
+    var d = dayAt(e.clientX, e.clientY); if (d && !d.classList.contains('past')) d.classList.add('over');
+    if (e.clientY < 90) window.scrollBy(0, -12); else if (e.clientY > window.innerHeight - 120) window.scrollBy(0, 12);
+  }, { passive: false });
+  function end(e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    var dd = drag; drag = null;
+    if (!dd.on) return;
+    dd.ghost.remove(); dd.grp.forEach(function (g) { g.classList.remove('lifted'); });
+    $$('.pvday.over').forEach(function (d) { d.classList.remove('over'); });
+    var t = dayAt(e.clientX, e.clientY);
+    if (t && !t.classList.contains('past') && t.dataset.pvday !== dd.from) pvMove(dd.keys, t.dataset.pvday, dd.from);
+    just = Date.now();
+  }
+  document.addEventListener('pointerup', end);
+  document.addEventListener('pointercancel', function () { if (drag && drag.ghost) { drag.ghost.remove(); drag.grp.forEach(function (g) { g.classList.remove('lifted'); }); } drag = null; });
+  document.addEventListener('click', function (e) {
+    if (App.view !== 'preview' || Date.now() - just < 300 || e.target.closest('button,a')) return;
+    var c = e.target.closest('.pvchip');
+    if (c && !c.closest('.pvday.past')) {
+      var keys = c.dataset.pvkeys.split(','), s = App.ui.pvSel;
+      if (s && s.keys.join(',') === keys.join(',')) App.ui.pvSel = null; else if (s && s.from !== c.dataset.from) { pvMove(s.keys, c.dataset.from, s.from); return; } else App.ui.pvSel = { keys: keys, from: c.dataset.from, cluster: !!c.dataset.cluster };
+      render(); return;
+    }
+    var d = e.target.closest('[data-pvday]');
+    if (d && App.ui.pvSel && !d.classList.contains('past')) pvMove(App.ui.pvSel.keys, d.dataset.pvday, App.ui.pvSel.from);
+  });
+})();
+
+/* ---------- Today: weekly review, missed sessions, rested-and-ready offer ---------- */
+function weekDotsHTML(w) {
+  return '<div class="pvmini">' + w.days.map(function (d) {
+    var real = d.parts.filter(function (x) { return x.type !== 'rest'; });
+    return '<div><span>' + d.dow.charAt(0) + '</span>' + (real.length ? real.map(function (x) { return '<i class="t-' + x.type + '" title="' + esc(x.title) + '"></i>'; }).join('') : '<i class="none"></i>') + '</div>';
+  }).join('') + '</div>';
+}
+function reviewCard() {
+  var p = App.plan; if (!p) return '';
+  var t = App.today, tm = E.addD(t, 1), rv = (st().prefs || {}).reviewed || {}, w = null, lead = '';
+  if (E.dow(tm) === 0) { w = E.weekOf(p, tm); lead = 'Next week starts tomorrow'; }
+  else if (E.dow(t) === 0) { w = E.weekOf(p, t); lead = 'A new week starts today'; }
+  if (!w || rv[w.start]) return '';
+  var long = 0, keys = []; w.days.forEach(function (d) { d.parts.forEach(function (x) { if (x.type === 'long') long = Math.max(long, x.mi); if (x.type === 'speed') keys.push(x.title.toLowerCase()); }); });
+  return '<a class="card reviewcard" href="#/preview/' + w.start + '"><div class="eyebrow">' + lead + '</div><h3>Week ' + w.n + ': ' + mi(w.tot.mi) + ' mi, ' + plural(w.tot.runs, 'run') + ', ' + plural(w.tot.lifts, 'lift') + '</h3>' +
+    '<p class="small muted">' + (long ? 'Long run ' + mi(long) + ' mi' : '') + (keys.length ? (long ? ' · ' : '') + keys.slice(0, 2).join(', ') : '') + '</p>' + weekDotsHTML(w) + '<span class="btn sm primary" style="margin-top:10px">Review and rearrange</span></a>';
+}
+function missedCard() {
+  var p = App.plan; if (!p || App.today < p.start) return '';
+  var ok = (st().prefs || {}).missedOk || {}, w = App.week; if (!w) return '';
+  var ms = E.missedThisWeek(p, st(), App.today).filter(function (m) { var k = partKeyOf(m.day, m.p); return !ok[k] && E.diffD(m.date, App.today) <= 3; });
+  if (!ms.length) return '';
+  return '<section class="card missed"><div class="eyebrow">Missed this week</div><div class="stack tight" style="margin-top:8px">' + ms.slice(0, 3).map(function (m) {
+    var k = partKeyOf(m.day, m.p);
+    return '<div class="mrow t-' + m.p.type + '"><span class="tx"><b>' + esc(m.p.title) + '</b><small>' + m.day.dow + ' · ' + partSummary(m.p) + '</small></span><div class="mbtns"><button class="btn sm ghost" data-act="missed-ok" data-arg="' + jattr({ key: k }) + '">Skip it</button><button class="btn sm primary" data-act="missed-opts" data-arg="' + jattr({ key: k }) + '">Options</button></div></div>';
+  }).join('') + '</div></section>';
+}
+ACTIONS['missed-opts'] = function (a) { if (!openAlts(App.week, a.key, 'missed')) toast('That session already moved'); };
+ACTIONS['missed-ok'] = function (a) { dismissMissed(a.key); toast('Skipped. The rest of the week stays as planned'); };
+function restOfferCard() {
+  var p = App.plan; if (!p) return '';
+  var t = App.today, no = (st().prefs || {}).offerNo || {};
+  if (no[t]) return '';
+  var o = E.restDayOffer(p, st(), Store.garmin, t, App.rd); if (!o) return '';
+  var items = []; if (o.add.run) items.push(o.add.run + ' mi easy run'); if (o.add.lift) items.push((o.add.lift.length === 1 ? 'Strength ' + o.add.lift : E.LIFT[o.add.lift].name) + ' (' + E.LIFT[o.add.lift].name.toLowerCase() + ')');
+  return '<section class="card offer"><div class="eyebrow" style="color:var(--green)">Readiness ' + App.rd.score + '</div><h3>' + esc(o.title) + '</h3><p class="small muted" style="margin-top:4px">' + esc(o.body) + '</p><ul class="plain small" style="margin-top:6px">' + items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' +
+    '<div class="btns" style="margin-top:10px"><button class="btn sm primary" data-act="offer-yes" data-arg="' + jattr({ add: o.add }) + '">Add to today</button>' + (o.add.lift && o.add.run ? '<button class="btn sm" data-act="offer-yes" data-arg="' + jattr({ add: { run: o.add.run, why: o.add.why } }) + '">Just the run</button>' : '') + '<button class="btn sm ghost" data-act="offer-no">Rest anyway</button></div></section>';
+}
+ACTIONS['offer-yes'] = function (a) { var t = App.today; Store.edit('overrides', t, function (S) { S.overrides[t] = { action: 'addday', add: a.add, reason: 'rested and ready', at: new Date().toISOString() }; }); toast('Added to today'); };
+ACTIONS['offer-no'] = function () { var t = App.today; Store.edit('prefs', 'offerNo', function (S) { S.prefs = S.prefs || {}; S.prefs.offerNo = {}; S.prefs.offerNo[t] = 1; }); toast('Enjoy the rest day'); };
+var _today6 = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today6(); if (!App.plan) return h;
+  var add = reviewCard() + missedCard() + restOfferCard();
+  if (!add) return h;
+  var g = h.indexOf('class="greet"'), i = g >= 0 ? h.indexOf('</h1></div>', g) : -1;
+  return i > 0 ? h.slice(0, i + 11) + add + h.slice(i + 11) : add + h;
+};
+
+/* ---------- weekly push notifications (ntfy.sh, free) ---------- */
+TITLES.notify = 'Weekly review';
+function ntfyTopic() { var a = 'abcdefghjkmnpqrstuvwxyz23456789', s = 'runplan-'; for (var i = 0; i < 14; i++) s += a.charAt(Math.floor(Math.random() * a.length)); return s; }
+VIEWS.notify = function () {
+  var n = Object.assign({ on: false, topic: '', hour: 18 }, (st().prefs || {}).notify || {});
+  if (!n.topic) n.topic = App.ui.newTopic || (App.ui.newTopic = ntfyTopic());
+  var ws = E.DOW_LONG_ABS[(wsOf() + 6) % 7], gh = Store.mode === 'github';
+  return '<div class="pagehead"><h1>Weekly review</h1><p>Every ' + ws + ' evening, a notification asks you to look over the coming week. Tap it to open the preview, then drag sessions to the days that suit you.</p></div>' +
+    (gh ? '' : '<div class="banner warn small">Notifications are sent by your Garmin sync, which runs on GitHub. <a href="#/sync">Connect it first</a>.</div>') +
+    '<section class="card stack"><div class="step"><span>1</span><div><b>Install ntfy</b><p class="small muted">A free, open-source notification app. No account needed.</p><div class="btns" style="margin-top:6px"><a class="btn sm" href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">iPhone</a><a class="btn sm" href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Android</a></div></div></div>' +
+    '<div class="step"><span>2</span><div><b>Subscribe to your private topic</b><p class="small muted">In ntfy tap +, paste this name, and subscribe. Treat it like a password: anyone with the name could read the reminders (they never include health data).</p><div class="topicrow"><code id="ntTopic">' + esc(n.topic) + '</code><button class="btn sm" data-act="nt-copy">Copy</button></div></div></div>' +
+    '<div class="step"><span>3</span><div><b>Pick a time and turn it on</b><div class="grid2" style="margin-top:8px"><label class="f">Send at<select class="i" id="ntHour">' + [8, 12, 16, 17, 18, 19, 20, 21].map(function (h) { return '<option value="' + h + '"' + (+n.hour === h ? ' selected' : '') + '>' + (h % 12 || 12) + ':00 ' + (h < 12 ? 'AM' : 'PM') + '</option>'; }).join('') + '</select></label><label class="f">On<select class="i" disabled><option>' + ws + '</option></select></label></div>' +
+    '<label class="check" style="margin-top:8px"><input type="checkbox" id="ntOn"' + (n.on ? ' checked' : '') + '> Send the weekly review</label></div></div></section>' +
+    '<div class="btns"><button class="btn primary" data-act="nt-save">Save</button><button class="btn" data-act="nt-test">Send a test</button></div>' +
+    '<p class="tiny muted">The reminder goes out with the first hourly sync after the time you pick, so it can arrive up to an hour later. Change which day your week starts in <a href="#/settings">Plan settings</a>.</p>';
+};
+function ntRead() { return { on: $('#ntOn').checked, topic: $('#ntTopic').textContent.trim(), hour: +$('#ntHour').value, tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC') }; }
+ACTIONS['nt-copy'] = function () { var t = $('#ntTopic').textContent; try { navigator.clipboard.writeText(t); toast('Copied'); } catch (e) { toast(t); } };
+ACTIONS['nt-save'] = function () { var n = ntRead(); Store.edit('prefs', 'notify', function (S) { S.prefs = S.prefs || {}; S.prefs.notify = n; }); toast(n.on ? 'Weekly review on' : 'Saved'); };
+ACTIONS['nt-test'] = function () {
+  var n = ntRead(), nw = nextWeek(), url = location.href.split('#')[0] + '#/preview/' + (nw ? nw.start : '');
+  fetch('https://ntfy.sh/' + encodeURIComponent(n.topic), { method: 'POST', body: 'This is how your weekly review reminder will look. Tap to open next week.', headers: { Title: 'Review next week\'s plan', Click: url, Tags: 'runner' } })
+    .then(function (r) { toast(r.ok ? 'Test sent. Check your phone' : 'ntfy said ' + r.status); }).catch(function () { toast('Could not reach ntfy.sh'); });
+};
+var _you6 = VIEWS.you;
+VIEWS.you = function () {
+  var h = _you6();
+  var link = '<a href="#/notify">Weekly review reminder<span class="v">' + (((st().prefs || {}).notify || {}).on ? 'On' : 'Off') + '</span><span class="chev">›</span></a>';
+  var nw = nextWeek(), pv = App.plan && nw ? '<a href="#/preview/' + nw.start + '">Preview next week<span class="v">Week ' + nw.n + '</span><span class="chev">›</span></a>' : '';
+  var i = h.indexOf('<a href="#/settings"');
+  return i < 0 ? h : h.slice(0, i) + pv + h.slice(i).replace(/(<a href="#\/settings"[\s\S]*?<\/a>)/, '$1' + link);
+};
+
+/* ---------- training balance (Garmin load focus) ---------- */
+var LF_NAMES = { low: ['Low aerobic', 'Easy and long running. Builds your base.', 'var(--blue)'], high: ['High aerobic', 'Tempo and threshold. Raises your race pace.', 'var(--amber)'], anaerobic: ['Anaerobic', 'Short, fast efforts. Speed and power.', 'var(--violet)'] };
+function loadFocusHTML() {
+  var lf = App.an && App.an.loadFocus;
+  if (!lf) return '<p class="empty">Needs about four weeks of Garmin activities.</p>';
+  var max = 0; ['low', 'high', 'anaerobic'].forEach(function (k) { max = Math.max(max, lf.cats[k].load, lf.cats[k].hi); }); max *= 1.12;
+  var rows = ['low', 'high', 'anaerobic'].map(function (k) {
+    var c = lf.cats[k], n = LF_NAMES[k], st0 = c.state === 'short' ? 'Below target' : c.state === 'over' ? 'Above target' : 'In range';
+    return '<div class="lfrow"><div class="spread"><b>' + n[0] + '</b><span class="pill ' + (c.state === 'ok' ? 'good' : 'warn') + '">' + st0 + '</span></div>' +
+      '<div class="lfbar"><i class="band" style="left:' + (c.lo / max * 100).toFixed(1) + '%;width:' + ((c.hi - c.lo) / max * 100).toFixed(1) + '%"></i><i class="val" style="width:' + Math.max(2, c.load / max * 100).toFixed(1) + '%;background:' + n[2] + '"></i><span>' + c.load + '</span></div>' +
+      '<div class="tiny muted">' + n[1] + ' Target ' + c.lo + '–' + c.hi + '.</div></div>';
+  }).join('');
+  var why = { anaerobic: 'This week gets six short strides on an easy day to top up anaerobic load.', high: 'An easy run this week finishes with a steady progression to top up high aerobic load.', low: 'One workout this week becomes easy running to rebuild your base.', 'anaerobic-excess': 'Intervals become threshold work this week to bring anaerobic load back into range.' }[lf.nudge];
+  return '<p class="small muted">' + (lf.src === 'garmin' ? 'From Garmin: ' : 'Estimated from your activities: ') + '4-week load by type. Training across all three keeps fitness improving.' + (lf.status ? ' Status: <b>' + esc(String(lf.status).toLowerCase().replace(/_\d+$/, '').replace(/_/g, ' ')) + '</b>.' : '') + '</p><div class="stack tight" style="margin-top:10px">' + rows + '</div>' +
+    (why ? '<div class="banner info small" style="margin-top:10px"><b>Plan adjusted.</b> ' + why + '</div>' : '<p class="small" style="margin-top:10px;color:var(--green)"><b>Balanced.</b> No changes needed.</p>');
+}
+
+/* ---------- pace & HR zones as bubbles ---------- */
+var ZONE_ROWS = [['REC', 'Recovery', 'Very easy: the day after hard efforts. Could chat all day.', '1–2'], ['E', 'Easy / long', 'Conversational. Full sentences, breathing through the nose at times.', '2–3'], ['S', 'Steady', 'Comfortably brisk. Short sentences.', '4'], ['M', 'Marathon pace', 'Your current marathon fitness. Controlled and rhythmic.', '5'], ['G', 'Goal race pace', '', '5–6'], ['T', 'Threshold', 'Comfortably hard: about the pace you could race for an hour.', '6–7'], ['I', 'Interval', 'About 5K race effort. Hard, a few words at a time.', '8–9'], ['R', 'Strides', 'Fast but relaxed. Smooth form, not a sprint.', '9']];
+var _zones6 = VIEWS.zones;
+VIEWS.zones = function () {
+  var h = _zones6(), p = App.plan; if (!p) return h;
+  var w = App.week, zz = w.zonesAdj, hr = zz.hr, an = App.an || {};
+  var basis = [];
+  if (an.vNow) basis.push('<span class="pill">VDOT ' + an.vNow.toFixed(1) + '</span>');
+  if (an.lt && an.lt.pace) basis.push('<span class="pill">Threshold ' + pace(an.lt.pace) + '/mi</span>');
+  if (an.vo2 && an.vo2.v) basis.push('<span class="pill">VO2 max ' + an.vo2.v + '</span>');
+  if (hr && hr.lthr) basis.push('<span class="pill">LTHR ' + hr.lthr + '</span>');
+  var bub = '<div class="zbasis">' + basis.join('') + '</div><p class="tiny muted" style="margin:-4px 2px 4px">These update on their own as your threshold, VO2 max, races and runs show new fitness.</p><div class="zgrid">' + ZONE_ROWS.map(function (r) {
+    var z = zz[r[0]], hz = hr && hr[r[0]], feel = r[0] === 'G' ? (w.event ? esc(w.event.name) + ' goal pace.' : 'Your next race goal.') + ' Practise it so race day feels familiar.' : r[2];
+    return '<div class="zb" style="--c:' + Z_COLOR[r[0]] + '"><div class="zh"><b>' + r[1] + '</b><span class="zc">' + r[0] + '</span></div>' +
+      '<div class="zv"><div><span>Pace /mi</span><b>' + (z ? pace(z[0]) + '–' + pace(z[1]) : '–') + '</b></div><div><span>Heart rate</span><b>' + (hz ? (hz[0] ? hz[0] + '–' : '<') + hz[1] : '–') + '</b></div><div><span>Effort</span><b>' + r[3] + '<small>/10</small></b></div></div>' +
+      '<p class="zf">' + feel + '</p></div>';
+  }).join('') + '</div>';
+  h = h.replace(/<section class="card"><div class="scroll"><table class="t"><thead><tr><th>Zone<\/th>[\s\S]*?<\/section>/, bub);
+  /* readings as rows that fit a phone */
+  var ms = (st().metrics || []).slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+  h = h.replace(/<div class="scroll" style="margin-top:8px"><table class="t"><thead><tr><th>Date<\/th><th>LT pace[\s\S]*?<\/table><\/div>/, '<div class="stack tight" style="margin-top:10px">' + ms.map(function (m) {
+    return '<div class="mread"><b>' + E.fmtDate(m.date, { month: 'short', day: 'numeric', year: 'numeric' }) + '</b><div class="mv">' + (m.ltPace ? '<span>LT <b>' + esc(m.ltPace) + '</b>/mi</span>' : '') + (m.ltHr ? '<span>LTHR <b>' + m.ltHr + '</b></span>' : '') + (m.vo2 ? '<span>VO2 <b>' + m.vo2 + '</b></span>' : '') + '</div><button class="pvx" data-act="del-metric" data-arg="' + jattr({ id: m.id }) + '" aria-label="Delete reading">✕</button></div>';
+  }).join('') + '</div>');
+  return h.replace('<h3>Lactate threshold & VO2max</h3><button class="btn sm primary"', '<h3>Threshold & VO2 max</h3><button class="btn sm primary" style="white-space:nowrap"');
+};
+
+/* ---------- dashboard additions ---------- */
+var _dash6 = VIEWS.dash;
+VIEWS.dash = function () {
+  var h = _dash6(); if (!App.plan) return h;
+  var card = '<section class="card c6"><div class="spread"><h3>Training balance</h3><span class="tiny muted">last 4 weeks</span></div>' + loadFocusHTML() + '</section>';
+  var i = h.lastIndexOf('<section', h.indexOf('<h3>Recent runs'));
+  return i > 0 ? h.slice(0, i) + card + h.slice(i) : h.replace(/<\/div>$/, card + '</div>');
+};
+var _fitness6 = VIEWS.fitness;
+if (_fitness6) VIEWS.fitness = function () { var h = _fitness6(); return App.plan ? h + '<section class="card"><h3>Training balance</h3>' + loadFocusHTML() + '</section>' : h; };
 
 
 /* ---------------- Garmin polling ---------------- */

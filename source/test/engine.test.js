@@ -105,3 +105,37 @@ console.log(bad ? 'FAILURES ' + bad : 'ALL OK (fitness)');
   ok(E.weekIntensity(w6, s6.profile).filter(x => x.level === 'warn').length === 0, 'generated week has no warnings: ' + E.weekIntensity(w6, s6.profile).map(x => x.text).join(' | '));
 }
 console.log(bad ? 'FAILURES ' + bad : 'ALL OK (week tools)');
+// ---- week start, removals, alternatives, load focus, rest-day offer ----
+{
+  const s = JSON.parse(JSON.stringify(seed)); const base = E.generate(s); E.setWeekStart(0);
+  const longAbs = E.dow(base.weeks[6].days.find(d => d.parts.some(p => p.type === 'long')).date);
+  const s2 = JSON.parse(JSON.stringify(seed)); E.rotateProfile(s2.profile, 6); // Sunday start
+  const q = E.generate(s2);
+  ok(E.DOW[0] === 'Sun' && E.pd(q.weeks[3].start).getDay() === 0, 'sunday weeks start ' + q.weeks[3].start + ' ' + E.DOW[0]);
+  const ld = q.weeks[6].days.find(d => d.parts.some(p => p.type === 'long'));
+  ok(E.pd(ld.date).getDay() === E.pd(base.weeks[6].days[longAbs].date).getDay(), 'long run stays on same weekday after rotation');
+  ok(q.weeks[27].days.some(d => d.parts.some(x => x.type === 'race')), 'half still in plan');
+  E.setWeekStart(0);
+  // removal with 'x'
+  const s3 = JSON.parse(JSON.stringify(seed)); const q3 = E.generate(s3); E.adapt(q3, s3, E.analyze(q3, s3, null));
+  const w = q3.weeks[6], ed = w.days.find(d => d.parts.some(p => p.type === 'easy' && p.role !== 'gym')), ep = ed.parts.find(p => p.type === 'easy');
+  s3.arr = { [E.partKey(ed.date, ep)]: 'x' };
+  const q4 = E.generate(s3); E.adapt(q4, s3, E.analyze(q4, s3, null));
+  ok(q4.weeks[6].removed.length === 1 && q4.weeks[6].tot.mi < w.tot.mi, 'removed easy run ' + q4.weeks[6].tot.mi + ' vs ' + w.tot.mi);
+  // alternatives exist for each type
+  ['easy', 'long', 'speed', 'strength'].forEach(tp => { const d = w.days.find(x => x.parts.some(p => p.type === tp)); if (!d) return; const p = d.parts.find(x => x.type === tp); const al = E.sessionAlternatives(q3, s3, w, p, d.date, 'removed'); ok(al.length >= 1, 'alts ' + tp + ' ' + al.map(a => a.label).join(' / ')); console.log(tp, '->', al.map(a => a.label).join(' | ')); });
+  // lift mix
+  const ld2 = w.days.filter(d => d.parts.some(p => p.type === 'strength'));
+  if (ld2.length >= 2) { const a = ld2[0].parts.find(p => p.type === 'strength'), b = ld2[1].parts.find(p => p.type === 'strength'); const m = E.liftMod(a.key, a.v, b.key); ok(m.blocks.some(x => /heavy/i.test(x.t) && x.ex.length === 4), 'mix heavy 4'); console.log('mix', m.name, m.blocks.map(x => x.t + ':' + x.ex.map(e => e.n).join(',')).join(' ; ')); }
+  // load focus
+  const t = E.today(), acts = []; for (let i = 1; i < 28; i += 2) acts.push({ date: E.addD(t, -i), run: true, distM: 8000, load: 90, teLabel: 'AEROBIC_BASE' });
+  const lf = E.loadFocus({ activities: acts }, t); ok(lf && lf.nudge === 'anaerobic', 'load focus nudge ' + JSON.stringify(lf));
+  // overrides
+  const s5 = JSON.parse(JSON.stringify(seed)); const q5 = E.generate(s5); const w5 = q5.weeks[6]; const ed5 = w5.days.find(d => d.parts.some(p => p.type === 'easy'));
+  const rd5 = w5.days.find(d => d.parts.every(p => p.type === 'rest'));
+  s5.overrides = { [ed5.date]: { action: 'add', mi: 1.5 } }; if (rd5) s5.overrides[rd5.date] = { action: 'addday', add: { run: 3, lift: 'UB' } };
+  E.adapt(q5, s5, E.analyze(q5, s5, null));
+  ok(q5.weeks[6].days[ed5.i].parts.some(p => p.note && /Longer/.test(p.note)), 'add miles override');
+  if (rd5) ok(q5.weeks[6].days[rd5.i].parts.filter(p => p.added).length === 2, 'addday adds run+lift');
+}
+console.log(bad ? 'FAILURES ' + bad : 'ALL OK (week start + alternatives)');

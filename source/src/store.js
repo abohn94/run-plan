@@ -13,7 +13,7 @@ var STATE_PATH = 'user/state.json', GARMIN_PATH = 'garmin/data.json', WORKFLOW =
 function b64enc(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64dec(b64) { return decodeURIComponent(escape(atob(String(b64).replace(/\s/g, '')))); }
 function emptyState() {
-  return { v: 1, profile: null, events: [], logs: {}, status: {}, life: [], overrides: {}, moves: {}, checkins: [], metrics: [], coach: [], seen: {}, shoes: [], gear: {}, orm: [], anotes: {}, prefs: {}, arr: {}, subs: {}, updatedAt: null };
+  return { v: 1, profile: null, events: [], logs: {}, status: {}, life: [], overrides: {}, moves: {}, checkins: [], metrics: [], coach: [], seen: {}, shoes: [], gear: {}, orm: [], anotes: {}, prefs: {}, arr: {}, subs: {}, liftmix: {}, updatedAt: null };
 }
 function normalize(s) {
   var e = emptyState();

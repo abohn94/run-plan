@@ -15,7 +15,7 @@ function isTimed(rx) { return /\d+\s*×\s*\d+\s*(s|m)\b/.test(String(rx || '')) 
 function kindOf(n, rx) { var w = needsWeight(n); if (isTimed(rx)) return w ? 'timedw' : 'timed'; return w ? 'wt' : 'bw'; }
 
 /* ---------- brief description for the bubble ---------- */
-function liftModOf(p) { return E.liftMod(p.key, p.v); }
+function liftModOf(p) { return E.liftMod(p.key, p.v, p.mix); }
 function liftDesc(p) {
   var m = liftModOf(p); if (!m) return '';
   var subs = st().subs || {}, lead = { UB: 'Upper body, core and hips', HT: 'Bodyweight, anywhere', ACT: 'Short and light to stay sharp' }[p.key] || (m.focus || '').split(':')[0];
@@ -79,13 +79,14 @@ function buildWorkout(date, key) {
   var lp = adv ? adv.lp : p ? p.lp : (l && l.lp) || 0;
   var wkOf = App.plan ? E.weekOf(App.plan, date) : null;
   var v = p && p.key === key && p.v != null ? p.v : E.liftVar(wkOf ? wkOf.n : 1);
-  var wk = { ver: 2, date: date, key: key, v: v, lp: lp, start: Date.now(), sec: 0, ex: [], secs: [], rpe: (l && l.rpe) || null, note: (l && l.note) || '', edit: !!(l && l.ex && Object.keys(l.ex).length) };
+  var mix = p && p.key === key ? p.mix || null : (l && l.mix) || null;
+  var wk = { ver: 2, date: date, key: key, v: v, mix: mix, lp: lp, start: Date.now(), sec: 0, ex: [], secs: [], rpe: (l && l.rpe) || null, note: (l && l.note) || '', edit: !!(l && l.ex && Object.keys(l.ex).length) };
   if (wk.edit) {
     wk.secs = [{ t: 'Your lifts', min: 0 }];
     Object.keys(l.ex).forEach(function (n) { var mod = findEx(n), ss = setsOf(l.ex[n]), w = ss.some(function (s) { return +s.w > 0; }) || needsWeight(n); wk.ex.push({ n: n, sec: 0, kind: w ? 'wt' : 'bw', rx: mod ? mod.rx[lp] : '', rest: mod ? restSec(mod.rest[lp]) : 90, cue: mod ? mod.cue : '', sets: ss.map(function (s) { return { w: s.w || '', r: s.r || '', done: true }; }) }); });
     return wk;
   }
-  var m = E.liftMod(key, v), subs = st().subs || {};
+  var m = E.liftMod(key, v, mix), subs = st().subs || {};
   m.blocks.forEach(function (b, bi) {
     var wu = b.ex.every(function (x) { return x.wu; });
     wk.secs.push({ t: wu && bi === 0 ? 'Warm-up' : b.t, sub: wu && bi === 0 ? b.t : '', min: b.min });
@@ -136,7 +137,7 @@ VIEWS.workout = function () {
     if (App.wk.cur == null) App.wk.cur = 0;
     if (!App.wk.edit && !dr) wkSave();
   }
-  var w = App.wk, m = E.liftMod(w.key, w.v), last = w.secs.length - 1, cs = w.secs[w.cur];
+  var w = App.wk, m = E.liftMod(w.key, w.v, w.mix), last = w.secs.length - 1, cs = w.secs[w.cur];
   var vol = wkVolume(w);
   var html = '<div class="wkhead"><div class="spread"><div style="min-width:0"><div class="eyebrow">' + (w.edit ? 'Editing saved workout' : esc(m ? (w.key.length === 1 ? 'Strength ' + w.key + ': ' : '') + m.name : 'Workout')) + '</div><b class="sectitle">' + (w.secs.length > 1 ? (w.cur + 1) + ' of ' + w.secs.length + ' · ' : '') + esc(cs.t) + '</b></div>' + (w.edit ? '' : '<div class="clock" id="wkClock">' + mmss((Date.now() - w.start) / 1000) + '</div>') + '</div>' +
     (w.secs.length > 1 ? '<div class="secdots">' + w.secs.map(function (s, i) { return '<button data-act="wk-sec" data-arg="' + jattr({ s: i }) + '" class="' + (i === w.cur ? 'on ' : '') + (secDone(w, i) ? 'dn' : '') + '" aria-label="' + esc(s.t) + '"><i></i><span>' + esc(s.t.replace('Muscle-specific finishers', 'Finishers').replace('Dynamic power', 'Power').replace('Heavy compounds', 'Heavy')) + '</span></button>'; }).join('') + '</div>' : '') +
@@ -191,7 +192,7 @@ ACTIONS['wk-end'] = function () {
   var secs = w.edit ? (old.sec || (old.min || 0) * 60) : Math.min(4 * 3600, Math.round((Date.now() - w.start) / 1000));
   var vol = 0; Object.keys(ex).forEach(function (n) { vol += setsVolume(ex[n].s); });
   var prs = Object.keys(ex).filter(function (n) { var h = liftHistory(n, date); var pb = h.reduce(function (m, x) { return Math.max(m, x.e1); }, 0); return pb && bestE1(ex[n]) > pb; });
-  var rec = Object.assign({}, old, { key: w.key, v: w.v, lp: w.lp, ex: ex, rpe: w.rpe || old.rpe || null, sec: secs, min: old.src === 'garmin' && old.min ? old.min : Math.max(1, Math.round(secs / 60)), vol: Math.round(vol), prs: prs, wu: wuDone, note: (w.note || '').trim() });
+  var rec = Object.assign({}, old, { key: w.key, v: w.v, mix: w.mix || null, lp: w.lp, ex: ex, rpe: w.rpe || old.rpe || null, sec: secs, min: old.src === 'garmin' && old.min ? old.min : Math.max(1, Math.round(secs / 60)), vol: Math.round(vol), prs: prs, wu: wuDone, note: (w.note || '').trim() });
   Store.edit('logs', date, function (S) { S.logs[date] = S.logs[date] || {}; S.logs[date].lift = rec; });
   App.wk = null; App.rest = null; LS.del('rp-wk');
   go('#/wksummary/' + date);
@@ -204,7 +205,7 @@ VIEWS.wksummary = function () {
   if (!l) return '<div class="card">No workout logged that day.</div>';
   var ex = l.ex || {}, names = Object.keys(ex), vol = l.vol != null ? l.vol : names.reduce(function (t, n) { return t + setsVolume(setsOf(ex[n])); }, 0);
   var sets = names.reduce(function (t, n) { return t + setsOf(ex[n]).length; }, 0), prs = l.prs || [];
-  var title = l.key && E.LIFT[l.key] ? (l.key.length === 1 ? 'Strength ' + l.key + ': ' : '') + E.liftMod(l.key, l.v).name : 'Strength';
+  var title = l.key && E.LIFT[l.key] ? (l.key.length === 1 ? 'Strength ' + l.key + ': ' : '') + E.liftMod(l.key, l.v, l.mix).name : 'Strength';
   var html = '<div class="donehead"><div class="eyebrow">' + E.fmtDate(date, { weekday: 'long', month: 'short', day: 'numeric' }) + '</div><h1>Workout complete</h1><p>' + esc(title) + '</p></div>';
   html += '<div class="tiles"><div class="tile big"><span>Total volume</span><b>' + Math.round(vol).toLocaleString() + '</b><em>lb lifted</em></div><div class="tile big"><span>Time lifting</span><b>' + (l.sec ? mmss(l.sec) : (l.min || 0) + ' min') + '</b><em>' + (l.sec ? 'h:mm:ss' : '') + '</em></div><div class="tile"><span>Sets</span><b>' + sets + '</b><em>' + plural(names.length, 'exercise') + '</em></div><div class="tile"><span>Effort</span><b>' + (l.rpe || '–') + '</b><em>' + (l.rpe ? 'out of 10' : 'not rated') + '</em></div></div>';
   if (prs.length) html += '<div class="banner good"><b>New best' + (prs.length > 1 ? 's' : '') + ':</b> ' + prs.map(function (n) { return esc(n) + ' (e1RM ' + bestE1(ex[n]) + ' lb)'; }).join(', ') + '</div>';

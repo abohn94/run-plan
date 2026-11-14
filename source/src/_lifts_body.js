@@ -147,7 +147,21 @@ var LIFT = {
 };
 /* which version of a session a given plan week uses: a new one every four weeks */
 function liftVar(weekN) { return Math.floor(Math.max(0, (weekN || 1) - 1) / 4) % 3; }
-function liftMod(key, v) { var a = LIFT_VARS[key]; return a ? a[(v || 0) % a.length] : LIFT[key]; }
+function liftMod(key, v, mix) {
+  var a = LIFT_VARS[key], m = a ? a[(v || 0) % a.length] : LIFT[key];
+  if (!mix || !LIFT[mix] || mix === key) return m;
+  /* combined session: this day's heavy lower lift and push, plus the other day's heavy lower lift and pull; trimmed finishers keep it near 45 minutes */
+  var o = LIFT_VARS[mix] ? LIFT_VARS[mix][(v || 0) % LIFT_VARS[mix].length] : LIFT[mix];
+  var heavy = function (mm) { var b = mm.blocks.filter(function (x) { return /heavy/i.test(x.t); })[0]; if (b) return b.ex; var ps = mm.blocks.filter(function (x) { return /push|pull|legs/i.test(x.t); }); return ps.map(function (x) { return x.ex[0]; }); };
+  var hm = heavy(m), ho = heavy(o), fin = (m.blocks[3] || m.blocks[m.blocks.length - 1]).ex.slice(0, 1).concat((o.blocks[3] || o.blocks[o.blocks.length - 1]).ex.slice(0, 1));
+  var LOW = /squat|deadlift|lunge|step-up|thrust|split|bridge/i, PUSH = /press|push-up|dip/i, PULL = /row|pull|chin/i;
+  var pick = function (arr, re, not) { return arr.filter(function (x) { return re.test(x.n) && (!not || x.n !== not.n); })[0]; };
+  var all = hm.concat(ho), l1 = pick(hm, LOW) || pick(ho, LOW), l2 = pick(ho, LOW, l1), pu = pick(hm, PUSH) || pick(ho, PUSH), pl = pick(ho, PULL) || pick(hm, PULL);
+  var lifts = [l1, l2, pu, pl].filter(Boolean);
+  var pat = function (x) { return LOW.test(x.n) ? 'l' : PUSH.test(x.n) ? 'p' : PULL.test(x.n) ? 'u' : x.n; };
+  all.forEach(function (x) { if (lifts.length < 4 && !lifts.some(function (y) { return y.n === x.n || (pat(y) === pat(x) && pat(x) !== 'l'); })) lifts.push(x); });
+  return { key: key, name: m.name + ' + ' + o.name, focus: 'Combined full body: the heavy lifts from both sessions so nothing is missed this week. Three working sets per lift; keep rests honest to finish in about 45 minutes.', v: v, mix: mix, blocks: [m.blocks[0], { min: 4, t: 'Dynamic power', ex: m.blocks[1] && /power/i.test(m.blocks[1].t) ? m.blocks[1].ex.slice(0, 1) : [] }, { min: 28, t: 'Heavy compounds', ex: lifts }, { min: 8, t: 'Muscle-specific finishers', ex: fin }].filter(function (b) { return b.ex.length; }) };
+}
 var LIFT_PHASES = [
   { k: 'Base', d: 'Learn the lifts. Moderate loads, higher reps.' },
   { k: 'Build', d: 'Heavier loads, lower reps. Your biggest strength gains come here.' },
