@@ -998,6 +998,8 @@ function adapt(plan, st, analysis) {
       mv.forEach(function (p) { b.parts.unshift(Object.assign({}, p, { moved: from })); });
       if (!a.parts.length) a.parts.push(restPart());
     });
+    /* work shifts: key sessions move to days off, the day after a night is easy */
+    if (st.shifts) applyShifts(w, st.shifts, zz);
     /* drag-and-drop arrangement: {origDate|role|kind: newDate} */
     var moved = [];
     w.days.forEach(function (d) {
@@ -1059,6 +1061,7 @@ function adapt(plan, st, analysis) {
         if (o.action === 'add' && o.mi) { var a2 = scaleRun(p, ((p.mi || 0) + o.mi) / (p.mi || 1), zz); a2.mi = half((p.mi || 0) + o.mi); if (p.type !== 'speed') a2.steps = [run(a2.mi, p.type === 'recovery' ? 'REC' : 'E')]; a2.changed = true; a2.from = p.title; a2.note = 'Longer by ' + o.mi + ' mi: ' + (o.reason || 'picking up miles from a run you dropped.'); return a2; }
         if (o.action === 'long' && o.mi) return { type: 'long', role: 'long', title: o.title || 'Medium-long run', mi: o.mi, steps: [run(o.mi, 'E')], note: o.reason || 'Easy, conversational: this stands in for the long run this week.', changed: true, from: p.title };
         if (o.action === 'strides' && p.type !== 'speed') { var sm = Math.max(2, p.mi || 3); return { type: 'easy', role: p.role, title: 'Easy + strides', mi: sm, steps: [run(Math.max(1, sm - 0.4), 'E'), rep(6, { sec: 20 }, 'R', { sec: 40, walk: true }, 'fast but relaxed')], note: o.reason || 'Strides keep your legs quick without real fatigue.', changed: true, from: p.title }; }
+        if (o.action === 'tread') return Object.assign({}, p, { treadmill: true, changed: true, from: p.title, note: 'Treadmill today: ' + (o.reason || 'icy or very cold outside') + '. Set a 1% incline so the effort matches the road; paces stay the same.' });
         if (o.action === 'cross') return { type: 'cross', role: p.role, title: 'Treadmill walk', min: clamp(Math.round((p.mi || 3) * 10), 20, 45), note: 'Brisk walk on a 4–8% incline instead of running: ' + (o.reason || 'low impact today.'), changed: true, from: p.title };
         return p;
       });
@@ -1077,6 +1080,9 @@ function adapt(plan, st, analysis) {
     /* training balance from Garmin load focus: small, safe nudges to future sessions this week and next */
     var lf = analysis && analysis.loadFocus;
     if (lf && lf.nudge && !(mod && mod.m < 1)) applyLoadFocus(w, lf, zz);
+    /* personal shin-load ceiling: trims easy and long runs in this week and next when the plan asks for more */
+    var sh = analysis && analysis.shin;
+    if (sh && st.profile && st.profile.injuryProne && (st.prefs || {}).shinCap !== false && w.end >= today() && w.start <= addD(today(), 7) && w.phase.key !== 'race' && w.phase.key !== 'taper') capWeek(w, sh.ceiling, zz);
     /* never show two rest cards on one day, and drop rest cards next to real sessions */
     w.days.forEach(function (d) {
       var real = d.parts.filter(function (p) { return p.type !== 'rest'; });
@@ -1464,6 +1470,7 @@ function analyze(plan, st, garmin) {
   var hrMax = maxHrSeen(garmin);
   res.hrMax = hrMax;
   res.loadFocus = loadFocus(garmin, today());
+  try { res.shin = shinLoad(st, garmin, null, today()); res.recovery = recoveryProfile(garmin); } catch (e) { res.shin = null; }
   var withHr = er.filter(function (r) { return r.hr; });
   if (hrMax && withHr.length >= 3) {
     var hrPct = mean(withHr.map(function (r) { return r.hr; })) / hrMax;
@@ -1783,6 +1790,216 @@ function structure(p, zz) {
 }
 function estMinutes(p, zz) { return Math.round(structure(p, zz).reduce(function (a, b) { return a + b.w; }, 0)); }
 
+
+/* ======================= individualization: weather, shins, recovery, shifts, goals, laps, races ======================= */
+/* Dew-point pace slowdown (RunnersConnect table), scaled down by Garmin heat acclimation. Returns a fraction (0.03 = 3% slower). */
+function heatPct(dewF, tempF, acclimPct) {
+  if (dewF == null) return 0;
+  var pts = [[55, 0], [57.5, 0.01], [62.5, 0.025], [67.5, 0.04], [72.5, 0.065], [77.5, 0.135], [82, 0.16]];
+  var p = 0;
+  if (dewF > pts[0][0]) { for (var i = 1; i < pts.length; i++) { if (dewF <= pts[i][0]) { var a = pts[i - 1], b = pts[i]; p = a[1] + (b[1] - a[1]) * (dewF - a[0]) / (b[0] - a[0]); break; } } if (dewF > pts[pts.length - 1][0]) p = 0.16; }
+  if (tempF != null && tempF >= 85) p += 0.01 * Math.min(4, (tempF - 80) / 5);   /* direct sun and radiant heat on top of humidity */
+  if (acclimPct) p *= 1 - 0.3 * clamp(acclimPct, 0, 100) / 100;
+  return Math.round(p * 1000) / 1000;
+}
+/* scale pace zones (seconds per mile) by a heat slowdown; heart-rate zones stay as they are */
+function heatZones(zz, pct) {
+  if (!zz || !pct) return zz;
+  var out = {}; Object.keys(zz).forEach(function (k) { var z = zz[k]; out[k] = Array.isArray(z) && typeof z[0] === 'number' ? [Math.round(z[0] * (1 + pct)), Math.round(z[1] * (1 + pct))] : z; });
+  out.heat = pct; return out;
+}
+/* winter: ice, deep cold or heavy snow -> suggest the treadmill */
+function winterCheck(h) {
+  if (!h) return null;
+  var why = [];
+  var ice = [56, 57, 66, 67].indexOf(h.code) >= 0, snow = h.snow != null && h.snow >= 0.4;
+  var chill = h.feels != null ? h.feels : h.temp;
+  if (ice) why.push('freezing rain or drizzle (ice)');
+  if (chill != null && chill <= -10) why.push('a wind chill of ' + Math.round(chill) + '°F');
+  else if (chill != null && chill <= 0 && h.wind >= 15) why.push(Math.round(h.wind) + ' mph wind at ' + Math.round(chill) + '°F feels-like');
+  if (snow) why.push('heavy snow (' + h.snow + ' in/h)');
+  if (!why.length) return null;
+  return { swap: true, level: ice || (chill != null && chill <= -15) ? 'high' : 'mid', why: why.join(' and ') };
+}
+
+/* weekly run miles, from Garmin activities (with logs filling gaps) */
+function weeklyMiles(st, garmin, endDate, weeks) {
+  var byDay = {};
+  ((garmin && garmin.activities) || []).forEach(function (a) { if (a.run && a.date && a.distM) byDay[a.date] = (byDay[a.date] || 0) + a.distM / MI_M; });
+  Object.keys((st && st.logs) || {}).forEach(function (d) { var r = st.logs[d].run; if (r && +r.mi > 0 && !byDay[d]) byDay[d] = +r.mi; });
+  var out = [];
+  for (var i = weeks - 1; i >= 0; i--) {
+    var e = addD(endDate, -7 * i), s = addD(e, -6), t = 0, tread = 0;
+    Object.keys(byDay).forEach(function (d) { if (d >= s && d <= e) t += byDay[d]; });
+    ((garmin && garmin.activities) || []).forEach(function (a) { if (a.run && a.date >= s && a.date <= e && /treadmill|indoor/.test(a.type || '')) tread += (a.distM || 0) / MI_M; });
+    out.push({ start: s, end: e, mi: round1(t), tread: round1(tread) });
+  }
+  return out;
+}
+/* Shin-load ceiling: a personal weekly mileage limit from what you have handled without pain */
+function shinLoad(st, garmin, plan, date) {
+  var prof = (st && st.profile) || {};
+  var wk = weeklyMiles(st, garmin, addD(date, -1), 10), last4 = wk.slice(-4), a4 = mean(last4.map(function (w) { return w.mi; })) || 0;
+  var pains = ((st && st.checkins) || []).filter(function (c) { return c.pain && c.date >= addD(date, -21); });
+  var shinPain = pains.filter(function (c) { return !c.where || /shin|tib|calf|lower leg|ankle/i.test(String(c.where)); });
+  /* the biggest week in the last 10 that was not followed by pain within 7 days */
+  var safe = 0; wk.forEach(function (w) { var hurt = ((st && st.checkins) || []).some(function (c) { return c.pain && c.date >= w.start && c.date <= addD(w.end, 7); }); if (!hurt) safe = Math.max(safe, w.mi); });
+  var reasons = [], f = prof.injuryProne ? 1.10 : 1.15;
+  var ceiling = Math.max(a4 * f, Math.min(safe * 1.05, a4 * 1.3), 8);
+  if (shinPain.length) { ceiling = Math.min(ceiling, Math.max(a4, 6)); reasons.push('shin or lower-leg pain reported in the last 3 weeks'); }
+  var tread = mean(last4.map(function (w) { return w.mi ? w.tread / w.mi : 0; })) || 0;
+  if (tread > 0.6) reasons.push('most recent miles were on a treadmill, so road miles count a little more');
+  var cad = ((garmin && garmin.activities) || []).filter(function (a) { return a.run && a.cadence && a.date >= addD(date, -21); }).map(function (a) { return a.cadence; });
+  var cadAvg = cad.length ? mean(cad) : null;
+  if (cadAvg && cadAvg < 160) { ceiling *= 0.95; reasons.push('cadence averages ' + Math.round(cadAvg) + ' spm; a slightly quicker step (165+) lowers shin load'); }
+  var shoes = ((st && st.shoes) || []).filter(function (s) { return !s.retired; });
+  var worn = shoes.filter(function (s) { return (+s.mi || 0) + (+s.start || 0) > 400; });
+  if (worn.length) reasons.push(worn.map(function (s) { return s.name; }).join(', ') + ' past 400 mi');
+  ceiling = round1(ceiling);
+  var w = plan && weekOf(plan, date), nw = plan && weekOf(plan, addD(date, 7));
+  var risk = function (mi) { return !mi ? 'ok' : mi > ceiling * 1.1 ? 'high' : mi > ceiling ? 'watch' : 'ok'; };
+  return { ceiling: ceiling, a4: round1(a4), safe: round1(safe), weeks: wk, cadence: cadAvg ? Math.round(cadAvg) : null, reasons: reasons,
+    thisWeek: w ? { mi: w.tot.mi, risk: risk(w.tot.mi) } : null, nextWeek: nw ? { mi: nw.tot.mi, risk: risk(nw.tot.mi) } : null };
+}
+/* cap a week's runs at the shin ceiling (scales easy and long runs, keeps the key workout) */
+function capWeek(w, ceiling, zz) {
+  w.tot = totals(w.days);
+  var over = w.tot.mi - ceiling; if (over <= 0.5) return false;
+  var flex = []; w.days.forEach(function (d) { d.parts.forEach(function (p, i) { if (isRun(p) && (p.type === 'easy' || p.type === 'recovery' || p.type === 'long') && d.date > today()) flex.push({ d: d, i: i, p: p }); }); });
+  var tot = flex.reduce(function (a, x) { return a + (x.p.mi || 0); }, 0); if (tot < 1) return false;
+  var f = Math.max(0.6, (tot - over) / tot);
+  flex.forEach(function (x) { var p = scaleRun(x.p, f, zz); p.mi = half(Math.max(1.5, (x.p.mi || 0) * f)); if (x.p.type !== 'long') p.steps = [run(p.mi, x.p.type === 'recovery' ? 'REC' : 'E')]; p.changed = true; p.shin = true; p.note = 'Shortened to stay under your shin-load ceiling of ' + ceiling + ' mi this week.'; x.d.parts[x.i] = p; });
+  w.tot = totals(w.days); w.shinCap = ceiling; return true;
+}
+
+/* Personal recovery profile: how many days your HRV and resting HR take to settle after each kind of session */
+function recoveryProfile(garmin) {
+  var days = (garmin && garmin.days) || {}, acts = (garmin && garmin.activities) || [];
+  var kinds = { long: [], hard: [], lift: [] };
+  acts.forEach(function (a) {
+    if (!a.date) return;
+    var k = a.strength ? 'lift' : a.run && (a.distM / MI_M >= 8 || (a.movS || 0) >= 5400) ? 'long' : a.run && (/TEMPO|THRESHOLD|VO2|ANAEROBIC|SPEED/.test(a.teLabel || '') || +a.te >= 3.5) ? 'hard' : null;
+    if (k) kinds[k].push(a.date);
+  });
+  function base(d, key) { var v = []; for (var i = 1; i <= 7; i++) { var x = days[addD(d, -i)]; if (x && typeof x[key] === 'number') v.push(x[key]); } return v.length >= 3 ? mean(v) : null; }
+  var out = {};
+  Object.keys(kinds).forEach(function (k) {
+    var rec = [], drops = [];
+    kinds[k].slice(0, 40).forEach(function (d) {
+      var bh = base(d, 'hrv'), br = base(d, 'rhr'); if (!bh) return;
+      var n1 = days[addD(d, 1)]; if (n1 && typeof n1.hrv === 'number') drops.push((n1.hrv - bh) / bh);
+      var back = null;
+      for (var i = 1; i <= 4; i++) { var x = days[addD(d, i)]; if (!x || typeof x.hrv !== 'number') continue; if (x.hrv >= bh * 0.97 && (!br || typeof x.rhr !== 'number' || x.rhr <= br + 2)) { back = i; break; } }
+      rec.push(back == null ? 4 : back);
+    });
+    if (rec.length) out[k] = { n: rec.length, days: round1(mean(rec)), hrvDrop: drops.length ? Math.round(mean(drops) * 100) : null };
+  });
+  return out;
+}
+
+/* Shift-aware week: move key sessions off work days, ease the day after nights.  st.shifts = { 'YYYY-MM-DD': 'day'|'night' } */
+function applyShifts(w, shifts, zz) {
+  if (!shifts) return;
+  var on = function (d) { return shifts[d.date]; }, hard = function (p) { return p.type === 'speed' || p.type === 'long'; };
+  var hardDay = function (d) { return d.parts.some(hard); };
+  w.days.forEach(function (d) {
+    if (!on(d) || d.date < today()) return;
+    d.shift = on(d);
+    d.parts.forEach(function (p, i) {
+      if (!hard(p)) return;
+      var easyIdx = function (x) { return x.parts.findIndex(function (q) { return isRun(q) && !hard(q) && q.role !== 'gym'; }); };
+      var cand = w.days.filter(function (x) { return !on(x) && x.date >= today() && x !== d && !hardDay(x) && !w.days.some(function (y) { return Math.abs(y.i - x.i) === 1 && y !== d && hardDay(y); }) && (easyIdx(x) >= 0 || !x.parts.some(isRun)); });
+      /* prefer swapping with an easy run, then a day with no run at all; nearest first */
+      cand.sort(function (a, b) { return ((easyIdx(a) >= 0 ? 0 : 10) + Math.abs(a.i - d.i)) - ((easyIdx(b) >= 0 ? 0 : 10) + Math.abs(b.i - d.i)); });
+      var to = cand[0];
+      if (to) {
+        var ei = to.parts.findIndex(function (x) { return isRun(x) && !hard(x) && x.role !== 'gym'; });
+        var moved = Object.assign({}, p, { moved: p.moved || d.date, note: 'Moved off your ' + on(d) + ' shift.' });
+        if (ei >= 0) { var ez = Object.assign({}, to.parts[ei], { moved: d.date, note: 'Swapped with your key session because of your ' + on(d) + ' shift.' }); to.parts[ei] = moved; d.parts[i] = ez; }
+        else { to.parts = to.parts.filter(function (x) { return x.type !== 'rest'; }); to.parts.unshift(moved); d.parts[i] = restPart('Shift day', 'Your key session moved to ' + to.dow + '.'); }
+      } else {
+        var e = toEasy(p, p.type === 'long' ? 0.7 : 0.75, 'Short easy run', 'Shortened for your ' + on(d) + ' shift.'); d.parts[i] = e;
+      }
+    });
+    d.parts = d.parts.map(function (p) { if (isRun(p) && !hard(p) && p.mi > 4 && on(d)) { var s = scaleRun(p, 0.75, zz); s.changed = true; s.note = 'Trimmed for your ' + on(d) + ' shift.'; s.steps = [run(s.mi, 'E')]; return s; } return p; });
+    d.parts = d.parts.filter(function (p, i, a) { return p.type !== 'rest' || a.length === 1; });
+  });
+  /* the day after a night shift: easy only */
+  w.days.forEach(function (d) {
+    var prev = addD(d.date, -1); if (shifts[prev] !== 'night' || d.date < today()) return;
+    d.parts = d.parts.map(function (p) { return p.type === 'speed' ? toEasy(p, 0.8, 'Easy run', 'Easy today: you came off a night shift.') : p; });
+  });
+  w.tot = totals(w.days);
+}
+
+/* Chance of hitting a race goal: planned fitness on race day, discounted by consistency, with ~3% spread */
+function normCdf(z) { var t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp(-z * z / 2), p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - p : p; }
+function goalOdds(plan, an, ev, garminPred) {
+  var g = parseClock(ev && ev.goal); if (!(g > 0) || !an || !an.vNow) return null;
+  var d = distOf(ev), rw = weekOf(plan, ev.date); if (!rw) return null;
+  var vRace = rw.vPlan + (an.dvAt ? an.dvAt(ev.date) : 0), gain = vRace - (weekOf(plan, today()) || plan.weeks[0]).vPlan;
+  var comp = plan.compliance ? (plan.compliance.level === 'verylow' ? 0.4 : plan.compliance.level === 'low' ? 0.7 : 1) : 1;
+  var vExp = an.vNow + Math.max(0, gain) * comp, tExp = predict(vExp, d.mi);
+  var gk = { '5k': 'k5', '10k': 'k10', half: 'half', full: 'full' }[d.key], gp = garminPred && gk && +garminPred[gk];
+  if (gp && Math.abs(d.mi - DIST[d.key].mi) < 0.2) tExp = (tExp + gp * (tExp / predict(an.vNow, d.mi))) / 2;   /* blend with Garmin's own race predictor */
+  var sd = tExp * (0.025 + 0.0004 * Math.max(0, diffD(today(), ev.date)) / 7);
+  var p = normCdf((g - tExp) / sd);
+  var need = []; if (comp < 1) need.push('hit most planned runs; consistency is the biggest lever'); if (p < 0.5) need.push('a 2–3% gain from threshold work and long runs would move this past 50%');
+  return { p: Math.round(clamp(p, 0.03, 0.95) * 100), garmin: gp || null, expected: Math.round(tExp), goal: g, vRace: round1(vExp), weeks: Math.round(diffD(today(), ev.date) / 7), tips: need };
+}
+
+/* How well a run matched the workout: laps carry the watch's workout step index */
+function execution(p, zz, laps) {
+  if (!laps || !laps.length || !p || !p.steps) return null;
+  var work = laps.filter(function (l) { return l.t > 20 && l.d > 50; });
+  if (!work.length) return null;
+  var rows = [], hitN = 0, tot = 0;
+  work.forEach(function (l, i) {
+    var pace = l.sp ? MI_M / l.sp : null, typ = String(l.type || '').toUpperCase();
+    var zone = typ === 'WARMUP' || typ === 'COOLDOWN' || typ === 'RECOVERY' ? 'E' : null;
+    if (!zone) { var st = p.steps.filter(function (s) { return s.k === 'run' || s.k === 'rep'; }); var s0 = st[Math.min(st.length - 1, Math.max(0, (l.step != null ? l.step : i) - 1))] || st[0]; zone = s0 ? s0.z : 'E'; }
+    var tgt = zz && zz[zone], ok = null, off = null;
+    if (tgt && pace && typ !== 'RECOVERY' && typ !== 'REST') { var slack = zone === 'E' || zone === 'REC' ? 20 : 6; ok = pace >= tgt[0] - slack && pace <= tgt[1] + slack; off = pace < tgt[0] ? Math.round(pace - tgt[0]) : pace > tgt[1] ? Math.round(pace - tgt[1]) : 0; if (typ === 'ACTIVE' || typ === 'INTERVAL' || !typ) { tot++; if (ok) hitN++; } }
+    rows.push({ i: i + 1, type: typ || 'ACTIVE', zone: zone, mi: round1(l.d / MI_M), sec: Math.round(l.t), pace: pace ? Math.round(pace) : null, hr: l.hr, target: tgt || null, ok: ok, off: off, gscore: l.score });
+  });
+  var main = rows.filter(function (r) { return r.type !== 'WARMUP' && r.type !== 'COOLDOWN' && r.type !== 'RECOVERY' && r.type !== 'REST' && r.ok != null; });
+  var fade = null;
+  if (main.length >= 3) { var a = main.slice(0, Math.ceil(main.length / 2)), b = main.slice(Math.ceil(main.length / 2)); fade = Math.round(mean(b.map(function (r) { return r.pace; })) - mean(a.map(function (r) { return r.pace; }))); }
+  return { score: tot ? Math.round(hitN / tot * 100) : null, hit: hitN, of: tot, rows: rows, fade: fade, garmin: mean(work.filter(function (l) { return l.score != null; }).map(function (l) { return l.score; })) };
+}
+/* Durability: aerobic decoupling over a long run (pace per heartbeat, second half vs first) */
+function durability(laps) {
+  var L = (laps || []).filter(function (l) { return l.t > 60 && l.hr && (l.gap || l.sp); });
+  if (L.length < 6) return null;
+  var h = Math.floor(L.length / 2), eff = function (a) { return mean(a.map(function (l) { return (l.gap || l.sp) / l.hr; })); };
+  var e1 = eff(L.slice(0, h)), e2 = eff(L.slice(h));
+  return { decouple: Math.round((e1 - e2) / e1 * 1000) / 10, laps: L.length };
+}
+
+/* Race-day pacing from a course: elev = feet per 0.1 mi. Even effort: uphill costs ~3.3% per 1% grade, downhill gives back ~1.8% (capped). */
+function racePacing(distMi, goalSec, elev, heat) {
+  var n = Math.ceil(distMi - 1e-6), segs = [];
+  for (var m = 0; m < n; m++) {
+    var len = Math.min(1, distMi - m), i0 = Math.round(m * 10), i1 = Math.min(elev ? elev.length - 1 : 0, Math.round((m + len) * 10));
+    var up = 0, down = 0;
+    if (elev && elev.length > 1) for (var j = i0 + 1; j <= i1; j++) { var dz = elev[j] - elev[j - 1]; if (dz > 0) up += dz; else down -= dz; }
+    var grade = elev && elev.length > 1 ? (elev[i1] - elev[i0]) / (len * 5280) * 100 : 0;
+    var f = 1 + (grade > 0 ? 0.033 * grade : Math.max(-0.08, 0.018 * grade));
+    if (m < 2) f *= 1.005;   /* settle in: the first two miles a touch conservative */
+    segs.push({ mile: m + 1, len: len, grade: Math.round(grade * 10) / 10, up: Math.round(up), down: Math.round(down), f: f });
+  }
+  var w = segs.reduce(function (a, s) { return a + s.f * s.len; }, 0), base = goalSec * (1 + (heat || 0)) / w, t = 0;
+  segs.forEach(function (s) { s.pace = Math.round(base * s.f); s.sec = Math.round(base * s.f * s.len); t += s.sec; s.cum = t; });
+  return { segs: segs, total: t, avgPace: Math.round(t / distMi), heat: heat || 0 };
+}
+/* Sleep target the night before: wake time minus sleep need, earlier before a hard day or after a short night */
+function sleepTarget(needH, wakeMin, hardTomorrow, debtH) {
+  var need = (needH || 8) + (hardTomorrow ? 0.25 : 0) + Math.min(1, Math.max(0, debtH || 0) / 2);
+  var bed = wakeMin - Math.round(need * 60) - 15;
+  bed = ((bed % 1440) + 1440) % 1440;
+  return { bedMin: bed, needH: Math.round(need * 4) / 4 };
+}
+
 /* ---------------- exports ---------------- */
 var api = {
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
@@ -1790,6 +2007,7 @@ var api = {
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
   vdotOf: vdotOf, paceAt: paceAt, predict: predict, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
+  heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
   weekOf: weekOf, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,

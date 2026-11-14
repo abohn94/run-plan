@@ -1,0 +1,58 @@
+name: Garmin metrics
+
+# Reads Garmin metrics the Personal API doesn't share (threshold, readiness, HRV status, training
+# status, race predictions, laps, lift sets, food) with your Garmin sign-in, a few times a day.
+on:
+  schedule:
+    - cron: "41 11,17,23 * * *"   # about 5:41 AM, 11:41 AM and 5:41 PM Central
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "run, or probe (print response shapes)"
+        required: false
+        default: "run"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: garmin-extra
+  cancel-in-progress: false
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet "garminconnect==0.3.20"
+      - name: Restore saved Garmin sign-in
+        uses: actions/cache/restore@v4
+        with:
+          path: .garmin_tokens
+          key: garmin-tokens-${{ github.run_id }}
+          restore-keys: garmin-tokens-
+      - name: Read Garmin metrics
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: PYTHONPATH=scripts python3 scripts/garmin_extra.py "${{ github.event.inputs.mode || 'run' }}"
+      - name: Save Garmin sign-in for next time
+        if: always() && hashFiles('.garmin_tokens/**') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .garmin_tokens
+          key: garmin-tokens-${{ github.run_id }}
+      - name: Save
+        if: always()
+        run: |
+          git config user.name "garmin-sync"
+          git config user.email "garmin-sync@users.noreply.github.com"
+          git add garmin/extra.json 2>/dev/null || true
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Garmin metrics $(date -u +%Y-%m-%dT%H:%MZ)"
+          for i in 1 2 3; do git pull --rebase --quiet && git push --quiet && exit 0; sleep 5; done
+          exit 1

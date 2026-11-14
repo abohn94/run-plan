@@ -139,3 +139,23 @@ console.log(bad ? 'FAILURES ' + bad : 'ALL OK (week tools)');
   if (rd5) ok(q5.weeks[6].days[rd5.i].parts.filter(p => p.added).length === 2, 'addday adds run+lift');
 }
 console.log(bad ? 'FAILURES ' + bad : 'ALL OK (week start + alternatives)');
+// ---- individualization ----
+{
+  ok(E.heatPct(50, 70) === 0 && E.heatPct(66, 80) > 0.03 && E.heatPct(66, 80) < 0.05 && E.heatPct(78, 90) > 0.12, 'heat pct ' + [E.heatPct(50, 70), E.heatPct(66, 80), E.heatPct(78, 90)]);
+  ok(E.heatPct(70, 85, 100) < E.heatPct(70, 85, 0), 'acclimation lowers heat');
+  ok(E.winterCheck({ temp: 5, feels: -14, wind: 10, code: 3 }).swap && !E.winterCheck({ temp: 30, feels: 25, wind: 5, code: 3 }), 'winter');
+  const rp = E.racePacing(13.1094, 6300, Array.from({ length: 132 }, (_, i) => 900 + (i > 60 && i < 70 ? (i - 60) * 8 : i >= 70 ? 80 : 0)), 0.02);
+  ok(Math.abs(rp.total - 6300 * 1.02) < 30 && rp.segs.length === 14 && rp.segs[6].pace > rp.segs[0].pace, 'race pacing ' + rp.total + ' ' + rp.segs.map(s => s.pace).join(','));
+  const st = JSON.parse(JSON.stringify(seed)); const q = E.generate(st); E.adapt(q, st, E.analyze(q, st, null));
+  const w = q.weeks[6], sp = w.days.find(d => d.parts.some(p => p.type === 'speed'));
+  st.shifts = { [sp.date]: 'day' }; const q2 = E.generate(st); E.adapt(q2, st, E.analyze(q2, st, null)); const w2 = q2.weeks[6];
+  ok(!w2.days[sp.i].parts.some(p => p.type === 'speed'), 'shift moved the key workout');
+  ok(w2.days.some(d => d.parts.some(p => p.type === 'speed')), 'key workout still in the week');
+  const an = E.analyze(q, st, null), ev = st.events.find(e => e.goal) || Object.assign({}, st.events[0], { goal: '1:45:00' });
+  const go = E.goalOdds(q, an, ev); ok(go && go.p >= 2 && go.p <= 98, 'goal odds ' + JSON.stringify(go));
+  const sl = E.shinLoad(st, { activities: [] }, q, E.today()); ok(sl && sl.ceiling >= 8, 'shin ' + JSON.stringify(sl).slice(0, 120));
+  const ex = E.execution({ steps: [{ k: 'wu', mi: 1, z: 'E' }, { k: 'rep', n: 3, z: 'I', work: { m: 800 } }, { k: 'cd', mi: 1, z: 'E' }] }, w.zonesAdj, [{ d: 1609, t: 600, sp: 2.7, type: 'WARMUP' }, { d: 800, t: 200, sp: 800 / 200, type: 'ACTIVE', step: 2 }, { d: 400, t: 150, sp: 400 / 150, type: 'RECOVERY' }, { d: 800, t: 205, sp: 800 / 205, type: 'ACTIVE', step: 2 }]);
+  ok(ex && ex.of === 2, 'execution ' + JSON.stringify(ex && ex.rows.map(r => [r.type, r.pace, r.ok])));
+  console.log('race pacing miles:', rp.segs.map(s => E.fmtPace(s.pace)).join(' '));
+}
+console.log(bad ? 'FAILURES ' + bad : 'ALL OK (individualization)');

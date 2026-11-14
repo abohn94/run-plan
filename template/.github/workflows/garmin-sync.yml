@@ -1,0 +1,53 @@
+name: Garmin sync
+
+on:
+  schedule:
+    - cron: "23 * * * *"   # every hour at :23 (GitHub may start it a few minutes late)
+  workflow_dispatch:         # the app's "Sync now" button starts this
+    inputs:
+      history_days:
+        description: "Re-pull this many days of history (leave empty for a normal sync)"
+        required: false
+        default: ""
+      probe:
+        description: "Print field names Garmin returns (no values), for troubleshooting"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: garmin-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull Garmin data
+        env:
+          GARMIN_PERSONAL_API_KEY: ${{ secrets.GARMIN_PERSONAL_API_KEY }}
+          HISTORY_DAYS: ${{ github.event.inputs.history_days }}
+          PROBE: ${{ github.event.inputs.probe }}
+        run: python3 scripts/garmin_sync.py
+
+      - name: Save changes
+        if: always()
+        run: |
+          git config user.name "garmin-sync"
+          git config user.email "garmin-sync@users.noreply.github.com"
+          git add garmin/
+          if git diff --cached --quiet; then
+            echo "No new data."
+            exit 0
+          fi
+          git commit -m "Garmin sync $(date -u +%Y-%m-%dT%H:%MZ)"
+          for i in 1 2 3; do
+            git pull --rebase --quiet && git push --quiet && exit 0
+            sleep 5
+          done
+          exit 1
