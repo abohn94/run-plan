@@ -202,7 +202,7 @@ function liftHistory(n, before) {
 }
 function allLiftNames() {
   var names = {}, logs = st().logs || {};
-  Object.keys(E.LIFT).forEach(function (k) { E.LIFT[k].blocks.forEach(function (b) { b.ex.forEach(function (x) { if (!LIFT_SKIP2[x.n]) names[x.n] = 1; }); }); });
+  allMods().forEach(function (m) { m.blocks.forEach(function (b) { b.ex.forEach(function (x) { if (!LIFT_SKIP2[x.n] && !x.wu) names[x.n] = 1; }); }); });
   Object.keys(logs).forEach(function (d) { var l = logs[d].lift; if (l && l.ex) Object.keys(l.ex).forEach(function (n) { names[n] = 1; }); });
   return Object.keys(names).sort();
 }
@@ -217,15 +217,20 @@ function newWorkout(date, key) {
     Object.keys(l.ex).forEach(function (n) { var mod = findEx(n); wk.ex.push({ n: n, rx: mod ? mod.rx[lp] : '', rest: mod ? restSec(mod.rest[lp]) : 90, cue: mod ? mod.cue : '', sets: setsOf(l.ex[n]).map(function (x) { return { w: x.w || '', r: x.r || '', done: true }; }) }); });
     return wk;
   }
-  var m = E.LIFT[key];
-  if (m) m.blocks.forEach(function (b) { b.ex.forEach(function (x) { if (LIFT_SKIP2[x.n]) return; wk.ex.push(exFromModule(x, lp, date)); }); });
+  var wkOf = App.plan ? E.weekOf(App.plan, date) : null;
+  wk.v = part && part.key === key && part.v != null ? part.v : E.liftVar(wkOf ? wkOf.n : 1);
+  var m = E.liftMod(key, wk.v);
+  if (m) m.blocks.forEach(function (b) { b.ex.forEach(function (x) { if (LIFT_SKIP2[x.n] || x.wu) return; wk.ex.push(exFromModule(x, lp, date)); }); });
   return wk;
 }
-function findEx(n) { var f = null; Object.keys(E.LIFT).some(function (k) { return E.LIFT[k].blocks.some(function (b) { return b.ex.some(function (x) { if (x.n === n) { f = x; return true; } return false; }); }); }); return f; }
+function allMods() { var a = []; Object.keys(E.LIFT).forEach(function (k) { (E.LIFT_VARS[k] || [E.LIFT[k]]).forEach(function (m) { a.push(m); }); }); return a; }
+function findEx(n) { var f = null; allMods().some(function (m) { return m.blocks.some(function (b) { return b.ex.some(function (x) { if (x.n === n) { f = x; return true; } return false; }); }); }); return f; }
 function exFromModule(x, lp, date) {
   var rx = rxParse(x.rx[lp]), prev = liftHistory(x.n, date).pop();
   var sets = [];
   for (var i = 0; i < rx.sets; i++) { var p = prev && (prev.sets[i] || prev.sets[prev.sets.length - 1]); sets.push({ w: p && p.w ? p.w : '', r: rx.reps, done: false }); }
+  var sub = (st().subs || {})[x.n];
+  if (sub) { var pv = liftHistory(sub, date).pop(); sets.forEach(function (s, i2) { var p2 = pv && (pv.sets[i2] || pv.sets[pv.sets.length - 1]); s.w = p2 && p2.w ? p2.w : ''; }); return { n: sub, orig: x.n, rx: x.rx[lp], rest: restSec(x.rest[lp]), cue: 'Your substitute for ' + x.n + '.', sets: sets }; }
   return { n: x.n, rx: x.rx[lp], rest: restSec(x.rest[lp]), cue: x.cue, sets: sets };
 }
 function wkSave() { try { LS.set('rp-wk', JSON.stringify(App.wk)); } catch (e) { /* ignore */ } }

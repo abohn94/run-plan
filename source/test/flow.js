@@ -33,7 +33,7 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   await pg.waitForTimeout(200); await pg.click('text=Hit a goal time'); await pg.waitForTimeout(250); if (/What are you training/.test(await pg.innerText('#main'))) await pg.click('text=Continue');
   await pg.waitForTimeout(200);
   for (const [n, d, g, k] of [['Half Marathon', '2027-04-24', '1:45:00', 'half'], ['Marathon', '2027-10-17', '3:30:00', 'full'], ['Turkey Trot 5K', '2026-11-26', '', '5k']]) {
-    await pg.click('text=+ Add a race'); await pg.fill('#ev-name', n); await pg.fill('#ev-date', d); await pg.fill('#ev-goal', g); await pg.click('[data-evd="' + k + '"]'); if (k === '5k') await pg.click('[data-evp="C"]'); await pg.click('[data-act="sheet-save"]'); await pg.waitForTimeout(200); }
+    await pg.click('text=+ Add a race'); await pg.fill('#ev-name', n); await pg.fill('#ev-date', d); await pg.fill('#ev-goal', g); await pg.selectOption('#ev-dist', k); if (k === '5k') await pg.click('[data-evp="C"]'); await pg.click('[data-act="sheet-save"]'); await pg.waitForTimeout(200); }
   await shot('w3-races'); await pg.click('.wizfoot .btn.primary'); await pg.waitForTimeout(250);
   log('current step prefill:', (await pg.innerText('#main')).match(/From your Garmin:[^\n]*/)?.[0], '| mpw', await pg.inputValue('input[name=mpw]'), 'easy', await pg.inputValue('input[name=easyPace]'));
   await shot('w4-current', true);

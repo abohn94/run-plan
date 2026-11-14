@@ -6,6 +6,28 @@
  "display": "standalone",
  "background_color": "#071013",
  "theme_color": "#071013",
+ "shortcuts": [
+  {
+   "name": "Today",
+   "short_name": "Today",
+   "url": "./#/today"
+  },
+  {
+   "name": "Start today's workout",
+   "short_name": "Workout",
+   "url": "./#/workout"
+  },
+  {
+   "name": "Calendar",
+   "short_name": "Calendar",
+   "url": "./#/calendar"
+  },
+  {
+   "name": "Glance",
+   "short_name": "Glance",
+   "url": "./#/glance"
+  }
+ ],
  "icons": [
   {
    "src": "icon-192.png",

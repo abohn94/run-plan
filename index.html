@@ -432,6 +432,95 @@ textarea.i { min-height: 80px; padding: 10px 12px; resize: vertical; font: inher
 .edchip.lifted { opacity: .3; }
 .edchip.ghost { position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none; box-shadow: inset 4px 0 0 var(--c), 0 12px 30px rgba(0,0,0,.45); opacity: .95; }
 
+/* ---- features 3: style catalog, countdowns, dashboard, glance, desktop ---- */
+.deskonly { display: none !important; }
+.method .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.method .tags i { font-style: normal; font-size: .7rem; font-weight: 800; background: var(--card2); border-radius: 999px; padding: 2px 9px; color: var(--muted); }
+.cdstrip { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+.cdstrip::-webkit-scrollbar { display: none; }
+.cdstrip .cd { flex: 0 0 auto; min-width: 132px; display: grid; grid-template-columns: auto 1fr; column-gap: 6px; align-items: baseline; background: var(--card); border-radius: 18px; padding: 12px 14px; text-decoration: none; color: inherit; }
+.cdstrip .cd.a { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--violet) 60%, transparent); }
+.cdstrip .cd b { font-size: 1.7rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+.cdstrip .cd small { color: var(--muted); font-weight: 700; font-size: .78rem; }
+.cdstrip .cd span { grid-column: 1 / -1; font-weight: 800; font-size: .9rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+.cdstrip .cd em { grid-column: 1 / -1; font-style: normal; font-size: .72rem; color: var(--muted); white-space: nowrap; }
+.dash { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.dash > * { min-width: 0; }
+.splitbar { display: flex; height: 16px; border-radius: 999px; overflow: hidden; margin-top: 10px; background: var(--card2); }
+.heat { display: grid; gap: 3px; margin-top: 10px; align-items: center; }
+.heat em { font-style: normal; font-size: .6rem; color: var(--muted); font-weight: 800; padding-right: 4px; }
+.heat i { aspect-ratio: 1; border-radius: 3px; background: var(--card2); min-width: 0; }
+.dyn { display: grid; gap: 4px 16px; grid-template-columns: minmax(0, 1fr); }
+.chart.wide { width: 100%; height: auto; }
+.glance { display: grid; gap: 12px; }
+.glance .gl { display: grid; gap: 2px; background: var(--card); border-radius: 20px; padding: 14px 16px; text-decoration: none; color: inherit; box-shadow: inset 5px 0 0 var(--c); }
+.glance .gl b { font-size: 1.25rem; font-weight: 800; }
+.glance .gl span { color: var(--muted); font-weight: 700; }
+body.glancemode .topbar, body.glancemode .tabbar { display: none; }
+body.glancemode main { padding-top: calc(14px + var(--safe-t)); padding-bottom: 20px; }
+@media (min-width: 1024px) {
+  .deskonly { display: grid !important; }
+  body { padding-left: 236px; }
+  .tabbar { left: 0; top: 0; bottom: 0; right: auto; width: 236px; transform: none; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 2px; border: 0; border-right: 1px solid var(--line); border-radius: 0; padding: 18px 12px; box-shadow: none; background: var(--bg2); }
+  .tabbar .brand { font-weight: 800; font-size: 1.3rem; letter-spacing: -.03em; padding: 4px 12px 16px; }
+  .tabbar a { grid-auto-flow: column; justify-content: start; justify-items: start; align-items: center; gap: 12px; font-size: .95rem; padding: 11px 12px; border-radius: 14px; }
+  .tabbar a.deskonly { display: grid !important; }
+  .tabbar a[aria-current="page"] { background: var(--card2); }
+  main { max-width: 820px; padding-bottom: 60px; }
+  body.wide main { max-width: 1480px; padding-left: 28px; padding-right: 28px; }
+  .dash { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+  .dash .c12 { grid-column: span 12; } .dash .c8 { grid-column: span 8; } .dash .c6 { grid-column: span 6; } .dash .c4 { grid-column: span 4; }
+  .dash .tiles.k6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .dyn { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .toast { bottom: 28px; left: calc(50% + 118px); }
+  .restbar { left: calc(50% + 118px); bottom: 28px; }
+  .composer { bottom: 20px; }
+  .sheet { padding-left: 236px; }
+  body.glancemode { padding-left: 0; }
+}
+@media (min-width: 1024px) and (max-width: 1280px) { .dash .c4, .dash .c8 { grid-column: span 12; } .dash .tiles.k6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .dyn { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.chart text.bl { font-size: 7.5px; font-weight: 800; }
+
+/* ---- features 4: exercise library ---- */
+.exlink { border: 0; background: none; color: inherit; font: inherit; font-weight: 800; text-align: left; padding: 0; display: inline-flex; align-items: center; gap: 6px; text-decoration: underline; text-decoration-color: var(--line2); text-underline-offset: 3px; }
+.exlink .info { flex: 0 0 auto; width: 17px; height: 17px; border-radius: 50%; background: var(--card2); color: var(--muted); font-size: .68rem; font-weight: 800; display: inline-grid; place-items: center; text-decoration: none; font-style: italic; }
+.sheet-card h4 { font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 6px 0 0; }
+.tagsrow { display: flex; flex-wrap: wrap; gap: 6px; }
+.tagsrow i { font-style: normal; font-size: .72rem; font-weight: 800; background: var(--card2); border-radius: 999px; padding: 3px 10px; color: var(--muted); }
+.tagsrow i.deep { background: color-mix(in srgb, var(--violet) 25%, var(--card2)); color: var(--ink); }
+.exdiag { display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--card2); border-radius: 18px; padding: 10px; }
+.exdiag figure { margin: 0; flex: 1 1 0; max-width: 150px; text-align: center; }
+.exdiag svg { width: 100%; height: auto; display: block; }
+.exdiag figcaption { font-size: .7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.exdiag .arrow { font-size: 1.4rem; color: var(--dim); font-weight: 800; }
+.musc { width: 100%; max-width: 300px; height: auto; display: block; margin: 0 auto; }
+.musc .body > * { fill: var(--card2); }
+.musc ellipse, .musc rect, .musc path { fill: color-mix(in srgb, var(--line2) 70%, transparent); }
+.musc .body rect, .musc .body circle, .musc .body path { fill: var(--line); }
+.musc .s { fill: var(--amber); opacity: .75; }
+.musc .p { fill: var(--red); }
+.musc text { font-size: 9px; font-weight: 800; fill: var(--muted); }
+.btn.sublink { justify-content: space-between; text-align: left; border-radius: 16px; min-height: 48px; }
+.btn.sublink span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* ---- nothing may be wider than the screen ---- */
+html, body { max-width: 100%; overflow-x: clip; }
+main > *, .card > *, .stack > * { min-width: 0; }
+.actrow { grid-template-columns: auto minmax(0, 1fr) auto; }
+.liftrow { grid-template-columns: minmax(0, 1fr) auto; }
+.calday { grid-template-columns: 42px minmax(0, 1fr); }
+.edday { grid-template-columns: 44px minmax(0, 1fr); }
+.list-item { grid-template-columns: minmax(0, 1fr) auto; }
+.ex { grid-template-columns: minmax(0, 1fr) auto; }
+.sess { grid-template-columns: auto minmax(0, 1fr) auto; }
+.spread > * { min-width: 0; }
+.scroll { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+.chart { max-width: 100%; }
+.btns { flex-wrap: wrap; }
+h1, h2, h3, p, li, td { overflow-wrap: anywhere; }
+table.sets { table-layout: fixed; } table.sets th:nth-child(2), table.sets td:nth-child(2) { width: 27%; } table.sets th:last-child, table.sets td:last-child { width: 46px; }
+table.sets .i { width: 100%; min-width: 0; padding-left: 2px; padding-right: 2px; }
+
 </style>
 </head>
 <body>
@@ -447,11 +536,17 @@ textarea.i { min-height: 80px; padding: 10px 12px; resize: vertical; font: inher
 <main id="main" tabindex="-1"></main>
 
 <nav class="tabbar" aria-label="Main">
+  <div class="brand deskonly">Run Plan</div>
+  <a href="#/dash" data-v="dash" data-ic="dash" class="deskonly">Dashboard</a>
   <a href="#/today" data-v="today" data-ic="today">Today</a>
   <a href="#/plan" data-v="plan" data-ic="plan">Plan</a>
   <a href="#/calendar" data-v="calendar" data-ic="calendar">Calendar</a>
   <a href="#/coach" data-v="coach" data-ic="coach">Coach</a>
   <a href="#/progress" data-v="progress" data-ic="progress">Progress</a>
+  <a href="#/strength" data-v="strength" data-ic="lift" class="deskonly">Strength</a>
+  <a href="#/fitness" data-v="fitness" data-ic="heart" class="deskonly">VO2 max &amp; threshold</a>
+  <a href="#/nutrition" data-v="nutrition" data-ic="fuel" class="deskonly">Nutrition</a>
+  <a href="#/shoes" data-v="shoes" data-ic="shoe" class="deskonly">Shoes</a>
   <a href="#/you" data-v="you" data-ic="you">You</a>
 </nav>
 
@@ -525,8 +620,8 @@ function solveV(pct, sec) {
 function vdotFromThreshold(sec) { return solveV(0.8725, sec); }   /* threshold pace sits near 86-89% of VO2max */
 function vdotFromVo2(vo2max) { return vo2max - 2; }                 /* watch VO2max tends to read a little above race-based VDOT */
 function hrZones(lthr, maxHr) {
-  if (lthr) return { REC: [0, Math.round(lthr * 0.8)], E: [Math.round(lthr * 0.75), Math.round(lthr * 0.85)], S: [Math.round(lthr * 0.87), Math.round(lthr * 0.92)], M: [Math.round(lthr * 0.89), Math.round(lthr * 0.93)], T: [Math.round(lthr * 0.95), Math.round(lthr * 1.0)], I: [Math.round(lthr * 1.02), Math.round(lthr * 1.06)] };
-  if (maxHr) return { REC: [0, Math.round(maxHr * 0.7)], E: [Math.round(maxHr * 0.65), Math.round(maxHr * 0.78)], S: [Math.round(maxHr * 0.8), Math.round(maxHr * 0.85)], M: [Math.round(maxHr * 0.82), Math.round(maxHr * 0.87)], T: [Math.round(maxHr * 0.87), Math.round(maxHr * 0.92)], I: [Math.round(maxHr * 0.94), Math.round(maxHr * 0.98)] };
+  if (lthr) return { REC: [0, Math.round(lthr * 0.8)], E: [Math.round(lthr * 0.75), Math.round(lthr * 0.85)], S: [Math.round(lthr * 0.87), Math.round(lthr * 0.92)], M: [Math.round(lthr * 0.89), Math.round(lthr * 0.93)], T: [Math.round(lthr * 0.95), Math.round(lthr * 1.0)], ST: [Math.round(lthr * 0.9), Math.round(lthr * 0.96)], I: [Math.round(lthr * 1.02), Math.round(lthr * 1.06)] };
+  if (maxHr) return { REC: [0, Math.round(maxHr * 0.7)], E: [Math.round(maxHr * 0.65), Math.round(maxHr * 0.78)], S: [Math.round(maxHr * 0.8), Math.round(maxHr * 0.85)], M: [Math.round(maxHr * 0.82), Math.round(maxHr * 0.87)], T: [Math.round(maxHr * 0.87), Math.round(maxHr * 0.92)], ST: [Math.round(maxHr * 0.82), Math.round(maxHr * 0.88)], I: [Math.round(maxHr * 0.94), Math.round(maxHr * 0.98)] };
   return null;
 }
 function vdotFromEasy(sec) {                /* typical easy pace -> rough fitness */
@@ -539,14 +634,24 @@ var DIST = {
   '5k': { key: '5k', mi: 3.10686, label: '5K', peak: 25, longCap: 10, taper: 1, recov: 1 },
   '10k': { key: '10k', mi: 6.21371, label: '10K', peak: 30, longCap: 12, taper: 1, recov: 1 },
   half: { key: 'half', mi: 13.1094, label: 'Half marathon', peak: 35, longCap: 14, taper: 2, recov: 2 },
-  full: { key: 'full', mi: 26.2188, label: 'Marathon', peak: 45, longCap: 20, taper: 3, recov: 3 }
+  full: { key: 'full', mi: 26.2188, label: 'Marathon', peak: 45, longCap: 20, taper: 3, recov: 3 },
+  /* more distances: 'key' is the training family they follow */
+  '1mi': { key: '5k', id: '1mi', mi: 1, label: '1 mile', peak: 22, longCap: 8, taper: 1, recov: 1 },
+  '8k': { key: '10k', id: '8k', mi: 4.97097, label: '8K / 5 mile', peak: 28, longCap: 11, taper: 1, recov: 1 },
+  '15k': { key: 'half', id: '15k', mi: 9.32057, label: '15K', peak: 32, longCap: 12, taper: 1, recov: 1 },
+  '10mi': { key: 'half', id: '10mi', mi: 10, label: '10 mile', peak: 32, longCap: 13, taper: 1, recov: 1 },
+  '25k': { key: 'full', id: '25k', mi: 15.5343, label: '25K', peak: 38, longCap: 16, taper: 2, recov: 2 },
+  '30k': { key: 'full', id: '30k', mi: 18.6411, label: '30K', peak: 42, longCap: 18, taper: 2, recov: 2 },
+  '50k': { key: 'full', id: '50k', mi: 31.0686, label: '50K', peak: 50, longCap: 22, taper: 3, recov: 3 }
 };
 function distOf(ev) {
   if (!ev) return DIST.half;
   if (DIST[ev.dist]) return DIST[ev.dist];
   var m = +ev.mi || 13.1;
   var base = m <= 4 ? DIST['5k'] : m <= 8 ? DIST['10k'] : m <= 16 ? DIST.half : DIST.full;
-  return { key: base.key, mi: m, label: ev.name || (m + ' mi'), peak: base.peak, longCap: base.longCap, taper: base.taper, recov: base.recov };
+  /* a custom distance scales peak mileage and the long run between the standard races */
+  var peak = m <= 16 ? base.peak : Math.round(clamp(35 + (m - 13.1) * 0.8, 35, 52));
+  return { key: base.key, mi: m, label: (Math.round(m * 10) / 10) + ' mi', peak: peak, longCap: clamp(Math.round(m <= 13.2 ? m + 1 : m * 0.78), base.key === '5k' ? 8 : 10, 22), taper: m > 20 ? 3 : m > 12 ? 2 : 1, recov: m > 20 ? 3 : m > 12 ? 2 : 1 };
 }
 function goalVdot(ev) {
   var d = distOf(ev), t = parseClock(ev && ev.goal);
@@ -563,9 +668,10 @@ function zones(v, goalPace) {
     T: band(0.885, 0.86), I: band(0.985, 0.965), R: band(1.06, 1.03)
   };
   z.G = goalPace ? [r5(goalPace - 5), r5(goalPace + 5)] : z.H;
+  z.ST = [z.T[1], z.T[1] + 20];   /* sub-threshold: just under threshold, about half-marathon to 30K effort */
   return z;
 }
-var ZONE_NAME = { REC: 'recovery', E: 'easy', S: 'steady', M: 'marathon pace', H: 'half marathon pace', T: 'threshold', I: 'interval', R: 'stride', G: 'goal pace', F: 'by feel' };
+var ZONE_NAME = { REC: 'recovery', E: 'easy', S: 'steady', M: 'marathon pace', H: 'half marathon pace', T: 'threshold', ST: 'sub-threshold', I: 'interval', R: 'stride', G: 'goal pace', F: 'by feel' };
 
 /* ---------------- training styles ---------------- */
 var METHODS = {
@@ -610,8 +716,58 @@ var METHODS = {
     desc: 'Simple and gentle: three or four easy runs, a long run that slowly grows, light fartleks for fun, and optional run-walk intervals. Finishing healthy is the goal.',
     suits: 'First race at the distance, coming back from injury, or low weekly mileage.',
     runs: [3, 4], quality: 1, peakMult: 0.85, longFrac: 1, longCapFull: 20, longCapHalf: 12, mlr: false, cross: 0, easyShare: 0.9
+  },
+  runwalk: {
+    key: 'runwalk', name: 'Run-walk', short: 'Run-walk',
+    inspired: 'Run-walk-run plans in the style of Jeff Galloway',
+    desc: 'Every run uses planned walk breaks, starting around 1 minute running and 1 minute walking and growing to 4 or 5 minutes of running per minute of walking. Three runs a week and a long run that builds patiently.',
+    suits: 'Brand-new runners, returning from a long layoff or injury, or anyone who wants the gentlest way to cover the distance.',
+    runs: [3, 3], quality: 0, peakMult: 0.7, longFrac: 1.1, longCapFull: 20, longCapHalf: 12, mlr: false, cross: 0, easyShare: 1
+  },
+  hybrid: {
+    key: 'hybrid', name: 'Hybrid: strength + endurance', short: 'Hybrid',
+    inspired: 'Concurrent-training plans used by hybrid athletes',
+    desc: 'Lifting and running get equal billing: three or four runs (one key workout, one long run) and at least three heavy lifting sessions, with hard runs and leg days sequenced so they do not blunt each other.',
+    suits: 'Lifters who want to run a strong race without giving up the barbell.',
+    runs: [3, 4], quality: 1, peakMult: 0.85, longFrac: 1.05, longCapFull: 20, longCapHalf: 13, mlr: false, cross: 0, easyShare: 0.75, liftMin: 3
+  },
+  lydiard: {
+    key: 'lydiard', name: 'Base first', short: 'Base first',
+    inspired: 'Aerobic base, hills, then sharpening, in the style of Arthur Lydiard',
+    desc: 'A long aerobic base of easy and steady running with strides, then a hill-strength phase, then a short sharpening phase of race-pace work. Speed comes last, on top of a big engine.',
+    suits: 'Runners with months before the race who want durable fitness and few hard sessions early on.',
+    runs: [4, 6], quality: 1, peakMult: 1.15, longFrac: 1.05, longCapFull: 22, longCapHalf: 15, mlr: true, cross: 0, easyShare: 0.85
+  },
+  norwegian: {
+    key: 'norwegian', name: 'Norwegian singles', short: 'Norwegian',
+    inspired: 'The sub-threshold "Norwegian singles" approach adapted for one run a day',
+    desc: 'Two or three controlled sub-threshold interval sessions a week (such as 10 × 1K, 5 × 2K or 3 × 3K with 60-second rests), always a notch below threshold, with truly easy running between and one easy long run. No all-out workouts. Near a marathon, one session becomes marathon-pace work.',
+    suits: 'Consistent runners at 25+ miles a week over 5–7 days who recover well from frequent moderate work. Not for beginners.',
+    runs: [5, 7], quality: 3, peakMult: 1.15, longFrac: 0.9, longCapFull: 20, longCapHalf: 14, mlr: false, cross: 0, easyShare: 0.78, qBeforeLong: true
+  },
+  canova: {
+    key: 'canova', name: 'Marathon specific', short: 'Specific',
+    inspired: 'Race-specific extension training in the style of Renato Canova',
+    desc: 'Builds from fast continuous runs at about 90% of marathon pace, then extends how long you can hold marathon pace: long marathon-pace intervals with steady "float" recoveries and long fast runs. High mileage, very race-specific.',
+    suits: 'Advanced marathoners at 40+ miles a week chasing a time goal.',
+    runs: [5, 7], quality: 2, peakMult: 1.3, longFrac: 1.05, longCapFull: 22, longCapHalf: 15, mlr: true, cross: 0, easyShare: 0.72
   }
 };
+/* Who each style is for. level: 1 beginner, 2 intermediate, 3 advanced. focus: 'run' or 'mixed' (running + lifting). */
+var METHOD_META = {
+  runwalk: { level: 1, focus: 'run', minMpw: 0, days: '3 runs', evidence: 'Walk breaks lower impact and perceived strain; a 2016 study of first-time marathoners found run-walkers finished in similar times with less muscle pain and fatigue.' },
+  beginner: { level: 1, focus: 'run', minMpw: 5, days: '3–4 runs', evidence: 'Gradual mileage growth with mostly easy running is the common thread in novice plans, and large training-log studies link sudden mileage spikes to injury.' },
+  lowfreq: { level: 1, focus: 'mixed', minMpw: 8, days: '3 runs + 2 gym days', evidence: 'The FIRST three-run programme produced marathon improvements in its own studies; best when the other days are real training, here lifting.' },
+  hybrid: { level: 2, focus: 'mixed', minMpw: 10, days: '3–4 runs + 3–4 lifts', evidence: 'A 2022 review of 43 studies found concurrent training does not reduce strength or muscle gain; heavy lifting (near-maximal loads, 10+ weeks) improves running economy.' },
+  balanced: { level: 2, focus: 'mixed', minMpw: 10, days: '3–5 runs + 2–3 lifts', evidence: 'Pyramidal training: mostly easy, some threshold, a little fast. A 2024 analysis of about 120,000 marathoners found faster runners follow this pattern and differ mainly by doing more easy miles.' },
+  polarized: { level: 2, focus: 'run', minMpw: 15, days: '4–6 runs', evidence: 'Controlled trials of 80/20 intensity balance show better gains than threshold-heavy training for recreational runners who usually run easy days too hard.' },
+  lydiard: { level: 2, focus: 'run', minMpw: 15, days: '4–6 runs', evidence: 'Volume of easy running is the strongest training predictor of marathon time in large datasets; this style front-loads it.' },
+  cumulative: { level: 2, focus: 'run', minMpw: 20, days: '6 runs', evidence: 'Frequent running spreads load across the week; long runs are capped so no single run is more than about 30% of weekly volume.' },
+  endurance: { level: 3, focus: 'run', minMpw: 30, days: '5–6 runs', evidence: 'Higher mileage with threshold work and medium-long runs: the pattern most associated with faster marathon times in training-log research.' },
+  norwegian: { level: 3, focus: 'run', minMpw: 25, days: '5–7 runs', evidence: 'Keeps about 20–25% of weekly running just under the second lactate threshold, where a lot of quality can be absorbed with little fatigue. Evidence is strong observationally (elite and amateur results) but controlled trials are still few.' },
+  canova: { level: 3, focus: 'run', minMpw: 40, days: '5–7 runs', evidence: 'Race-pace specificity: the closer the session is to marathon pace and duration, the more directly it trains the demands of the race. Coaching-derived rather than trial-tested.' }
+};
+Object.keys(METHOD_META).forEach(function (k) { Object.assign(METHODS[k], METHOD_META[k]); });
 function suggestMethods(profile, events) {
   /* Scores each style against the runner's answers. Returns [{key, score, why}] best first. */
   var p = profile || {};
@@ -638,7 +794,22 @@ function suggestMethods(profile, events) {
   if (p.hrTrainer) add('polarized', 4, 'You like training by heart rate, which fits 80/20.');
   if (runs >= 4 && lvl !== 'new') add('polarized', 1, 'Two varied workouts with strictly easy days between them.');
   if (goal === 'fitness') { add('polarized', 1); add('lowfreq', 1); }
-  return Object.keys(sc).map(function (k) { return { key: k, score: sc[k], why: why[k].slice(0, 2).join(' ') || METHODS[k].suits }; }).sort(function (a, b) { return b.score - a.score; });
+  /* newer styles */
+  if (lvl === 'new' && mpw < 6) add('runwalk', 7, 'You are just starting, and walk breaks are the gentlest way to build.'); else if (lvl === 'new' || p.runWalk) add('runwalk', 2, 'Walk breaks keep the impact low while you build.'); else add('runwalk', -6);
+  if (goal === 'finish' && mpw < 10) add('runwalk', 2);
+  if (lifts >= 3 && runs <= 4) add('hybrid', 8, 'You lift ' + lifts + ' days a week and this style keeps lifting and running in balance.'); else if (lifts >= 3) add('hybrid', 3, 'You lift ' + lifts + ' days a week.'); else add('hybrid', -3);
+  if (lvl === 'new') add('hybrid', -2);
+  if (runs >= 5 && mpw >= 25 && lvl !== 'new') add('norwegian', lvl === 'exp' ? 5 : 3, 'You run ' + runs + ' days and ' + mpw + ' miles a week, enough to absorb frequent sub-threshold work.'); else add('norwegian', -5);
+  if (p.injuryProne) add('norwegian', -2);
+  if (lifts >= 3) { add('norwegian', -2); add('canova', -3); }
+  if (hasFull && lvl === 'exp' && mpw >= 40 && runs >= 5 && goal === 'time') add('canova', 6, 'Your mileage and experience suit marathon-specific work.'); else add('canova', -6);
+  if (runs >= 4 && mpw >= 15 && lvl !== 'new') add('lydiard', 2, 'A long aerobic base suits the time you have before your race.'); else add('lydiard', -2);
+  var far = (events || []).filter(function (e) { return (e.priority || 'A') === 'A'; }).some(function (e) { return diffD(today(), e.date) > 150; });
+  if (far && lvl !== 'new' && runs >= 4) add('lydiard', 2);
+  /* never rank a style far above the runner's level or current mileage as the best match */
+  var lv = lvl === 'new' ? 1 : lvl === 'exp' ? 3 : 2;
+  Object.keys(sc).forEach(function (k) { var m = METHODS[k]; if (m.level > lv) sc[k] -= 4 * (m.level - lv); if (mpw < m.minMpw * 0.6) sc[k] -= 3; });
+  return Object.keys(sc).map(function (k) { return { key: k, score: sc[k], why: why[k].slice(0, 2).join(' ') || METHODS[k].suits, level: METHODS[k].level, focus: METHODS[k].focus, stretch: METHODS[k].level > lv || mpw < METHODS[k].minMpw * 0.6 }; }).sort(function (a, b) { return b.score - a.score; });
 }
 
 /* What your Garmin history says about where you are now. */
@@ -658,66 +829,104 @@ function historyStats(garmin, date) {
 }
 
 /* ---------------- strength modules (shared with the UI) ---------------- */
-/* ---------- Strength modules ---------- */
+/* ---------- Strength modules ----------
+   Every gym day is about 45 minutes and follows the same arc:
+   dynamic stretch (5) -> dynamic power lifts (5) -> heavy full-body compounds (23) -> muscle-specific finishers (12).
+   A, B and C are all full-body but stagger the patterns: A squat + horizontal push/pull, B hinge + vertical push/pull,
+   C single-leg + mixed. Each has three versions that rotate every four weeks. */
 function same(a) { return [a, a, a, a]; }
 function ex(n, cue, rx, rest) { return { n: n, cue: cue, rx: rx, rest: Array.isArray(rest) ? rest : same(rest) }; }
-var WU = ex('Lift warm-up', 'Follow the 5-minute lift warm-up on the Warm-up tab.', same('5 min'), '–');
-
+function dy(n, cue, rx) { var e = ex(n, cue, same(rx), '–'); e.wu = true; return e; }
+var WU = ex('Lift warm-up', 'Follow the 5-minute lift warm-up on the Warm-up tab.', same('5 min'), '–'); WU.wu = true;
+var DYN = [
+  [dy("World's greatest stretch", 'Lunge, elbow to instep, then rotate and reach to the sky.', '1×5/side'), dy('Deep squat pry', 'Sit deep, elbows push the knees out, rock side to side.', '1×5, 5 s holds'), dy('Leg swings', 'Front to back, tall torso, a little higher each swing.', '1×10/leg'), dy('Inchworm', 'Walk the hands out to a plank and back, legs as straight as you can.', '1×5'), dy('Open-book rotation', 'Side-lying, knees stacked, open the top arm and follow it with your eyes.', '1×6/side')],
+  [dy('Walking lunge with reach', 'Long step, reach both arms overhead and lean slightly away from the front leg.', '1×6/side'), dy('90/90 hip switch', 'Sit tall, rotate both knees side to side without using your hands if you can.', '1×6/side'), dy('Hamstring scoop', 'Heel down, toes up, hinge and sweep the hands past the foot.', '1×8/leg'), dy('Scapular push-up', 'Arms straight, let the chest sink then push the floor away.', '1×8'), dy('Band pull-apart', 'Arms straight, squeeze the shoulder blades together.', '1×12')],
+  [dy('Spiderman lunge with rotation', 'Deep lunge, same-side elbow toward the floor, then rotate open.', '1×5/side'), dy('Bodyweight Cossack squat', 'Shift side to side, sitting deep over one heel with the other leg straight.', '1×5/side'), dy('Glute bridge march', 'Hips high and level while you lift one knee at a time.', '1×8/side'), dy('Cat-cow to downward dog', 'Round, arch, then push the hips up and press the heels down.', '1×6'), dy('Knee-to-wall ankle rock', 'Heel stays down, knee tracks over the second toe.', '1×8/side')]
+];
+var RX = {
+  power: ['3×5', '4×4', '3×3', '2×3'], powerMany: ['3×10', '3×12', '3×10', '2×8'],
+  lower: ['4×6 @ RPE 7', '4×4 @ RPE 8', '3×3 @ RPE 8', '2×5 @ RPE 6'], lowerRest: ['2:30', '2:30', '2:30', '2:00'],
+  lowerLeg: ['3×8/leg @ RPE 7', '4×6/leg @ RPE 8', '3×5/leg @ RPE 8', '2×6/leg @ RPE 6'],
+  upper: ['3×8 @ RPE 7', '3×5 @ RPE 8', '3×4 @ RPE 8', '2×6 @ RPE 6'],
+  acc: ['3×10', '3×8', '2×8', '2×10'], accLeg: ['3×10/leg', '3×8/leg', '2×8/leg', '2×8/leg'], accHi: ['3×15', '3×12', '2×12', '2×12'], side: ['3×10/side', '3×10/side', '2×10/side', '2×8/side']
+};
+function day(key, name, focus, v, power, lower, push, pull, fin) {
+  return { key: key, name: name, focus: focus, v: v, blocks: [
+    { min: 5, t: 'Dynamic stretch', ex: DYN[v.d] },
+    { min: 5, t: 'Dynamic power', ex: power },
+    { min: 23, t: 'Heavy compounds', ex: [lower, push, pull] },
+    { min: 12, t: 'Muscle-specific finishers', ex: fin }
+  ] };
+}
+var SS = 'Superset: alternate with the next lift, about 75 s between them.';
+var LIFT_VARS = {
+  A: [
+    day('A', 'Squat Day', 'Full body, squat-led: explosive jumps, a heavy squat, a heavy press-and-row superset, then hamstring, shin and calf finishers.', { d: 0 },
+      [ex('Box jump', 'Step down, never jump down. Reset between reps and land quietly.', RX.power, '60 s'), ex('Kettlebell swing', 'Hike it back, snap the hips, let the bell float to chest height.', RX.powerMany, '60 s')],
+      ex('Back squat', 'Brace first, sit between your hips, and go as deep as you can control. RPE 8 leaves two reps in the tank.', RX.lower, RX.lowerRest),
+      ex('Barbell bench press', 'Shoulder blades pinned back and down, feet planted, bar to the lower chest. ' + SS, RX.upper, '75 s'),
+      ex('One-arm dumbbell row', 'Flat back, let the shoulder blade stretch forward at the bottom, pull the elbow to the hip.', ['3×8/arm', '3×6/arm', '3×5/arm', '2×8/arm'], '75 s'),
+      [ex('Dumbbell Romanian deadlift', 'Slow 3 s lowering, feel the hamstrings stretch, hips back, soft knees.', RX.acc, '45 s'), ex('Tibialis raise (wall)', 'Heels about 12 in from the wall, toes up hard, 2 s up and 2 s down.', ['3×20', '3×20, add a band', '2×20', '2×15'], '30 s'), ex('Deficit calf raise', 'Off a step: sink into a deep stretch for 2 s, then rise all the way up.', ['3×12', '3×10, add weight', '2×12', '2×10'], '30 s')]),
+    day('A', 'Squat Day', 'Full body, squat-led: jumps and slams, a front squat that opens the ankles and hips, an incline press-and-row superset, then adductor and lower-leg finishers.', { d: 1 },
+      [ex('Squat jump', 'Dip, explode, land soft and sink into the next rep.', RX.power, '60 s'), ex('Medicine ball slam', 'Reach tall, then throw the ball through the floor with your whole body.', ['3×8', '3×10', '3×6', '2×6'], '45 s')],
+      ex('Front squat', 'Elbows high, chest tall, sit straight down. The upright position stretches ankles and hips.', RX.lower, RX.lowerRest),
+      ex('Incline dumbbell press', 'Let the dumbbells sink for a deep chest stretch, elbows about 45° from the body. ' + SS, RX.upper, '75 s'),
+      ex('Chest-supported dumbbell row', 'Chest on the incline bench, reach long at the bottom, pause at the top.', RX.upper, '75 s'),
+      [ex('Cossack squat', 'Sit deep over one heel with the other leg long. Hold a light weight in front as a counterbalance.', ['3×6/side', '3×6/side, add weight', '2×6/side', '2×5/side'], '45 s'), ex('Tibialis raise (wall)', 'Heels about 12 in from the wall, toes up hard, 2 s up and 2 s down.', ['3×20', '3×20, add a band', '2×20', '2×15'], '30 s'), ex('Soleus raise (bent knee)', 'Knees bent 90°, weight on the thighs, 3 s down and a pause at the bottom.', ['3×15', '3×12, heavier', '2×15', '2×15'], '30 s')]),
+    day('A', 'Squat Day', 'Full body, squat-led: jumps, a paused squat for strength out of the deepest position, a dumbbell press-and-row superset, then hamstring, groin and calf finishers.', { d: 2 },
+      [ex('Box jump', 'Step down, never jump down. Reset between reps and land quietly.', RX.power, '60 s'), ex('Medicine ball chest pass', 'Step and punch the ball into a wall or to a partner as fast as you can.', ['3×8', '3×8', '3×6', '2×6'], '45 s')],
+      ex('Paused back squat', 'Two-second pause at the bottom, stay tight, then drive up. Use about 10% less than your normal squat.', RX.lower, RX.lowerRest),
+      ex('Dumbbell bench press', 'Deep stretch at the bottom, press up and slightly in. ' + SS, RX.upper, '75 s'),
+      ex('Seated cable row', 'Reach forward and let the lats stretch, then pull to the lower ribs without leaning back.', RX.upper, '75 s'),
+      [ex('Nordic hamstring curl', 'Anchor the ankles, lower as slowly as you can, push back up with your hands.', ['3×5', '3×6', '2×5', '2×4'], '60 s'), ex('Copenhagen plank', 'Top leg on the bench, lift the hips, squeeze the inner thigh.', ['3×20 s/side', '3×25 s/side', '2×20 s/side', '2×15 s/side'], '30 s'), ex('Deficit calf raise', 'Off a step: sink into a deep stretch for 2 s, then rise all the way up.', ['3×12', '3×10, add weight', '2×12', '2×10'], '30 s')])
+  ],
+  B: [
+    day('B', 'Hinge Day', 'Full body, hinge-led: bouncy ankle work, a heavy deadlift, an overhead press and pull-up superset, then single-leg and Achilles finishers.', { d: 1 },
+      [ex('Pogo hops', 'Stiff ankles, quiet feet, quick off the floor.', ['3×20', '4×20', '3×20', '2×15'], '45 s'), ex('Broad jump', 'Swing the arms, land in a quarter squat and hold for 2 s.', RX.power, '60 s')],
+      ex('Trap-bar deadlift', 'Wedge into the bar, push the floor away, finish by squeezing the glutes. No bouncing off the floor.', RX.lower, RX.lowerRest),
+      ex('Standing barbell overhead press', 'Squeeze glutes, ribs down, head through the window at the top. ' + SS, RX.upper, '75 s'),
+      ex('Pull-up', 'Start from a full dead hang for a lat stretch, pull the elbows to your ribs. Use a band or the lat pulldown if needed.', ['3×6', '3×5, add weight if easy', '3×4', '2×5'], '75 s'),
+      [ex('Dumbbell Bulgarian split squat', 'Rear foot on a bench, drop straight down until the back hip flexor stretches, drive through the front heel.', RX.accLeg, '45 s'), ex('Eccentric heel drop (single leg)', 'Rise on two legs, lower on one over 3 s into a full stretch, off the edge of a step.', ['3×12/leg', '3×12/leg, hold a dumbbell', '2×12/leg', '2×10/leg'], '30 s'), ex('Hanging knee raise', 'No swinging: curl the pelvis up, lower slowly to a full hang.', ['3×10', '3×12', '2×10', '2×8'], '30 s')]),
+    day('B', 'Hinge Day', 'Full body, hinge-led: hops and swings, a heavy Romanian deadlift that lengthens the hamstrings under load, a push-press and chin-up superset, then lunge, calf and trunk finishers.', { d: 2 },
+      [ex('Pogo hops', 'Stiff ankles, quiet feet, quick off the floor.', ['3×20', '4×20', '3×20', '2×15'], '45 s'), ex('Kettlebell swing', 'Hike it back, snap the hips, let the bell float to chest height.', RX.powerMany, '60 s')],
+      ex('Barbell Romanian deadlift', 'Bar stays on the thighs, hips travel back until the hamstrings are fully stretched, then stand tall.', ['4×8 @ RPE 7', '4×6 @ RPE 8', '3×5 @ RPE 8', '2×6 @ RPE 6'], RX.lowerRest),
+      ex('Push press', 'Small dip, drive with the legs, punch the bar overhead and lower it under control. ' + SS, RX.upper, '75 s'),
+      ex('Chin-up', 'Palms toward you, full hang at the bottom, chest to the bar. Use a band or the lat pulldown if needed.', ['3×6', '3×5, add weight if easy', '3×4', '2×5'], '75 s'),
+      [ex('Dumbbell walking lunge', 'Long step, tall torso, back knee kisses the floor.', RX.accLeg, '45 s'), ex('Soleus raise (bent knee)', 'Knees bent 90°, weight on the thighs, 3 s down and a pause at the bottom.', ['3×15', '3×12, heavier', '2×15', '2×15'], '30 s'), ex('Pallof press', 'Resist the twist. Keep hips square.', RX.side, '30 s')]),
+    day('B', 'Hinge Day', 'Full body, hinge-led: jumps, a heavy conventional deadlift, a dumbbell press and pulldown superset, then glute, Achilles and trunk finishers.', { d: 0 },
+      [ex('Broad jump', 'Swing the arms, land in a quarter squat and hold for 2 s.', RX.power, '60 s'), ex('Medicine ball slam', 'Reach tall, then throw the ball through the floor with your whole body.', ['3×8', '3×10', '3×6', '2×6'], '45 s')],
+      ex('Conventional deadlift', 'Bar over mid-foot, lats tight, push the floor away and stand tall. Reset each rep.', RX.lower, RX.lowerRest),
+      ex('Seated dumbbell overhead press', 'Lower until the dumbbells are at ear height for a shoulder stretch, press straight up. ' + SS, RX.upper, '75 s'),
+      ex('Lat pulldown', 'Full reach at the top, pull the elbows down to your ribs, chest proud.', RX.upper, '75 s'),
+      [ex('Barbell hip thrust', 'Shoulders on a bench, chin tucked, drive the hips up and pause for 2 s.', RX.acc, '45 s'), ex('Eccentric heel drop (single leg)', 'Rise on two legs, lower on one over 3 s into a full stretch, off the edge of a step.', ['3×12/leg', '3×12/leg, hold a dumbbell', '2×12/leg', '2×10/leg'], '30 s'), ex('Dead bug', 'Lower back stays glued to the floor.', ['3×8/side', '3×10/side', '2×8/side', '2×8/side'], '30 s')])
+  ],
+  C: [
+    day('C', 'Single-Leg Day', 'Full body, one leg at a time: bounds and hops, a heavy reverse lunge, a push-up and barbell-row superset, then hamstring, trunk and lat finishers.', { d: 2 },
+      [ex('Lateral skater hops', 'Land softly on one foot, hold for a beat, then go the other way.', ['3×8/side', '4×8/side', '3×6/side', '2×6/side'], '45 s'), ex('Alternate-leg bounds', 'Long, springy strides. Drive the knee up and reach out.', ['3×20 m', '4×20 m', '3×20 m', '2×20 m'], '60 s')],
+      ex('Barbell reverse lunge', 'Long step back, front shin near vertical, drive through the front heel. All reps on one leg, then switch.', RX.lowerLeg, RX.lowerRest),
+      ex('Weighted push-up', 'Hands on plates or handles so the chest sinks below the hands, body in one line. ' + SS, ['3×10', '3×8, add weight', '3×6', '2×8'], '75 s'),
+      ex('Barbell bent-over row', 'Hinge to about 45°, pull to the belly button, keep the torso still.', RX.upper, '75 s'),
+      [ex('Dumbbell single-leg Romanian deadlift', 'Square hips, soft knee, reach long until the hamstring stretches. Touch a wall for balance if needed.', RX.accLeg, '45 s'), ex('Side plank', 'Straight line from head to heels.', ['3×30 s/side', '3×40 s/side', '2×30 s/side', '2×20 s/side'], '30 s'), ex('Dumbbell pullover', 'Lying across a bench, lower the dumbbell behind your head for a deep lat and chest stretch.', RX.acc, '30 s')]),
+    day('C', 'Single-Leg Day', 'Full body, one leg at a time: split jumps, a heavy step-up, a landmine press and inverted-row superset, then glute, carry and arm finishers.', { d: 0 },
+      [ex('Split-squat jump', 'Jump from a lunge and land in a lunge on the same side. Soft, quiet landings.', ['3×5/side', '3×6/side', '3×4/side', '2×4/side'], '60 s'), ex('Lateral skater hops', 'Land softly on one foot, hold for a beat, then go the other way.', ['3×8/side', '4×8/side', '3×6/side', '2×6/side'], '45 s')],
+      ex('Dumbbell step-up', 'Knee-high box, whole foot on, stand tall without pushing off the back leg, lower for 3 s.', RX.lowerLeg, RX.lowerRest),
+      ex('Landmine press', 'Half-kneeling, press up and forward, reach long at the top. ' + SS, ['3×8/arm', '3×6/arm', '3×5/arm', '2×6/arm'], '75 s'),
+      ex('Inverted row', 'Body in one line under a bar or rings, pull the chest to the bar, lower to straight arms.', ['3×10', '3×8, feet raised', '3×6', '2×8'], '75 s'),
+      [ex('Single-leg hip thrust', 'Shoulders on a bench, one foot down, drive the hips up level and pause.', RX.accLeg, '45 s'), ex('Suitcase carry', 'One heavy dumbbell, tall posture, no leaning.', same('3×30 m/side'), '30 s'), ex('Incline dumbbell curl', 'Lie back on an incline so the arms hang behind you: a long stretch at the bottom of every rep.', RX.acc, '30 s')]),
+    day('C', 'Single-Leg Day', 'Full body, one leg at a time: bounds and jumps, a deep front-foot-elevated split squat, an Arnold press and pulldown superset, then hamstring, trunk and shin finishers.', { d: 1 },
+      [ex('Alternate-leg bounds', 'Long, springy strides. Drive the knee up and reach out.', ['3×20 m', '4×20 m', '3×20 m', '2×20 m'], '60 s'), ex('Squat jump', 'Dip, explode, land soft and sink into the next rep.', RX.power, '60 s')],
+      ex('Front-foot-elevated split squat', 'Front foot on a low plate, sink until the back knee nearly touches: a deep stretch for the back hip.', RX.lowerLeg, RX.lowerRest),
+      ex('Dumbbell Arnold press', 'Start palms facing you at the chin, rotate and press overhead, reverse it on the way down. ' + SS, RX.upper, '75 s'),
+      ex('Neutral-grip lat pulldown', 'Palms facing each other, full reach at the top, pull to the upper chest.', RX.upper, '75 s'),
+      [ex('Dumbbell single-leg Romanian deadlift', 'Square hips, soft knee, reach long until the hamstring stretches. Touch a wall for balance if needed.', RX.accLeg, '45 s'), ex('Pallof press', 'Resist the twist. Keep hips square.', RX.side, '30 s'), ex('Tibialis raise (wall)', 'Heels about 12 in from the wall, toes up hard, 2 s up and 2 s down.', ['3×20', '3×20, add a band', '2×20', '2×15'], '30 s')])
+  ]
+};
 var LIFT = {
-  A: {
-    key: 'A', name: 'Squat Day', focus: 'Heavy squat and press, box jumps for power, and a tibialis finisher for the shins.',
-    blocks: [
-      { min: 5, t: 'Warm-up', ex: [WU] },
-      { min: 6, t: 'Power', ex: [ex('Box jump', 'Step down, never jump down. Reset between reps and land quietly.', ['3×5', '4×4', '3×4', '2×3'], '60 s')] },
-      { min: 12, t: 'Main lift', ex: [ex('Back squat', 'RPE 7 leaves three reps in the tank, RPE 8 leaves two. Brace first, then use full depth you control.', ['3×8 @ RPE 7', '4×5 @ RPE 8', '3×3 @ RPE 8', '2×5 @ RPE 6'], ['2:00', '2:30', '2:30', '1:30'])] },
-      { min: 8, t: 'Press', ex: [ex('Standing barbell overhead press', 'Squeeze glutes, ribs down, head through the window at the top.', ['3×8', '4×5', '3×4', '2×5'], ['2:00', '2:00', '2:00', '1:30'])] },
-      { min: 7, t: 'Single-leg', ex: [ex('Dumbbell walking lunge', 'Long step, tall torso, front knee tracks over the middle toes.', ['3×10/leg', '3×8/leg', '2×6/leg', '2×6/leg, bodyweight'], '90 s')] },
-      { min: 7, t: 'Superset', ex: [
-        ex('One-arm dumbbell row', 'Flat back, pull the elbow to the hip. Alternate with the tibialis raise.', ['3×10/arm', '3×8/arm', '3×6/arm', '2×8/arm'], '45 s'),
-        ex('Tibialis raise (wall)', 'Heels about 12 in from the wall, toes up hard, 2 s up and 2 s down.', ['3×20', '3×20, add a band', '2×20', '2×15'], '45 s')] }
-    ]
-  },
-  B: {
-    key: 'B', name: 'Hinge Day', focus: 'Deadlift and single-leg strength, with pogo hops and heel drops to build tough calves and Achilles tendons.',
-    blocks: [
-      { min: 5, t: 'Warm-up', ex: [WU] },
-      { min: 6, t: 'Power', ex: [
-        ex('Pogo hops', 'Stiff ankles, quiet feet, quick off the floor.', ['3×20', '4×20', '3×20', '2×15'], '45 s'),
-        ex('Broad jump', 'Swing the arms, land in a quarter squat and hold for 2 s.', ['3×3', '3×4', '3×3', '2×3'], '60 s')] },
-      { min: 12, t: 'Main lift', ex: [ex('Deadlift (conventional or trap bar)', 'Wedge into the bar, push the floor away, finish by squeezing the glutes.', ['3×8 @ RPE 7', '4×5 @ RPE 8', '3×3 @ RPE 8', '2×5 @ RPE 6'], ['2:00', '2:30', '2:30', '1:30'])] },
-      { min: 8, t: 'Single-leg', ex: [ex('Dumbbell Bulgarian split squat', 'Rear foot on a bench, drop straight down, drive through the front heel.', ['3×8/leg', '3×6/leg', '2×5/leg', '2×6/leg, bodyweight'], '90 s')] },
-      { min: 7, t: 'Pull', ex: [ex('Barbell bent-over row', 'Hinge to about 45°, pull to the belly button, keep the torso still.', ['3×10', '4×6', '3×5', '2×8'], ['90 s', '90 s', '90 s', '60 s'])] },
-      { min: 7, t: 'Calf superset', ex: [
-        ex('Eccentric heel drop (single leg)', 'Rise on two legs, lower on one leg over 3 s, off the edge of a step.', ['3×12/leg', '3×12/leg, hold a dumbbell', '2×12/leg', '2×10/leg'], '45 s'),
-        ex('Soleus raise (bent knee)', 'Knees bent 90°, weight on the thighs, 3 s down and a pause at the bottom.', ['3×15', '3×12, heavier', '2×15', '2×15'], '45 s')] }
-    ]
-  },
-  C: {
-    key: 'C', name: 'Power & Core', focus: 'The third lifting day in the base weeks. Light on the legs, heavy on bounce, trunk and foot strength.',
-    blocks: [
-      { min: 5, t: 'Warm-up', ex: [WU] },
-      { min: 8, t: 'Bounds', ex: [
-        ex('Alternate-leg bounds', 'Long, springy strides. Drive the knee up and reach out.', same('4×20 m'), '60 s'),
-        ex('Lateral skater hops', 'Land softly on one foot, hold for a beat, then go the other way.', same('3×8/side'), '45 s')] },
-      { min: 8, t: 'Hinge', ex: [ex('Dumbbell single-leg Romanian deadlift', 'Square hips, soft knee, reach long. Touch a wall for balance if needed.', same('3×10/leg'), '60 s')] },
-      { min: 8, t: 'Push and pull', ex: [
-        ex('Dumbbell incline press', 'Elbows at about 45° from the body.', same('3×10'), '60 s'),
-        ex('Chin-up or lat pulldown', 'Pull the elbows to your ribs. Pause at the top.', same('3×8'), '60 s')] },
-      { min: 8, t: 'Core', ex: [
-        ex('Pallof press', 'Resist the twist. Keep hips square.', same('3×10/side'), '30 s'),
-        ex('Dead bug', 'Lower back stays glued to the floor.', same('3×8/side'), '30 s'),
-        ex('Side plank', 'Straight line from head to heels.', same('3×30 s/side'), '30 s'),
-        ex('Suitcase carry', 'Tall posture, no leaning.', same('3×30 m/side'), '30 s')] },
-      { min: 8, t: 'Foot and ankle', ex: [
-        ex('Short-foot hold', 'Pull the ball of the foot toward the heel without curling the toes. Hold 5 s.', same('3×10'), '–'),
-        ex('Banded ankle inversion and eversion', 'Slow and controlled, only the ankle moves.', same('2×15 each way'), '–'),
-        ex('Single-leg balance', 'Progress to eyes closed or a folded towel.', same('3×30 s/leg'), '–')] }
-    ]
-  },
+  A: LIFT_VARS.A[0], B: LIFT_VARS.B[0], C: LIFT_VARS.C[0],
   UB: {
     key: 'UB', name: 'Upper Body & Core', focus: 'No-impact strength for weeks when running or jumping is off the table. Skip anything that provokes pain.',
     blocks: [
-      { min: 5, t: 'Warm-up', ex: [WU] },
+      { min: 5, t: 'Dynamic stretch', ex: DYN[0] },
       { min: 8, t: 'Push', ex: [
         ex('Dumbbell bench press', 'Shoulder blades pinned back, press up and slightly in.', same('3×10'), '90 s'),
         ex('Push-up', 'Body in one line. Stop two reps before form breaks.', same('2×12'), '60 s')] },
@@ -739,7 +948,7 @@ var LIFT = {
   HT: {
     key: 'HT', name: 'Travel Session', focus: 'A 30-minute bodyweight session for a hotel room or a park. Optional.',
     blocks: [
-      { min: 5, t: 'Warm-up', ex: [WU] },
+      { min: 5, t: 'Dynamic stretch', ex: DYN[0] },
       { min: 10, t: 'Legs', ex: [
         ex('Bodyweight squat', 'Slow down, 3 s lowering.', same('3×15'), '45 s'),
         ex('Reverse lunge', 'Long step back, tall torso.', same('3×10/leg'), '45 s'),
@@ -756,7 +965,7 @@ var LIFT = {
   ACT: {
     key: 'ACT', name: 'Race-Week Activation', focus: 'A short, easy session to keep the legs awake. Nothing heavy.',
     blocks: [
-      { min: 5, t: 'Warm-up', ex: [WU] },
+      { min: 5, t: 'Dynamic stretch', ex: DYN[0] },
       { min: 5, t: 'Prime', ex: [
         ex('Glute bridge', 'Squeeze at the top for 2 s.', same('2×10'), '30 s'),
         ex('Goblet squat, light', 'Easy depth, quick tempo, stop with plenty left.', same('2×6'), '45 s')] },
@@ -767,6 +976,9 @@ var LIFT = {
     ]
   }
 };
+/* which version of a session a given plan week uses: a new one every four weeks */
+function liftVar(weekN) { return Math.floor(Math.max(0, (weekN || 1) - 1) / 4) % 3; }
+function liftMod(key, v) { var a = LIFT_VARS[key]; return a ? a[(v || 0) % a.length] : LIFT[key]; }
 var LIFT_PHASES = [
   { k: 'Base', d: 'Learn the lifts. Moderate loads, higher reps.' },
   { k: 'Build', d: 'Heavier loads, lower reps. Your biggest strength gains come here.' },
@@ -803,6 +1015,16 @@ var SESS = {
   tt: function () { return { key: 'tt', kind: 'tt', title: '5K time trial', purpose: 'A fitness check. Your result resets every training pace in the app.', steps: function (q) { return [wu(1), S('run', { mi: 3.10686, z: 'F', label: '5K, as even as you can run it', race: true }), cd(1)]; } }; },
   tuneup: function () { return { key: 'tt', kind: 'tt', title: '5K tune-up', purpose: 'A race-effort 5K on a light week. Rehearse your race-morning routine.', steps: function (q) { return [wu(1.5), S('run', { mi: 3.10686, z: 'I', label: '5K at race effort', race: true }), cd(1)]; } }; },
   sharpener: function (z) { return { key: 'sharpener', title: 'Race-week sharpener', purpose: 'Just enough pace to feel sharp. Nothing more.', steps: function (q) { return [wu(1), rep(2, { mi: 1 }, z || 'G', { min: 3 }), cd(1), rep(4, { sec: 20 }, 'R', { sec: 40, walk: true }, 'relaxed strides')]; } }; },
+  /* sub-threshold intervals sized to the day: work = about q minus warm-up and cool-down */
+  subT: function (kind) {
+    var K = { k1: [1000, 'Sub-threshold 1K repeats', 6, 12, 'toward the faster end of the range (about 10-mile to 15K race effort)'], k2: [2000, 'Sub-threshold 2K repeats', 3, 6, 'mid-range (about half-marathon effort)'], k3: [3000, 'Sub-threshold 3K repeats', 2, 4, 'toward the slower end of the range (about 30K effort)'] }[kind];
+    return { key: 'subt', title: K[1], purpose: 'Controlled work just under your lactate threshold. It should feel "comfortably hard" (effort 5–6), never a strain: finish feeling you could do two more reps. If your breathing gets ragged, slow down.', steps: function (q) {
+      var work = clamp(q - 2.2, 1.8, 7.5), n = clamp(Math.round(work / (K[0] / MI_M)), K[2], K[3]);
+      return [wu(warm(q)), rep(n, { m: K[0] }, 'ST', { sec: 60 }, K[4]), cd(0)];
+    } };
+  },
+  mpFloat: function (n, mi) { return { key: 'goal', title: 'Marathon-pace intervals', purpose: 'Long repeats at marathon pace with a steady (not easy) float between them, extending how long you can hold race pace.', steps: function (q) { return [wu(1.5), rep(n, { mi: mi }, 'M', { mi: 0.5 }, 'float at steady effort, not a jog'), cd(0)]; } }; },
+  fastCont: function (mi) { return { key: 'steady', title: 'Fast continuous run', purpose: 'Continuous running at about 90% of marathon speed: the foundation that marathon pace is built on.', steps: function (q) { return [wu(1), run(mi, 'S', 'steady, about 90% of marathon speed'), cd(0)]; } }; },
   speedStrength: function (n, m) { return { key: 'intervals', title: 'Strength repeats', purpose: 'Longer repeats a little faster than goal pace, building speed endurance under fatigue.', steps: function (q) { return [wu(1.5), rep(n, { m: m }, 'T', { m: 400 }), cd(0)]; } }; }
 };
 
@@ -814,13 +1036,33 @@ function qualityFor(ctx) {
     if (ph === 'base') return SESS.strides(6);
     return SESS.fartlek(6, 2, 1, '10K effort');
   }
+  if (meth.key === 'norwegian') {
+    var kinds = ['k1', 'k2', 'k3'];
+    if (ph === 'taper') return d === 'full' ? SESS.goal(1, 3, 0, 'M') : SESS.subT('k1');
+    if (ph === 'race') return SESS.sharpener(d === 'full' ? 'M' : 'G');
+    if (ph === 'recov') return i === 0 ? null : SESS.strides(6);
+    /* near a marathon the third session becomes marathon pace */
+    /* near the race the midweek session becomes race-pace work; the day before the long run always stays sub-threshold */
+    if (ph === 'spec' && d === 'full' && slot === 1) return [SESS.goal(2, 2.5, 3, 'M'), SESS.goal(1, 5, 0, 'M'), SESS.mpFloat(3, 2), SESS.goal(1, 6, 0, 'M'), SESS.mpFloat(3, 3), SESS.goal(1, 8, 0, 'M')][Math.min(i, 5)];
+    if (ph === 'spec' && d !== 'full' && slot === 1) return d === 'half' ? [SESS.goal(2, 2, 3), SESS.goal(3, 2, 2)][i % 2] : [SESS.intervals(5, 1000, 400), SESS.intervals(6, 800, 400)][i % 2];
+    return SESS.subT(kinds[(i + slot) % 3]);
+  }
+  if (meth.key === 'canova' && !ctx.tt) {
+    if (ph === 'base') return slot === 1 ? [SESS.hills(8, 45), SESS.fartlek(8, 1, 1), SESS.hills(10, 45)][i % 3] : [SESS.fastCont(4), SESS.fastCont(5), SESS.progression(20), SESS.fastCont(6), SESS.fastCont(7), SESS.fastCont(8)][Math.min(i, 5)];
+    if (ph === 'thr') return slot === 1 ? [SESS.intervals(5, 1000, 400), SESS.intervalsMi(4, 2), SESS.intervals(6, 1000, 400)][i % 3] : [SESS.fastCont(8), SESS.tempoMi(4), SESS.fastCont(9), SESS.cruise(3, 2, 90), SESS.fastCont(10), SESS.tempoMi(5)][Math.min(i, 5)];
+    if (ph === 'spec' && d === 'full') return slot === 1 ? [SESS.tempoMi(4), SESS.intervalsMi(4, 2), SESS.cruise(3, 2, 90)][i % 3] : [SESS.mpFloat(3, 2), SESS.mpFloat(4, 2), SESS.mpFloat(3, 3), SESS.mpFloat(4, 3), SESS.goal(1, 10, 0, 'M'), SESS.mpFloat(5, 3), SESS.goal(1, 12, 0, 'M'), SESS.mpFloat(4, 3)][Math.min(i, 7)];
+  }
+  if (meth.key === 'lydiard' && !ctx.tt) {
+    if (ph === 'base') return [SESS.strides(6), SESS.steady(15), SESS.strides(8), SESS.steady(20), SESS.progression(20), SESS.steadyMi(4), SESS.strides(8), SESS.steady(25), SESS.progression(25), SESS.steadyMi(5)][i % 10];
+    if (ph === 'thr' && i < 4) return [SESS.hills(6, 60), SESS.hills(8, 60), SESS.hills(10, 60), SESS.hills(12, 45)][i];
+  }
   if (meth.key === 'beginner') {
-    var bl = [SESS.fartlek(6, 1, 1), SESS.strides(6), SESS.fartlek(8, 1, 1), SESS.hills(6, 45), SESS.steady(15), SESS.fartlek(5, 2, 2, 'steady-hard, RPE 7'), SESS.progression(15), SESS.steady(20)];
+    var bl = [SESS.fartlek(6, 1, 1), SESS.strides(6), SESS.fartlek(8, 1, 1), SESS.hills(6, 45), SESS.steady(15), SESS.fartlek(5, 2, 2, 'steady-hard, effort 5 of 10'), SESS.progression(15), SESS.steady(20)];
     if (ph === 'spec') bl = [SESS.goal(1, 2, 0), SESS.steady(20), SESS.goal(2, 1.5, 3), SESS.progression(20)];
     return bl[i % bl.length];
   }
   if (ph === 'base') {
-    var b1 = [SESS.fartlek(6, 1, 1), SESS.fartlek(8, 1, 1), SESS.fartlek(5, 2, 2, 'steady-hard, RPE 7'), SESS.hills(6, 45), SESS.steady(12), SESS.hills(8, 45), SESS.progression(15), SESS.fartlek(8, 1.5, 1.5, 'brisk, RPE 7'), SESS.steadyMi(3), SESS.steady(20), SESS.hills(10, 45), SESS.progression(20)];
+    var b1 = [SESS.fartlek(6, 1, 1), SESS.fartlek(8, 1, 1), SESS.fartlek(5, 2, 2, 'steady-hard, effort 5 of 10'), SESS.hills(6, 45), SESS.steady(12), SESS.hills(8, 45), SESS.progression(15), SESS.fartlek(8, 1.5, 1.5, 'brisk, effort 5 of 10'), SESS.steadyMi(3), SESS.steady(20), SESS.hills(10, 45), SESS.progression(20)];
     var b2 = [SESS.steady(20), SESS.tempoMi(3), SESS.cruise(2, 2, 180), SESS.cruise(4, 1, 60), SESS.tempoMi(4), SESS.progression(20)];
     if (meth.key === 'polarized' && slot === 1) return [SESS.hills(6, 45), SESS.fartlek(6, 1, 1), SESS.hills(8, 45)][i % 3];
     if (slot === 1) return [SESS.steady(15), SESS.progression(15), SESS.steady(20)][i % 3];
@@ -861,6 +1103,15 @@ function longFor(ctx, mi) {
   var easy = function (note) { return { title: 'Long run', steps: [run(mi, 'E')], note: note || 'Conversational the whole way. Fuel and hydrate like it is race day once it is over 75 minutes.' }; };
   if (ctx.cut || ph === 'base' || ph === 'recov') return easy();
   if (ph === 'thr') return i % 2 === 1 && mi >= 8 ? { title: 'Long run, steady finish', steps: [run(mi - 2, 'E'), run(2, 'S')], note: 'Easy, then finish the last 2 mi steady. Practice a gel or chews if it is over 75 minutes.' } : easy();
+  if (ctx.method && ctx.method.key === 'canova' && d === 'full' && (ph === 'thr' || ph === 'spec') && mi >= 12) {
+    var c = [
+      easy('Easy long run. The fast long runs do the specific work; this one builds endurance.'),
+      { title: 'Long fast run', steps: [run(3, 'E'), run(mi - 4, 'S', 'steady, about 90% of marathon speed'), run(1, 'E')], note: 'The signature run of this style: long and continuous at about 90% of marathon speed. Fuel as you will on race day.' },
+      easy(),
+      { title: 'Long run, marathon-pace blocks', steps: [run(3, 'E'), rep(ph === 'spec' ? 3 : 2, { mi: 3 }, 'M', { mi: 1 }, 'float at steady effort'), run(Math.max(1, mi - 3 - (ph === 'spec' ? 11 : 7)), 'E')], note: 'Marathon pace in blocks inside the long run. Practice race fueling and race shoes.' }
+    ];
+    return c[i % c.length];
+  }
   if (ph === 'spec') {
     if (d === 'full') {
       var opts = [
@@ -924,12 +1175,12 @@ function layoutWeek(o) {
   var nAvail = avail.filter(Boolean).length;
   var runs = Math.min(o.runs, nAvail);
   var qDays = [];
-  var qPref = [2, 3, 4, 5, 1].map(function (x) { return wrap(L + x); });
+  var qPref = (o.qBeforeLong && o.quality >= 3 ? [2, 4, 6, 3, 5] : [2, 3, 4, 5, 1]).map(function (x) { return wrap(L + x); });
   for (var qi = 0; qi < o.quality && runDays.length < runs; qi++) {
     var best = null;
     qPref.forEach(function (d) {
       if (best !== null || !free(d)) return;
-      if (d === wrap(L - 1) || d === wrap(L + 1)) return;
+      if ((d === wrap(L - 1) && !o.qBeforeLong) || d === wrap(L + 1)) return;
       if (qDays.some(function (x) { return Math.abs(wrap(x - d)) < 2 || Math.abs(wrap(d - x)) < 2; })) return;
       best = d;
     });
@@ -951,6 +1202,7 @@ function layoutWeek(o) {
   function liftOK(d) {
     if (liftDays.indexOf(d) >= 0) return false;
     if (d === wrap(L - 1)) return false;
+    if (d === L && o.lifts < 4) return false;   /* not on the long-run day unless there is no other room */
     if (liftDays.some(function (x) { return wrap(x - d) === 1 || wrap(d - x) === 1; }) && liftDays.length < 3) return false;
     return true;
   }
@@ -964,7 +1216,7 @@ function layoutWeek(o) {
   }
   [0, 1, 2, 3, 4, 5, 6].forEach(function (d) { lPref.push(d); });
   lPref.forEach(function (d) { if (liftDays.length < o.lifts && liftOK(d)) liftDays.push(d); });
-  lPref.forEach(function (d) { if (liftDays.length < o.lifts && liftDays.indexOf(d) < 0 && d !== wrap(L - 1)) liftDays.push(d); });
+  [wrap(L + 1), wrap(L - 4), wrap(L - 2)].concat(lPref).forEach(function (d) { if (liftDays.length < o.lifts && liftDays.indexOf(d) < 0 && d !== wrap(L - 1)) liftDays.push(d); });
   liftDays.forEach(function (d) { roles[d].push('lift'); });
   /* Cross-training on days without a run, never the day before the long run if avoidable. */
   var crossDays = [];
@@ -1069,7 +1321,7 @@ function generate(state) {
       var phIdx = phaseCounter[phKey] = (phaseCounter[phKey] == null ? 0 : phaseCounter[phKey] + 1);
       var miles;
       if (phKey === 'recov') {
-        var rf = prevDist && prevDist.key === 'full' ? [0.3, 0.45, 0.6] : [0.35, 0.55];
+        var rf = prevDist && prevDist.mi > 20 ? [0.3, 0.45, 0.6] : prevDist && prevDist.mi > 9 ? [0.5, 0.7] : [0.75];
         miles = Math.max(6, Math.round((prevPeak || 20) * (rf[wi] || 0.6)));
         lastBuild = miles; m = miles;
       } else if (phKey === 'taper') {
@@ -1113,6 +1365,7 @@ function longMilesFor(w, prev) {
   if (ph === 'spec') f = d === 'full' ? 0.45 : 0.4;
   f *= meth.longFrac;
   if (meth.key === 'cumulative') f = Math.min(f, 0.32);
+  if (meth.key === 'norwegian') f = Math.min(f, m >= 40 ? 0.3 : 0.33);
   var L = Math.round(m * f);
   if (ph === 'spec' && !w.cut && w.li % 2 === 1 && L >= w.longCap - 1) L = Math.max(L - (d === 'full' ? 4 : 2), 8);
   if (w.cut) L = Math.round((prev || L) * 0.72);
@@ -1129,7 +1382,7 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
   runs = Math.min(runs, +prof.runDays || 7);
   if (w.phase.key === 'recov' && w.phIdx === 0) runs = Math.min(runs, 3);
   if (m < 8) runs = Math.min(runs, 3);
-  var lifts = clamp(+prof.liftDays || 0, 0, 4);
+  var lifts = clamp(Math.max(+prof.liftDays || 0, method.liftMin || 0), 0, 4);
   if (w.phase.key === 'race') lifts = Math.min(lifts, 1);
   else if (w.phase.key === 'taper' || w.phase.key === 'recov') lifts = Math.min(lifts, 2);
   if (!prof.doubles) runs = Math.min(runs, Math.max(3, 7 - lifts - 1));
@@ -1139,9 +1392,14 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
   var quality = method.quality;
   if (w.cut || w.phase.key === 'recov' || w.phase.key === 'taper' || w.phase.key === 'race') quality = Math.min(quality, 1);
   if (runs <= 3 && method.key !== 'lowfreq') quality = Math.min(quality, 1);
-  if (w.phase.key === 'base' && method.key !== 'lowfreq' && method.key !== 'polarized') quality = Math.min(quality, 1);
+  if (w.phase.key === 'base' && ['lowfreq', 'polarized', 'norwegian', 'canova'].indexOf(method.key) < 0) quality = Math.min(quality, 1);
+  if (method.key === 'norwegian' && !(w.cut || w.phase.key === 'recov' || w.phase.key === 'taper' || w.phase.key === 'race')) {
+    /* ease in: one session for the first two weeks, three only with enough days and miles */
+    quality = runs >= 6 && m >= 30 ? 3 : runs >= 4 ? 2 : 1;
+    if (w.firstBlock && w.blockWeek < 2) quality = 1; else if (w.firstBlock && w.blockWeek < 5) quality = Math.min(quality, 2);
+  }
 
-  var lay = layoutWeek({ runs: runs, quality: quality, lifts: lifts, cross: cross, avail: prof.avail || [1, 1, 1, 1, 1, 1, 1].map(Boolean), longDay: prof.longDay != null ? +prof.longDay : 6, doubles: prof.doubles !== false, mlr: method.mlr && m >= 30 });
+  var lay = layoutWeek({ runs: runs, quality: quality, lifts: lifts, cross: cross, avail: prof.avail || [1, 1, 1, 1, 1, 1, 1].map(Boolean), longDay: prof.longDay != null ? +prof.longDay : 6, doubles: prof.doubles !== false, mlr: method.mlr && m >= 30, qBeforeLong: !!method.qBeforeLong });
   var ev = w.event;
   var raceIdx = (ev && ev.date >= w.start && ev.date <= w.end) ? dow(ev.date) : -1;
   var key = w.phase.block;
@@ -1157,11 +1415,11 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
   var used = 0;
   /* race week: race day, a sharpener 3-4 days out, short easy runs */
   if (w.phase.key === 'race' && raceIdx >= 0) {
-    days[raceIdx].parts.push({ type: 'race', role: 'race', title: ev.name || w.dist.label, mi: w.dist.mi, goal: ev.goal, steps: [S('run', { mi: w.dist.mi, z: 'G', label: 'Race' })], note: raceNote(ev, w.dist) });
+    days[raceIdx].parts.push({ type: 'race', role: 'race', kind: ev.kind || 'race', title: ev.name || (ev.kind === 'distance' ? 'Goal run: ' + w.dist.label : ev.kind === 'pace' ? w.dist.label + ' time trial' : w.dist.label), mi: w.dist.mi, goal: ev.goal, steps: [S('run', { mi: w.dist.mi, z: ev.kind === 'distance' ? 'E' : 'G', label: ev.kind === 'distance' ? 'Your goal distance' : ev.kind === 'pace' ? 'Time trial' : 'Race' })], note: ev.kind === 'distance' ? 'Goal day: cover ' + w.dist.label + '. Start easy, fuel after 45 minutes, and enjoy it. Pace does not matter today.' : raceNote(ev, w.dist) });
     var sd = raceIdx - 4 >= 0 ? raceIdx - 4 : null;
     if (sd != null) days[sd].parts.push(mkQuality(w, qualityFor({ phase: 'race', qi: 0, dist: w.dist, method: method }), 4, zz));
     var cand = [raceIdx - 5, raceIdx - 3, raceIdx - 2, raceIdx - 6].filter(function (d) { return d >= 0 && d !== sd; });
-    var ez = cand.slice(0, runs >= 4 ? 2 : 1);
+    var ez = cand.slice(0, runs >= 4 && raceIdx >= 5 ? 2 : 1);
     var each = clamp(Math.round((m - (sd != null ? 4 : 0) - 2) / Math.max(1, ez.length)), 3, w.dist.key === 'full' ? 6 : 5);
     ez.forEach(function (d) { days[d].parts.push(easyPart('Easy run', each, 'easy', zz)); });
     if (raceIdx - 1 >= 0) days[raceIdx - 1].parts.push(easyPart('Shakeout', 2, 'easy', zz, '15–20 minutes very easy with 4 relaxed strides. Lay out your gear tonight.'));
@@ -1171,7 +1429,7 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
     /* normal week */
     var qParts = [];
     var nQ = lay.qDays.length;
-    var qMiles = clamp(Math.round(m * (method.key === 'lowfreq' ? 0.28 : nQ > 1 ? 0.16 : 0.2)), 3, 10);
+    var qMiles = clamp(Math.round(m * (method.key === 'lowfreq' ? 0.28 : method.key === 'norwegian' ? (nQ >= 3 ? 0.13 : 0.16) : method.key === 'canova' && nQ > 1 ? 0.2 : nQ > 1 ? 0.16 : 0.2)), method.key === 'norwegian' ? 4 : 3, method.key === 'canova' ? 14 : method.key === 'norwegian' ? 8 : 10);
     lay.qDays.forEach(function (d, qn) {
       var ttWeek = w.phase.key === 'thr' && w.qi === 0 && !w.cut && w.firstBlock && qn === 0 && !(prof.recent && prof.recent.time);
       var tuneup = w.phase.key === 'spec' && w.cut;
@@ -1181,9 +1439,10 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
       days[d].parts.push(p); qParts.push(p); used += p.mi;
     });
     /* long run (or a B race on the weekend) */
-    var lr = longFor({ phase: w.phase.key === 'maint' ? 'base' : w.phase.key, dist: w.dist, li: w.li, cut: w.cut }, longMi);
+    var lr = longFor({ phase: w.phase.key === 'maint' ? 'base' : w.phase.key, dist: w.dist, li: w.li, cut: w.cut, method: method }, longMi);
     var longPart = { type: 'long', role: 'long', title: lr.title, mi: longMi, steps: lr.steps, note: lr.note };
     if (method.key === 'beginner' && prof.runWalk) longPart.note += ' Run-walk is welcome: for example 4 min running, 1 min walking.';
+    if (method.key === 'norwegian') longPart.note = 'Keep this truly easy. The sub-threshold days do the work; the long run just adds time on your feet.' + (longMi >= 10 ? ' Fuel after 75 minutes.' : '');
     days[lay.longDay].parts.push(longPart); used += longMi;
     /* easy runs fill the rest */
     var easyDays = [], mlrDay = null;
@@ -1216,6 +1475,17 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
     });
     /* lifts */
     var mods = liftRotation(lifts + gymDays.length, runs);
+    /* lifting two days in a row: the first of the pair is upper body so legs are never hit back to back */
+    var liftIdx = []; lay.roles.forEach(function (r, d) { if (r.indexOf('lift') >= 0 || r.indexOf('cross') >= 0) liftIdx.push(d); });
+    if (liftIdx.some(function (d, j) { return liftIdx[j + 1] === d + 1; })) {
+      var pool = mods.filter(function (k) { return k !== 'UB'; }), pi = 0, usedUB = false, byDay = {};
+      if (!pool.length) pool = ['A'];
+      liftIdx.forEach(function (d, j) { if (liftIdx[j + 1] === d + 1 && !usedUB) { byDay[d] = 'UB'; usedUB = true; } else byDay[d] = pool[pi++ % pool.length]; });
+      var liftOnly = [], gymOnly = [];
+      lay.roles.forEach(function (r, d) { if (r.indexOf('lift') >= 0) liftOnly.push(byDay[d]); });
+      gymDays.forEach(function (d) { gymOnly.push(byDay[d]); });
+      mods = liftOnly.concat(gymOnly);
+    }
     var lp = liftPhaseFor(w.phase.key, w.phIdx);
     var li2 = 0;
     lay.roles.forEach(function (r, d) {
@@ -1228,6 +1498,10 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
       if (!days[d].parts.some(function (p) { return p.type === 'strength'; })) { var k = mods[li2 % mods.length]; li2++; days[d].parts.push(liftPart(k, lp, w)); }
       days[d].gym = true;
     });
+  }
+  if (method.key === 'runwalk') {
+    var wkAll = w.n, ratio = wkAll <= 2 ? [1, 1] : wkAll <= 4 ? [2, 1] : wkAll <= 8 ? [3, 1] : wkAll <= 14 ? [4, 1] : [5, 1];
+    days.forEach(function (d) { d.parts.forEach(function (p) { if (isRun(p) && p.type !== 'race') { p.runwalk = ratio; p.note = 'Run ' + ratio[0] + ' min, walk ' + ratio[1] + ' min, from the first minute. ' + (p.type === 'long' ? 'On long runs, start the walk breaks before you feel you need them.' : 'Walk briskly, then ease back into the run.'); } if (p.type === 'race') p.note = (p.note || '') + ' Keep your run-walk rhythm from the start: ' + ratio[0] + ':' + ratio[1] + ' works well on race day too.'; }); });
   }
   days.forEach(function (d) { if (!d.parts.length) d.parts.push(restPart()); });
   w.days = days;
@@ -1252,9 +1526,9 @@ function easyPart(title, mi, type, zz, note) {
   return { type: type, role: type, title: title, mi: mi, steps: [run(mi, type === 'recovery' ? 'REC' : 'E')], note: note || (type === 'recovery' ? 'Slower than you think. This run helps you absorb yesterday\'s work.' : 'Conversational effort. You should be able to speak in full sentences.') };
 }
 function liftPart(key, lp, w, note) {
-  var mod = LIFT[key];
+  var v = LIFT_VARS[key] ? liftVar(w && w.n) : 0, mod = liftMod(key, v);
   var min = mod.blocks.reduce(function (a, b) { return a + b.min; }, 0);
-  return { type: 'strength', role: 'lift', key: key, lp: lp, title: (key === 'UB' || key === 'HT' || key === 'ACT') ? mod.name : 'Strength ' + key + ': ' + mod.name, min: min, note: note || mod.focus };
+  return { type: 'strength', role: 'lift', key: key, v: v, lp: lp, title: (key === 'UB' || key === 'HT' || key === 'ACT') ? mod.name : 'Strength ' + key + ': ' + mod.name, min: min, note: note || mod.focus };
 }
 function restPart(title, text) { return { type: 'rest', role: 'rest', title: title || 'Rest & recover', note: text || 'Full rest or a 20–30 minute walk. Mobility and the shin routine are welcome. Sleep is training too.' }; }
 function raceNote(ev, dist) {
@@ -1537,13 +1811,14 @@ function compliance(plan, st) {
 function weekIntensity(w, prof) {
   var out = [], days = w.days;
   var hard = function (d) { return d.parts.some(function (p) { return p.type === 'speed' || p.type === 'long' || p.type === 'race'; }); };
-  var legs = function (d) { return d.parts.some(function (p) { return p.type === 'strength' && (p.key === 'A' || p.key === 'B') && (p.lp || 0) < 3; }); };
+  var legs = function (d) { return d.parts.some(function (p) { return p.type === 'strength' && (p.key === 'A' || p.key === 'B' || p.key === 'C') && (p.lp || 0) < 3; }); };
   var runs = function (d) { return d.parts.filter(isRun).length; };
   var title = function (d, f) { var p = d.parts.filter(f)[0]; return p ? p.title : ''; };
   for (var i = 0; i < 7; i++) {
     var d = days[i], n = days[i + 1];
     if (runs(d) > 1) out.push({ level: 'warn', date: d.date, text: d.dow + ' has two runs. Unless you planned a double on purpose, move one to a free day.', fix: freeFix(w, d, function (p) { return isRun(p) && p.type !== 'long'; }) });
-    if (n && hard(d) && hard(n)) {
+    var subThenLong = n && d.parts.some(function (p) { return p.key === 'subt'; }) && !d.parts.some(function (p) { return p.type === 'long' || p.type === 'race'; }) && n.parts.some(function (p) { return p.type === 'long'; }) && !n.parts.some(function (p) { return p.type === 'speed'; });   /* controlled sub-threshold the day before an easy long run is part of the Norwegian layout */
+    if (n && hard(d) && hard(n) && !subThenLong) {
       var easier = n.parts.some(function (p) { return p.type === 'speed'; }) ? n : d;
       out.push({ level: 'warn', date: n.date, text: 'Hard days back to back: ' + d.dow + ' (' + title(d, function (p) { return p.type === 'speed' || p.type === 'long' || p.type === 'race'; }) + ') and ' + n.dow + ' (' + title(n, function (p) { return p.type === 'speed' || p.type === 'long' || p.type === 'race'; }) + '). Keep at least one easy day between them.', fix: { label: 'Make ' + easier.dow + ' easy', type: 'override', date: easier.date, action: 'easy' } });
     }
@@ -1578,6 +1853,7 @@ function zonesFor(plan, w, an) {
   if (an && an.ltPin && w.start >= monday(an.lt.date) && diffD(an.lt.date, w.start) <= 70) {
     z.T = [r5(an.ltPin - 5 + (off.T || 0)), r5(an.ltPin + 5 + (off.T || 0))];
   }
+  z.ST = [z.T[1], z.T[1] + 20];
   if (an && (an.lt && an.lt.hr || an.hrMax)) z.hr = hrZones(an.lt && an.lt.hr, an.hrMax);
   return z;
 }
@@ -1610,7 +1886,7 @@ function weekOf(plan, date) {
 function mainZone(p) {
   if (!p || !p.steps) return null;
   var z = null;
-  p.steps.forEach(function (s) { if (!z && (s.k === 'rep' || s.k === 'run') && ['T', 'I', 'M', 'G', 'H'].indexOf(s.z) >= 0) z = s.z; });
+  p.steps.forEach(function (s) { if (!z && (s.k === 'rep' || s.k === 'run') && ['T', 'ST', 'I', 'M', 'G', 'H'].indexOf(s.z) >= 0) z = s.z; });
   return z;
 }
 
@@ -1656,6 +1932,18 @@ function analyze(plan, st, garmin) {
     if (m.ltPace) { if (!(m.src === 'garmin' && lastLt && lastLt.pace === m.ltPace)) anchors.push({ date: m.date, src: 'lt', v: vdotFromThreshold(m.ltPace), w: 0.9, ltPace: m.ltPace, ltHr: m.ltHr, from: m.src }); lastLt = { pace: m.ltPace }; }
     else if (m.vo2) anchors.push({ date: m.date, src: 'vo2', v: vdotFromVo2(m.vo2), w: 0.5, vo2: m.vo2, from: m.src });
   });
+  /* best recent efforts: Garmin's fastest splits inside your runs over the last 8 weeks (a floor on your fitness) */
+  var eff = null, tdy = today();
+  ((garmin && garmin.activities) || []).forEach(function (a) {
+    if (!a.run || !a.best || !a.date || a.date > tdy || diffD(a.date, tdy) > 56) return;
+    [['5k', 3.10686, 1], ['10k', 6.21371, 1], ['half', 13.1094, 1], ['full', 26.2188, 1], ['1mi', 1, 0.96]].forEach(function (d) {
+      var sec = +a.best[d[0]]; if (!(sec > 0)) return;
+      var v = vdotOf(d[1], sec) * d[2];
+      if (v > 20 && v < 85 && (!eff || v > eff.v)) eff = { date: a.date, src: 'effort', v: v, w: 1, mi: d[1], sec: sec, key: d[0], name: a.name };
+    });
+  });
+  if (eff) anchors.push(eff);
+  res.effort = eff;
   anchors.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
   var lm = latestReading(fr, 'ltPace') || latestReading(fr, 'ltHr');
   if (lm) { var lhr = latestReading(fr, 'ltHr'); res.lt = { date: lm.date, pace: lm.ltPace || null, hr: lhr ? lhr.ltHr : null, src: lm.src }; }
@@ -1666,13 +1954,17 @@ function analyze(plan, st, garmin) {
        Watch VO2max alone moves paces at half weight. */
     var tday = today(), recent = function (a) { return diffD(a.date, tday) <= 84; };
     var pick = function (f) { for (var i = anchors.length - 1; i >= 0; i--) if (f(anchors[i])) return anchors[i]; return null; };
-    var last = pick(function (a) { return a.src === 'race' && recent(a); }) || pick(function (a) { return a.src === 'lt' && recent(a); }) || anchors[anchors.length - 1];
+    var aLt = pick(function (a) { return a.src === 'lt' && recent(a); }), aEf = pick(function (a) { return a.src === 'effort'; });
+    /* a threshold reading and a proven recent effort: whichever shows more fitness wins (an effort inside a training run is a floor) */
+    var measured = aLt && aEf ? (aEf.v * aEf.w > aLt.v * aLt.w + 0.5 ? aEf : aLt) : (aLt || aEf);
+    var last = pick(function (a) { return a.src === 'race' && recent(a); }) || measured || anchors[anchors.length - 1];
     res.anchor = last;
     var w = weekOf(plan, last.date);
     var exp = w ? w.vPlan : plan.v0;
     res.vdot = exp + (last.v - exp) * last.w;
     res.dv = clamp((last.v - exp) * last.w, -5, 5); res.dvFrom = last.date;
     res.result = { date: last.date, src: last.src, mi: last.mi, sec: last.sec, vdot: res.vdot, raw: last.v, exp: exp, ltPace: last.ltPace, vo2: last.vo2 };
+    res.sources = { race: pick(function (a) { return a.src === 'race'; }), lt: pick(function (a) { return a.src === 'lt'; }), effort: aEf, vo2: pick(function (a) { return a.src === 'vo2'; }) };
   }
   /* A recent lactate threshold pace pins the threshold zone directly (within 10 weeks). */
   if (res.lt && res.lt.pace && diffD(res.lt.date, today()) <= 70) res.ltPin = res.lt.pace;
@@ -1732,7 +2024,7 @@ function analyze(plan, st, garmin) {
   res.proj = { k5: predict(vNow, 3.10686), k10: predict(vNow, 6.21371), half: predict(vNow, 13.1094), full: predict(vNow, 26.2188) };
   if (res.result) {
     var rr = res.result, d = rr.vdot - rr.exp;
-    var what = rr.src === 'race' ? 'Your ' + round1(rr.mi) + ' mi in ' + clock(rr.sec) : rr.src === 'lt' ? 'Your lactate threshold pace of ' + fmtPace(rr.ltPace) + '/mi' : 'Your VO2max of ' + rr.vo2;
+    var what = rr.src === 'race' ? 'Your ' + round1(rr.mi) + ' mi in ' + clock(rr.sec) : rr.src === 'effort' ? 'Your best recent ' + round1(rr.mi) + ' mi stretch of ' + clock(rr.sec) : rr.src === 'lt' ? 'Your lactate threshold pace of ' + fmtPace(rr.ltPace) + '/mi' : 'Your VO2max of ' + rr.vo2;
     note(d >= 0.5 ? 'good' : d <= -1 ? 'warn' : 'good', d >= 0.5 ? 'Ahead of the plan' : d <= -1 ? 'Paces eased to match your fitness' : 'Right on plan',
       what + ' (' + fmtDate(rr.date) + ') puts your fitness (VDOT) at ' + rr.vdot.toFixed(1) + ' against ' + rr.exp.toFixed(1) + ' planned. Every pace from then on updates' + (rr.src === 'vo2' ? ', with half weight because watch VO2max is an estimate.' : '.'));
   }
@@ -2100,7 +2392,7 @@ function describe(p, zz) {
   }).filter(Boolean);
 }
 /* bar chart blocks for the workout structure view: [{w (relative duration), h (0-1 intensity), z}] */
-var INT_H = { REC: 0.22, E: 0.3, S: 0.5, M: 0.6, G: 0.65, H: 0.65, T: 0.75, I: 0.9, R: 1, F: 0.7 };
+var INT_H = { REC: 0.22, E: 0.3, S: 0.5, M: 0.6, G: 0.65, H: 0.65, ST: 0.68, T: 0.75, I: 0.9, R: 1, F: 0.7 };
 function structure(p, zz) {
   var out = [];
   function mins(o, z) {
@@ -2122,7 +2414,7 @@ function estMinutes(p, zz) { return Math.round(structure(p, zz).reduce(function 
 
 /* ---------------- exports ---------------- */
 var api = {
-  MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
+  MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
   ds: ds, pd: pd, addD: addD, dow: dow, monday: monday, diffD: diffD, today: today, fmtDate: fmtDate,
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
   vdotOf: vdotOf, paceAt: paceAt, predict: predict, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
@@ -2153,7 +2445,7 @@ var STATE_PATH = 'user/state.json', GARMIN_PATH = 'garmin/data.json', WORKFLOW =
 function b64enc(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64dec(b64) { return decodeURIComponent(escape(atob(String(b64).replace(/\s/g, '')))); }
 function emptyState() {
-  return { v: 1, profile: null, events: [], logs: {}, status: {}, life: [], overrides: {}, moves: {}, checkins: [], metrics: [], coach: [], seen: {}, shoes: [], gear: {}, orm: [], anotes: {}, prefs: {}, updatedAt: null };
+  return { v: 1, profile: null, events: [], logs: {}, status: {}, life: [], overrides: {}, moves: {}, checkins: [], metrics: [], coach: [], seen: {}, shoes: [], gear: {}, orm: [], anotes: {}, prefs: {}, arr: {}, subs: {}, updatedAt: null };
 }
 function normalize(s) {
   var e = emptyState();
@@ -2925,7 +3217,7 @@ function partDetail(x, date, w, zz, l, idx) {
     var lp = adv ? adv.lp : x.lp;
     if (adv && adv.notes.length) body += '<div class="banner warn small">' + adv.notes.map(esc).join(' ') + '</div>';
     body += '<p class="small muted">' + esc(x.note || '') + ' · <b>' + E.LIFT_PHASES[lp].k + '</b> loads: ' + esc(E.LIFT_PHASES[lp].d) + '</p>';
-    body += moduleBody(x.key, lp);
+    body += moduleBody(x.key, lp, x.v);
     body += logBlock(date, x, l, 'lift');
   } else if (x.type === 'cross') {
     body += '<p class="small">' + esc(x.note || '') + '</p>';
@@ -3185,7 +3477,16 @@ function barChart(items) {
   items.forEach(function (x, i) {
     var X = pl + i * bw, ha = (H - pb - 10) * x.a / max, hb = (H - pb - 10) * x.b / max;
     s += '<rect x="' + (X + 1) + '" y="' + (H - pb - ha) + '" width="' + (bw - 2) + '" height="' + ha + '" rx="2" fill="var(--line2)"/>';
-    if (hb > 0) s += '<rect x="' + (X + bw * 0.25) + '" y="' + (H - pb - hb) + '" width="' + (bw * 0.5) + '" height="' + hb + '" rx="2" fill="var(--green)"/>';
+    var solo = x.all || !(x.a > 0), wb = solo ? bw - 2 : bw * 0.5, xb = solo ? X + 1 : X + bw * 0.25;
+    if (hb > 0) s += '<rect x="' + xb + '" y="' + (H - pb - hb) + '" width="' + wb + '" height="' + hb + '" rx="2" fill="var(--green)"/>';
+    /* value labels: inside the bar when it fits, above it when the bar is short */
+    var val = x.b > 0 ? x.b : x.a, hv = x.b > 0 ? hb : ha, lab = val >= 10 ? String(Math.round(val)) : val > 0 ? String(Math.round(val * 10) / 10) : '';
+    if (lab) {
+      var cx = X + bw / 2, top = H - pb - hv, vert = (x.b > 0 ? wb : bw - 2) < 4 + lab.length * 4.6, need = vert ? lab.length * 4.6 + 6 : 12, inside = hv >= need;
+      var fillc = inside ? (x.b > 0 ? '#04210f' : 'var(--ink)') : 'var(--muted)';
+      if (vert) s += '<text class="bl" transform="translate(' + (cx + 2.7) + ',' + (inside ? top + 4 : top - 3) + ') rotate(-90)" text-anchor="' + (inside ? 'end' : 'start') + '" style="fill:' + fillc + '">' + lab + '</text>';
+      else s += '<text class="bl" x="' + cx + '" y="' + (inside ? top + 10 : top - 3) + '" text-anchor="middle" style="fill:' + fillc + '">' + lab + '</text>';
+    }
     if (x.cur || i % 4 === 0) s += '<text x="' + (X + bw / 2) + '" y="' + (H - 3) + '" text-anchor="middle"' + (x.cur ? ' style="fill:var(--ink);font-weight:700"' : '') + '>' + x.label + '</text>';
   });
   return s + '</svg>';
@@ -3559,7 +3860,7 @@ SHEETS.lift = function (a) {
 var LIFT_SKIP = { 'Lift warm-up': 1 };
 function liftRows(key, vals) {
   var m = E.LIFT[key]; if (!m) return '';
-  var names = []; m.blocks.forEach(function (b) { b.ex.forEach(function (e) { if (!LIFT_SKIP[e.n]) names.push(e.n); }); });
+  var names = []; m.blocks.forEach(function (b) { b.ex.forEach(function (e) { if (!LIFT_SKIP[e.n] && !e.wu) names.push(e.n); }); });
   return names.map(function (n) {
     var v = vals[n] || lastWeight(n) || {};
     return '<div class="stack tight" style="padding:6px 0;border-top:1px solid var(--line)"><b class="small">' + esc(n) + '</b><div class="grid3"><label class="f">Weight (lb)<input class="i" data-ex="' + esc(n) + '" data-k="w" type="number" min="0" step="2.5" value="' + (v.w != null ? v.w : '') + '"></label><label class="f">Reps<input class="i" data-ex="' + esc(n) + '" data-k="reps" type="number" min="0" value="' + (v.reps != null ? v.reps : '') + '"></label><label class="f">Sets<input class="i" data-ex="' + esc(n) + '" data-k="sets" type="number" min="0" value="' + (v.sets != null ? v.sets : '') + '"></label></div></div>';
@@ -4162,7 +4463,7 @@ function liftHistory(n, before) {
 }
 function allLiftNames() {
   var names = {}, logs = st().logs || {};
-  Object.keys(E.LIFT).forEach(function (k) { E.LIFT[k].blocks.forEach(function (b) { b.ex.forEach(function (x) { if (!LIFT_SKIP2[x.n]) names[x.n] = 1; }); }); });
+  allMods().forEach(function (m) { m.blocks.forEach(function (b) { b.ex.forEach(function (x) { if (!LIFT_SKIP2[x.n] && !x.wu) names[x.n] = 1; }); }); });
   Object.keys(logs).forEach(function (d) { var l = logs[d].lift; if (l && l.ex) Object.keys(l.ex).forEach(function (n) { names[n] = 1; }); });
   return Object.keys(names).sort();
 }
@@ -4177,15 +4478,20 @@ function newWorkout(date, key) {
     Object.keys(l.ex).forEach(function (n) { var mod = findEx(n); wk.ex.push({ n: n, rx: mod ? mod.rx[lp] : '', rest: mod ? restSec(mod.rest[lp]) : 90, cue: mod ? mod.cue : '', sets: setsOf(l.ex[n]).map(function (x) { return { w: x.w || '', r: x.r || '', done: true }; }) }); });
     return wk;
   }
-  var m = E.LIFT[key];
-  if (m) m.blocks.forEach(function (b) { b.ex.forEach(function (x) { if (LIFT_SKIP2[x.n]) return; wk.ex.push(exFromModule(x, lp, date)); }); });
+  var wkOf = App.plan ? E.weekOf(App.plan, date) : null;
+  wk.v = part && part.key === key && part.v != null ? part.v : E.liftVar(wkOf ? wkOf.n : 1);
+  var m = E.liftMod(key, wk.v);
+  if (m) m.blocks.forEach(function (b) { b.ex.forEach(function (x) { if (LIFT_SKIP2[x.n] || x.wu) return; wk.ex.push(exFromModule(x, lp, date)); }); });
   return wk;
 }
-function findEx(n) { var f = null; Object.keys(E.LIFT).some(function (k) { return E.LIFT[k].blocks.some(function (b) { return b.ex.some(function (x) { if (x.n === n) { f = x; return true; } return false; }); }); }); return f; }
+function allMods() { var a = []; Object.keys(E.LIFT).forEach(function (k) { (E.LIFT_VARS[k] || [E.LIFT[k]]).forEach(function (m) { a.push(m); }); }); return a; }
+function findEx(n) { var f = null; allMods().some(function (m) { return m.blocks.some(function (b) { return b.ex.some(function (x) { if (x.n === n) { f = x; return true; } return false; }); }); }); return f; }
 function exFromModule(x, lp, date) {
   var rx = rxParse(x.rx[lp]), prev = liftHistory(x.n, date).pop();
   var sets = [];
   for (var i = 0; i < rx.sets; i++) { var p = prev && (prev.sets[i] || prev.sets[prev.sets.length - 1]); sets.push({ w: p && p.w ? p.w : '', r: rx.reps, done: false }); }
+  var sub = (st().subs || {})[x.n];
+  if (sub) { var pv = liftHistory(sub, date).pop(); sets.forEach(function (s, i2) { var p2 = pv && (pv.sets[i2] || pv.sets[pv.sets.length - 1]); s.w = p2 && p2.w ? p2.w : ''; }); return { n: sub, orig: x.n, rx: x.rx[lp], rest: restSec(x.rest[lp]), cue: 'Your substitute for ' + x.n + '.', sets: sets }; }
   return { n: x.n, rx: x.rx[lp], rest: restSec(x.rest[lp]), cue: x.cue, sets: sets };
 }
 function wkSave() { try { LS.set('rp-wk', JSON.stringify(App.wk)); } catch (e) { /* ignore */ } }
@@ -5067,6 +5373,635 @@ VIEWS.plan = function () {
   if (sel === cur) { var hc = honestCard(); if (hc) { var k = h.indexOf('<section class="card"><div class="spread"><h3>Your season'); h = k >= 0 ? h.slice(0, k) + hc + h.slice(k) : hc + h; } }
   return h;
 };
+
+/* ================= Features 3: training-style catalog by level, flexible goals and multi-race countdowns,
+   desktop dashboard (deep dive), glance view for the home screen ================= */
+
+IC.dash = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="10" rx="2"/><rect x="13" y="3" width="8" height="6" rx="2"/><rect x="13" y="11" width="8" height="10" rx="2"/><rect x="3" y="15" width="8" height="6" rx="2"/></svg>';
+IC.shoe = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17v-5l4-1 3-5 3 2 2 4 5 2a2 2 0 0 1 1 2v1z"/><path d="M3 17h18"/></svg>';
+IC.heart = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>';
+IC.fuel = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3 4 5 6.5 5 10a5 5 0 0 1-10 0c0-3.500 2-6 5-10z"/></svg>';
+IC.lift = TICON.strength;
+Object.assign(TITLES, { dash: 'Dashboard', glance: 'Glance' });
+TOP.dash = 1;
+Object.assign(TABOF, { dash: 'dash', shoes: 'shoes', shoe: 'shoes', fitness: 'fitness', nutrition: 'nutrition', strength: 'strength', workout: 'plan' });
+
+/* ---------- training styles, sorted by level ---------- */
+var LEVELS = [[1, 'Beginner', 'New to running, coming back, or under about 10 miles a week'], [2, 'Intermediate', 'Running regularly, roughly 10–30 miles a week, some races done'], [3, 'Advanced', 'Years of consistent training, 30+ miles a week, structured workouts']];
+function styleCatalog(prof, events, mode) {
+  var sug = E.suggestMethods(prof, events), by = {}; sug.forEach(function (s, i) { by[s.key] = s; s.rank = i; });
+  var f = App.ui.mf || 'all', cur = prof.method;
+  var lv = prof.level === 'new' ? 1 : prof.level === 'exp' ? 3 : 2;
+  var html = '<div class="chips">' + [['all', 'All styles'], ['run', 'Run-focused'], ['mixed', 'Running + lifting']].map(function (x) { return '<button class="chip" data-act="ui" data-arg="' + jattr({ k: 'mf', v: x[0] }) + '" aria-pressed="' + (f === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
+  LEVELS.forEach(function (L) {
+    var keys = Object.keys(E.METHODS).filter(function (k) { return E.METHODS[k].level === L[0] && (f === 'all' || E.METHODS[k].focus === f); }).sort(function (a, b) { return by[a].rank - by[b].rank; });
+    if (!keys.length) return;
+    html += '<div class="sechead"><h2>' + L[1] + (L[0] === lv ? ' <span class="pill good" style="vertical-align:middle">Your level</span>' : '') + '</h2></div><p class="small muted" style="margin-top:-8px">' + L[2] + '</p><div class="stack">' + keys.map(function (k) {
+      var m = E.METHODS[k], s = by[k];
+      var badge = cur === k ? '<span class="pill solid">' + (mode === 'wiz' ? 'Selected' : 'Current') + '</span>' : s.rank === 0 ? '<span class="pill good">Best match</span>' : s.stretch ? '<span class="pill warn">A stretch for now</span>' : s.rank <= 2 && s.score > 0 ? '<span class="pill good">Good fit</span>' : '';
+      var act = mode === 'wiz' ? 'data-act="wiz-set" data-arg="' + jattr({ k: 'method', v: k, stay: true }) + '"' : 'data-act="method" data-arg="' + jattr({ key: k }) + '"';
+      return '<button class="method" ' + act + ' aria-pressed="' + (cur === k) + '"><div class="spread"><span class="k">' + esc(m.name) + '</span>' + badge + '</div>' +
+        '<span class="tags"><i>' + (m.focus === 'mixed' ? 'Running + lifting' : 'Run-focused') + '</i><i>' + esc(m.days) + '</i><i>' + (m.quality >= 3 ? 'Up to 3 key sessions' : m.quality === 2 ? '2 key workouts' : m.quality === 1 ? '1 key workout' : 'No hard workouts') + '</i></span>' +
+        '<span class="small">' + esc(m.desc) + '</span><span class="small muted"><b>Best for:</b> ' + esc(m.suits) + '</span>' +
+        (s.why && s.score > 0 && s.why !== m.suits ? '<span class="small"><b>For you:</b> ' + esc(s.why) + '</span>' : '') +
+        (s.stretch ? '<span class="small" style="color:var(--amber)">This asks for more running than you do now (about ' + m.minMpw + '+ miles a week). You can pick it, and the plan will build up gradually, but a style at your level is safer.</span>' : '') +
+        '<span class="tiny muted"><b>Why it works:</b> ' + esc(m.evidence) + '</span><span class="tiny muted">Inspired by ' + esc(m.inspired) + '. Our own plan, not the published one.</span></button>';
+    }).join('') + '</div>';
+  });
+  return html;
+}
+var RESEARCH = '<section class="card"><h3>What the research says</h3><ul class="plain small" style="margin-top:6px">' +
+  '<li><b>Easy volume matters most.</b> A 2024 analysis of about 120,000 marathoners\' Strava logs found faster runners mainly did more easy running; hard and threshold amounts were similar across groups, and almost everyone trained in a pyramid (mostly easy, some threshold, a little fast).</li>' +
+  '<li><b>Sub-threshold work is efficient.</b> The Norwegian approach keeps quality just under the lactate threshold (about 20–25% of weekly running), so you can do a lot of it without deep fatigue. Strong results in practice; few controlled trials yet.</li>' +
+  '<li><b>Lifting makes you more economical.</b> A 2022 meta-analysis found heavy resistance training improved running economy more than plyometrics alone, with the best results from near-maximal loads over 10+ weeks.</li>' +
+  '<li><b>Lifting and running mix fine.</b> A 2022 review of 43 studies found combining them does not reduce strength or muscle gain; only explosive power suffers when both are done back to back. Run first when running is the priority, and separate hard runs from leg days by several hours where you can.</li>' +
+  '<li><b>Specificity near the race.</b> Marathon-pace work extended over longer distances is the common thread in race-specific phases, from Hansons to Canova.</li></ul>' +
+  '<p class="tiny muted" style="margin-top:8px">Sources: Muniz-Pumares et al., Sports Medicine 2024; Eihara et al., Sports Medicine – Open 2022; Schumann et al., Sports Medicine 2022; the sub-threshold summary of the LetsRun "Norwegian singles" thread; coaching writing by Daniels, Pfitzinger, Hansons, Fitzgerald, Lydiard, Galloway, Higdon and Canova.</p></section>';
+VIEWS.style = function () {
+  var prof = st().profile || E.defaultProfile();
+  return '<div class="pagehead"><h1>Training style</h1><p>Eleven research-backed approaches, sorted by level. The app recommends one from your experience, current mileage, run days and gym days, but the choice is yours. Switching rebuilds future weeks; your logs stay.</p></div>' + styleCatalog(prof, st().events, 'page') + RESEARCH;
+};
+var _setup3 = VIEWS.setup;
+VIEWS.setup = function () {
+  var h = _setup3();
+  if (!App.wiz || WIZ_STEPS[App.wiz.step] !== 'match') return h;
+  var a = h.indexOf('<div class="sechead"><h2>Other styles</h2></div>'), b = h.lastIndexOf('<div class="wizfoot">');
+  if (a < 0 || b < 0) return h;
+  return h.slice(0, a) + '<div class="sechead"><h2>All styles by level</h2></div><p class="small muted" style="margin-top:-8px">Tap any style to select it instead.</p>' + styleCatalog(App.wiz.profile, App.wiz.events, 'wiz') + h.slice(b);
+};
+
+/* ---------- goals: races, distance goals and pace goals of any length ---------- */
+var DIST_OPTS = [['1mi', '1 mile'], ['5k', '5K'], ['8k', '8K / 5 mile'], ['10k', '10K'], ['15k', '15K'], ['10mi', '10 mile'], ['half', 'Half marathon'], ['25k', '25K'], ['30k', '30K'], ['full', 'Marathon'], ['50k', '50K'], ['custom', 'Other distance']];
+var KIND = { race: ['Race', 'A race on a set date'], distance: ['Distance goal', 'Cover a distance by a date, any pace'], pace: ['Pace goal', 'Hit a pace or time over a distance (time trial)'] };
+function evMiles() { var d = $('#ev-dist').value; return d === 'custom' ? +$('#ev-mi').value || 0 : E.DIST[d].mi; }
+SHEETS.event = function (a) {
+  var list = a.wiz ? App.wiz.events : st().events;
+  var e = (a.id && list.filter(function (x) { return x.id === a.id; })[0]) || { id: uid(), name: '', date: E.addD(App.today, 84), dist: a.kind === 'distance' ? '10mi' : 'half', goal: '', priority: 'A', kind: a.kind || 'race' };
+  sheetCtx.ev = Object.assign({ kind: 'race' }, e); sheetCtx.isNew = !a.id;
+  var k = sheetCtx.ev.kind, g = E.parseClock(e.goal), mi0 = E.distOf(e).mi;
+  return '<h3>' + (a.id ? 'Edit goal' : 'Add a goal') + '</h3>' +
+    '<div class="chips">' + Object.keys(KIND).map(function (x) { return '<button type="button" class="chip" data-act="evkind" data-arg="' + jattr({ v: x }) + '" aria-pressed="' + (k === x) + '">' + KIND[x][0] + '</button>'; }).join('') + '</div><p class="tiny muted" id="ev-kindh">' + KIND[k][1] + '.</p>' +
+    '<label class="f">Name<input class="i" id="ev-name" value="' + esc(e.name) + '" placeholder="e.g. Twin Cities Marathon"></label>' +
+    '<div class="grid2"><label class="f">Date<input class="i" type="date" id="ev-date" value="' + esc(e.date) + '"></label><label class="f">Distance<select class="i" id="ev-dist">' + DIST_OPTS.map(function (d) { return '<option value="' + d[0] + '"' + (e.dist === d[0] ? ' selected' : '') + '>' + d[1] + '</option>'; }).join('') + '</select></label></div>' +
+    '<label class="f" id="ev-miw"' + (e.dist === 'custom' ? '' : ' hidden') + '>Distance in miles<input class="i" id="ev-mi" type="number" step="0.1" min="0.5" inputmode="decimal" value="' + esc(e.mi || '') + '"></label>' +
+    '<div class="grid2" id="ev-goalw"' + (k === 'distance' ? ' hidden' : '') + '><label class="f">Goal time<input class="i" id="ev-goal" placeholder="1:45:00" value="' + esc(e.goal || '') + '"></label><label class="f">or goal pace /mi<input class="i" id="ev-pace" placeholder="8:00" value="' + (g > 0 ? pace(g / mi0) : '') + '"></label></div>' +
+    '<p class="tiny muted" id="ev-goalh"' + (k === 'distance' ? ' hidden' : '') + '>Fill in either one and the other follows. Leave both empty to just finish.</p>' +
+    '<label class="f" id="ev-priw">Priority<div class="chips">' + [['A', 'A — full build and taper'], ['B', 'B — tune-up'], ['C', 'C — for fun']].map(function (d) { return '<button type="button" class="chip" data-evp="' + d[0] + '" aria-pressed="' + ((e.priority || 'A') === d[0]) + '">' + d[1] + '</button>'; }).join('') + '</div></label>' +
+    '<p class="tiny muted">Training for several races? Make each one you want to peak for an A. The plan builds toward the first, recovers, then builds toward the next. Races within about 5 weeks of a bigger one work best as B tune-ups.</p>' + sheetBtns('Save', !!a.id);
+};
+ACTIONS.evkind = function (a) {
+  sheetCtx.ev.kind = a.v;
+  $$('[data-act="evkind"]').forEach(function (b) { b.setAttribute('aria-pressed', String(JSON.parse(b.dataset.arg).v === a.v)); });
+  $('#ev-kindh').textContent = KIND[a.v][1] + '.'; $('#ev-goalw').hidden = a.v === 'distance'; $('#ev-goalh').hidden = a.v === 'distance';
+};
+document.addEventListener('change', function (e) { if (e.target.id === 'ev-dist') { $('#ev-miw').hidden = e.target.value !== 'custom'; evSyncPace('time'); } });
+function evSyncPace(from) {
+  var mi2 = evMiles(), gi = $('#ev-goal'), pi = $('#ev-pace'); if (!gi || !pi || !(mi2 > 0)) return;
+  if (from === 'pace') { var p = E.parseClock(pi.value); gi.value = p > 0 ? E.clock(Math.round(p * mi2)) : gi.value; }
+  else { var g = E.parseClock(gi.value); pi.value = g > 0 ? pace(g / mi2) : pi.value; }
+}
+document.addEventListener('input', function (e) { if (e.target.id === 'ev-pace') evSyncPace('pace'); else if (e.target.id === 'ev-goal' || e.target.id === 'ev-mi') evSyncPace('time'); });
+SAVE2.event = function () {
+  var ev = sheetCtx.ev, a = sheetCtx.a, err = $('#shErr');
+  ev.name = $('#ev-name').value.trim(); ev.date = $('#ev-date').value; ev.dist = $('#ev-dist').value;
+  if (ev.dist === 'custom') { ev.mi = +$('#ev-mi').value || null; if (!(ev.mi >= 0.5 && ev.mi <= 100)) { err.textContent = 'Enter the distance in miles.'; return; } } else delete ev.mi;
+  if (!ev.date) { err.textContent = 'Pick a date.'; return; }
+  if (ev.kind === 'distance') ev.goal = '';
+  else {
+    var g = $('#ev-goal').value.trim(), p = $('#ev-pace').value.trim();
+    if (!g && p) { var ps = E.parseClock(p); if (!(ps > 150 && ps < 1500)) { err.textContent = 'Goal pace should look like 8:00 (per mile).'; return; } g = E.clock(Math.round(ps * evMiles())); }
+    if (g && !(E.parseClock(g) > 0)) { err.textContent = 'Goal time looks off. Use h:mm:ss, like 1:45:00, or m:ss for short races.'; return; }
+    if (ev.kind === 'pace' && !g) { err.textContent = 'A pace goal needs a goal pace or time.'; return; }
+    ev.goal = g;
+  }
+  if (ev.kind === 'race') delete ev.kind;
+  if (!ev.name) ev.name = ev.kind === 'distance' ? 'Run ' + E.distOf(ev).label : ev.kind === 'pace' ? E.distOf(ev).label + ' at ' + pace(E.parseClock(ev.goal) / E.distOf(ev).mi) + '/mi' : E.distOf(ev).label;
+  if (a.wiz) { App.wiz.events = App.wiz.events.filter(function (x) { return x.id !== ev.id; }).concat([ev]).sort(function (x, y) { return x.date < y.date ? -1 : 1; }); closeSheet(); render(); return; }
+  Store.edit('events', ev.id, function (S) { S.events = S.events.filter(function (x) { return x.id !== ev.id; }); S.events.push(ev); });
+  closeSheet(); toast('Saved — plan rebuilt');
+};
+function upcoming() { return (st().events || []).filter(function (e) { return e.date >= App.today; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; }); }
+function countdownStrip(skipFirst) {
+  var evs = upcoming().slice(skipFirst ? 1 : 0);
+  if (!evs.length) return '';
+  return '<div class="cdstrip">' + evs.map(function (e) {
+    var d = E.distOf(e), days = E.diffD(App.today, e.date), g = E.parseClock(e.goal);
+    return '<a href="#/goals" class="cd' + ((e.priority || 'A') === 'A' ? ' a' : '') + '"><b>' + days + '</b><small>day' + (days === 1 ? '' : 's') + '</small><span>' + esc(e.name || d.label) + '</span><em>' + E.fmtDate(e.date, { month: 'short', day: 'numeric' }) + ' · ' + esc(d.label) + (g > 0 ? ' · ' + E.clock(g) : '') + '</em></a>';
+  }).join('') + '</div>';
+}
+var _goals3 = VIEWS.goals;
+VIEWS.goals = function () {
+  var h = _goals3();
+  h = h.replace('<h1>Goals & races</h1><p>A-races get a full build and taper. B- and C-races slot in as tune-ups. Add, change or remove races any time and the plan rebuilds.</p>', '<h1>Goals & races</h1><p>Train for one race or several at once: a 5K next month, a 10-miler in the spring, a marathon next fall. Each A goal gets its own build, taper and recovery, and every goal keeps its own countdown. Change anything and the plan rebuilds.</p>');
+  h = h.replace(/<div class="btns"><button class="btn primary" data-act="sheet"[^>]*>Add a race<\/button><\/div>/, countdownStrip(false) + '<div class="btns"><button class="btn primary" data-act="sheet" data-arg="' + jattr({ sheet: 'event' }) + '">Add a race</button><button class="btn" data-act="sheet" data-arg="' + jattr({ sheet: 'event', kind: 'distance' }) + '">Distance goal</button><button class="btn" data-act="sheet" data-arg="' + jattr({ sheet: 'event', kind: 'pace' }) + '">Pace goal</button></div>');
+  return h.replace(/>Edit<\/button>/g, '>Edit</button>');
+};
+var _plan3 = VIEWS.plan;
+VIEWS.plan = function () {
+  var h = _plan3();
+  if (upcoming().length < 2) return h;
+  var i = h.indexOf('class="racecard"'); if (i < 0) return h;
+  var j = h.indexOf('</a>', i); if (j < 0) return h;
+  return h.slice(0, j + 4) + countdownStrip(true) + h.slice(j + 4);
+};
+
+/* ---------- desktop dashboard: the deep dive ---------- */
+function multiLine(dates, series, opts) {
+  opts = opts || {};
+  var W = 640, H = opts.h || 220, pl = 38, pr = 10, pb = 22, pt = 12;
+  var all = []; series.forEach(function (s) { s.vals.forEach(function (v) { if (typeof v === 'number' && isFinite(v)) all.push(v); }); });
+  if (all.length < 2) return '<p class="small muted">Not enough data yet.</p>';
+  var lo = opts.min != null ? opts.min : Math.min.apply(null, all), hi = Math.max.apply(null, all); if (hi - lo < 1e-6) hi = lo + 1;
+  var pad = (hi - lo) * 0.08; hi += pad; if (opts.min == null) lo -= pad;
+  function X(i) { return pl + i * (W - pl - pr) / Math.max(1, dates.length - 1); }
+  function Y(v) { return pt + (H - pt - pb) * (1 - (v - lo) / (hi - lo)); }
+  var fmt = opts.fmt || function (v) { return Math.round(v); };
+  var s = '<svg class="chart wide" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(opts.label || 'Chart') + '">';
+  [0, 0.5, 1].forEach(function (f) { var v = lo + (hi - lo) * f, y = Y(v); s += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="var(--line)" stroke-dasharray="3 4"/><text x="' + (pl - 6) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end">' + fmt(v) + '</text>'; });
+  if (opts.band) { var y1 = Y(Math.min(hi, opts.band[1])), y0 = Y(Math.max(lo, opts.band[0])); s += '<rect x="' + pl + '" y="' + y1.toFixed(1) + '" width="' + (W - pl - pr) + '" height="' + Math.max(0, y0 - y1).toFixed(1) + '" fill="var(--green)" opacity=".1"/>'; }
+  series.forEach(function (se) {
+    var path = '', on = false;
+    se.vals.forEach(function (v, i) { if (typeof v !== 'number' || !isFinite(v)) { on = false; return; } path += (on ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' '; on = true; });
+    if (se.area) { var first = se.vals.findIndex(function (v) { return typeof v === 'number'; }); var last = se.vals.length - 1; while (last > 0 && typeof se.vals[last] !== 'number') last--; s += '<path d="' + path + 'L' + X(last).toFixed(1) + ' ' + Y(lo).toFixed(1) + ' L' + X(first).toFixed(1) + ' ' + Y(lo).toFixed(1) + 'Z" fill="' + se.color + '" opacity=".12"/>'; }
+    s += '<path d="' + path + '" fill="none" stroke="' + se.color + '" stroke-width="' + (se.w || 2.2) + '" stroke-linejoin="round" stroke-linecap="round"' + (se.dash ? ' stroke-dasharray="5 4"' : '') + '/>';
+    if (se.dots) se.vals.forEach(function (v, i) { if (typeof v === 'number') s += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(v).toFixed(1) + '" r="2.4" fill="' + se.color + '"/>'; });
+  });
+  var n = dates.length, ticks = [0, Math.round((n - 1) / 3), Math.round((n - 1) * 2 / 3), n - 1];
+  ticks.forEach(function (i, k) { s += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 5) + '" text-anchor="' + (k === 0 ? 'start' : k === 3 ? 'end' : 'middle') + '">' + E.fmtDate(dates[i]) + '</text>'; });
+  s += '</svg><div class="legend">' + series.map(function (se) { var lastV = null; for (var i = se.vals.length - 1; i >= 0; i--) if (typeof se.vals[i] === 'number') { lastV = se.vals[i]; break; } return '<span><i class="dot" style="background:' + se.color + '"></i>' + esc(se.name) + (lastV != null ? ' <b>' + fmt(lastV) + '</b>' : '') + '</span>'; }).join('') + '</div>';
+  return s;
+}
+function dailyLoad(days) {
+  /* Garmin exercise load per day (falls back to miles x 10 when a run has no load) */
+  var t = App.today, by = {};
+  activities().forEach(function (a) { if (E.diffD(a.date, t) > days + 45 || a.date > t) return; var l = a.g && a.g.load ? a.g.load : a.kind === 'run' ? a.mi * 10 : a.kind === 'lift' ? 30 : 0; by[a.date] = (by[a.date] || 0) + l; });
+  var dates = [], acute = [], chronic = [], a7 = 0, c28 = 0;
+  for (var i = days + 44; i >= 0; i--) { var d = E.addD(t, -i), l = by[d] || 0; a7 += (l - a7) / 7; c28 += (l - c28) / 28; if (i <= days) { dates.push(d); acute.push(a7); chronic.push(c28); } }
+  return { dates: dates, acute: acute, chronic: chronic, ratio: c28 > 1 ? a7 / c28 : null };
+}
+function intensitySplit(days) {
+  var t = App.today, from = E.addD(t, -days), b = { easy: 0, mod: 0, hard: 0 };
+  activities().forEach(function (a) {
+    if (a.kind !== 'run' || a.date <= from || !a.sec) return;
+    var g = a.g || {}, k = 'easy';
+    if (g.teLabel) k = /VO2|ANAEROBIC|SPEED/.test(g.teLabel) ? 'hard' : /TEMPO|THRESHOLD/.test(g.teLabel) ? 'mod' : 'easy';
+    else if (g.ane >= 2.5 || g.te >= 4.2) k = 'hard'; else if (g.te >= 3.2) k = 'mod';
+    else if (!g.te) { var zz = zonesAt(a.date), pc = a.sec / a.mi; if (zz) k = pc <= zz.T[1] ? 'hard' : pc <= zz.S[1] ? 'mod' : 'easy'; }
+    b[k] += a.sec;
+  });
+  var tot = b.easy + b.mod + b.hard;
+  return tot ? { easy: b.easy / tot, mod: b.mod / tot, hard: b.hard / tot, sec: tot } : null;
+}
+function heatmap(weeks) {
+  var t = App.today, start = E.addD(E.monday(t), -7 * (weeks - 1)), by = {}, gym = {};
+  activities().forEach(function (a) { if (a.date < start) return; if (a.kind === 'run') by[a.date] = (by[a.date] || 0) + a.mi; else if (a.kind === 'lift') gym[a.date] = 1; });
+  var max = Math.max.apply(null, Object.keys(by).map(function (k) { return by[k]; }).concat([4]));
+  var s = '<div class="heat" style="grid-template-columns:auto repeat(' + weeks + ',1fr)">';
+  for (var r = 0; r < 7; r++) {
+    s += '<em>' + (r % 2 === 0 ? E.DOW[r].charAt(0) : '') + '</em>';
+    for (var w = 0; w < weeks; w++) { var d = E.addD(start, w * 7 + r), v = by[d] || 0, fut = d > t; s += '<i title="' + fmtD(d) + (v ? ': ' + mi(v) + ' mi' : '') + (gym[d] ? ' + gym' : '') + '" style="' + (fut ? 'opacity:.25' : v ? 'background:color-mix(in srgb, var(--green) ' + Math.round(25 + 75 * Math.min(1, v / max)) + '%, var(--card2))' : gym[d] ? 'background:color-mix(in srgb, var(--blue) 55%, var(--card2))' : '') + '"></i>'; }
+  }
+  return s + '</div><div class="legend" style="margin-top:8px"><span><i class="dot" style="background:var(--green)"></i>Run (darker = longer)</span><span><i class="dot" style="background:var(--blue)"></i>Gym only</span></div>';
+}
+function dcard(cls, title, body, link) { return '<section class="card ' + cls + '"><div class="spread"><h3>' + title + '</h3>' + (link ? '<a class="small muted" href="' + link[0] + '">' + link[1] + ' ›</a>' : '') + '</div>' + body + '</section>'; }
+VIEWS.dash = function () {
+  var p = App.plan; if (!p) return setupNeeded();
+  var t = App.today, w = App.week, an = App.an || {}, runs = activities().filter(function (a) { return a.kind === 'run'; });
+  var hr = new Date().getHours();
+  var html = '<div class="pagehead c12"><div class="eyebrow">' + E.fmtDate(t, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div><h1>Training dashboard</h1><p>' + esc(p.method.name) + ' · week ' + (w ? w.n : 1) + ' of ' + p.weeks.length + (w ? ' · ' + esc(w.phase.name) : '') + '</p></div>';
+  html += '<div class="c12">' + (countdownStrip(false) || '<a class="banner info" href="#/goals" style="display:block;text-decoration:none;color:inherit">No goals yet. Add a race, a distance goal or a pace goal ›</a>') + '</div>';
+  /* KPIs */
+  var ld = dailyLoad(112), last28 = runs.filter(function (a) { return E.diffD(a.date, t) < 28 && a.date <= t; });
+  var ratio = ld.ratio, rd = App.rd;
+  html += '<div class="tiles c12 k6">' + [
+    ['This week', mi(w ? weekActual(w) : 0) + ' mi', w ? 'of ' + mi(w.tot.mi) + ' planned' : ''],
+    ['4-week average', mi(sumMi(last28) / 4) + ' mi', plural(last28.length, 'run')],
+    ['Fitness', an.vNow ? an.vNow.toFixed(1) : '–', 'VDOT'],
+    ['VO2 max', an.vo2 ? an.vo2.v : '–', an.lt && an.lt.pace ? 'LT ' + pace(an.lt.pace) + '/mi' : 'threshold not set'],
+    ['Readiness', rd && rd.factors ? rd.score : '–', rd && rd.factors ? (rd.level === 'green' ? 'good to go' : rd.level === 'amber' ? 'ease off' : 'recover') : 'no data'],
+    ['Load ratio', ratio ? ratio.toFixed(2) : '–', ratio ? (ratio > 1.5 ? 'spiking: back off' : ratio > 1.3 ? 'building fast' : ratio < 0.8 ? 'detraining' : 'in the sweet spot') : '']
+  ].map(function (x) { return '<div class="tile"><span>' + x[0] + '</span><b>' + x[1] + '</b><em>' + x[2] + '</em></div>'; }).join('') + '</div>';
+  /* today + week */
+  var day = dayOf(t);
+  html += dcard('c4', 'Today', (day ? day.parts.map(function (x) { return x.type === 'rest' ? restRow(x, t) : sessHTML(x, t, zonesAt(t), { struct: false }); }).join('') : '<p class="empty">Outside the plan.</p>') + (w ? '<div class="weekstrip" style="margin-top:12px">' + w.days.map(function (d) { var dots = d.parts.filter(function (x) { return x.type !== 'rest'; }).map(function (x) { return '<i class="t-' + x.type + (partDone(d.date, x) ? ' dn' : '') + '"></i>'; }).join(''); return '<a href="#/day/' + d.date + '" class="' + (d.date === t ? 'today' : '') + '">' + d.dow.charAt(0) + '<span class="n">' + E.pd(d.date).getDate() + '</span><span class="dots">' + dots + '</span></a>'; }).join('') + '</div>' : ''), ['#/plan', 'Plan']);
+  /* training load */
+  html += dcard('c8', 'Training load', '<p class="small muted">Short-term load (7 days) against long-term load (28 days), from Garmin exercise load. Staying within 0.8–1.3× of your long-term load is the range linked with the fewest injuries.</p>' + multiLine(ld.dates, [{ name: 'Long-term (fitness)', vals: ld.chronic, color: 'var(--blue)', area: true }, { name: 'Short-term (fatigue)', vals: ld.acute, color: 'var(--gold)' }], { label: 'Training load', min: 0 }));
+  /* weekly miles */
+  var cur = w ? w.n : 1, m0 = E.monday(t), wk = [];
+  for (var i = 25; i >= 0; i--) { var s0 = E.addD(m0, -7 * i), e0 = E.addD(s0, 6), pw = E.weekOf(p, s0); wk.push({ label: E.pd(s0).getDate(), a: pw ? pw.tot.mi : 0, b: sumMi(runs.filter(function (a) { return a.date >= s0 && a.date <= e0; })), cur: i === 0 }); }
+  html += dcard('c8', 'Weekly miles, last 26 weeks', barChart(wk).replace('class="chart"', 'class="chart wide"') + '<div class="legend"><span><i class="dot" style="background:var(--line2)"></i>Planned</span><span><i class="dot" style="background:var(--green)"></i>Run</span></div>', ['#/progress/performance', 'Performance']);
+  /* intensity distribution */
+  var sp = intensitySplit(56);
+  html += dcard('c4', 'Intensity mix, 8 weeks', sp ? '<div class="splitbar"><i style="width:' + (sp.easy * 100).toFixed(1) + '%;background:var(--green)"></i><i style="width:' + (sp.mod * 100).toFixed(1) + '%;background:var(--gold)"></i><i style="width:' + (sp.hard * 100).toFixed(1) + '%;background:var(--red)"></i></div><div class="grid3" style="margin-top:10px"><div class="metric"><span>Easy</span><b>' + Math.round(sp.easy * 100) + '%</b></div><div class="metric"><span>Moderate</span><b>' + Math.round(sp.mod * 100) + '%</b></div><div class="metric"><span>Hard</span><b>' + Math.round(sp.hard * 100) + '%</b></div></div><p class="small muted" style="margin-top:8px">' + (sp.easy < 0.7 ? 'Less than 70% easy. Faster marathoners in large training studies do about 75–85% of their running easy: slow the easy days down.' : sp.easy > 0.92 ? 'Almost all easy. Fine while building a base; your plan adds threshold work as the race nears.' : 'A healthy pyramid: mostly easy, some moderate, a little hard.') + '</p><p class="tiny muted">By time, classed from Garmin training effect.</p>' : '<p class="empty">No runs yet.</p>');
+  /* aerobic efficiency + long run */
+  var easy = runs.filter(function (a) { return a.hr && a.sec && a.mi >= 2 && (!a.ptype || a.ptype === 'easy' || a.ptype === 'long' || a.ptype === 'recovery'); }).slice(0, 40).reverse();
+  html += dcard('c6', 'Aerobic efficiency', '<p class="small muted">Meters covered per heartbeat on easy and long runs. A rising line means you are getting fitter at the same effort.</p>' + multiLine(easy.map(function (a) { return a.date; }), [{ name: 'm per beat', vals: easy.map(function (a) { return (a.mi * E.MI_M) / (a.hr * a.sec / 60); }), color: 'var(--green)', dots: true }], { fmt: function (v) { return v.toFixed(2); }, label: 'Aerobic efficiency', h: 190 }));
+  var lw = [], ld2 = [];
+  for (var j = 15; j >= 0; j--) { var s1 = E.addD(m0, -7 * j), e1 = E.addD(s1, 6), rr = runs.filter(function (a) { return a.date >= s1 && a.date <= e1; }); ld2.push(s1); lw.push(rr.length ? Math.max.apply(null, rr.map(function (a) { return a.mi; })) : null); }
+  var nextLong = null; if (w) w.days.forEach(function (d) { d.parts.forEach(function (x) { if (x.type === 'long') nextLong = x.mi; }); });
+  html += dcard('c6', 'Long-run progression', '<p class="small muted">Longest run each week.' + (nextLong ? ' This week\'s long run: ' + mi(nextLong) + ' mi.' : '') + '</p>' + multiLine(ld2, [{ name: 'Longest run (mi)', vals: lw, color: 'var(--red)', dots: true }], { fmt: function (v) { return v.toFixed(1); }, min: 0, label: 'Long run', h: 190 }));
+  /* running dynamics */
+  var dyn = runs.filter(function (a) { return a.g && (a.g.cadence || a.g.pwr); }).slice(0, 30).reverse(), dd = dyn.map(function (a) { return a.date; });
+  var dynCharts = [['Cadence (spm)', 'cadence', 'var(--blue)', 0], ['Stride (m)', 'stride', 'var(--violet)', 2, 0.01], ['Vertical ratio (%)', 'vRatio', 'var(--amber)', 1], ['Ground contact (ms)', 'gct', 'var(--red)', 0], ['Power (W)', 'pwr', 'var(--gold)', 0]].filter(function (c) { return dyn.filter(function (a) { return a.g[c[1]]; }).length >= 3; });
+  if (dynCharts.length) html += dcard('c12', 'Running dynamics, last ' + dyn.length + ' runs', '<div class="dyn">' + dynCharts.map(function (c) { return '<div>' + lineChart(dd, [{ name: c[0], vals: dyn.map(function (a) { return a.g[c[1]] ? a.g[c[1]] * (c[4] || 1) : null; }), color: c[2], fmt: function (v) { return v.toFixed(c[3]); } }]) + '</div>'; }).join('') + '</div><p class="tiny muted">Higher cadence and lower vertical ratio usually mean less impact per step. Treadmill runs can read differently from outdoor runs.</p>');
+  /* recovery */
+  var g = Store.garmin && Store.garmin.days;
+  if (g) { var rdts = []; for (var q = 55; q >= 0; q--) rdts.push(E.addD(t, -q)); var norm = function (k) { return rdts.map(function (d) { return g[d] && typeof g[d][k] === 'number' ? g[d][k] : null; }); };
+    html += dcard('c6', 'HRV and resting heart rate', multiLine(rdts, [{ name: 'HRV (ms)', vals: norm('hrv'), color: 'var(--violet)' }, { name: 'Resting HR (bpm)', vals: norm('rhr'), color: 'var(--red)' }], { label: 'HRV and resting HR', h: 190 }), ['#/progress/health', 'Health']);
+    html += dcard('c6', 'Sleep', multiLine(rdts, [{ name: 'Sleep score', vals: norm('sleepScore'), color: 'var(--blue)' }, { name: 'Body Battery peak', vals: norm('bbHigh'), color: 'var(--gold)', dash: true }], { label: 'Sleep', h: 190 }), ['#/progress/health', 'Health']); }
+  /* predictions + fitness trend */
+  html += dcard('c6', 'Race predictions', '<div class="scroll"><table class="t" style="margin-top:6px"><thead><tr><th>Distance</th><th class="num">Predicted</th><th class="num">Pace</th><th class="num">Goal</th><th class="num">Gap</th></tr></thead><tbody>' + [['5k', '5K'], ['10k', '10K'], ['10mi', '10 mile'], ['half', 'Half'], ['full', 'Marathon']].map(function (x) { var d = E.DIST[x[0]], pr = E.predict(an.vNow, d.mi), ev = upcoming().filter(function (e) { return e.dist === x[0] && e.goal; })[0], gg = ev ? E.parseClock(ev.goal) : 0; return '<tr><td>' + x[1] + '</td><td class="num">' + E.clock(pr) + '</td><td class="num">' + pace(pr / d.mi) + '</td><td class="num">' + (gg ? esc(ev.goal) : '–') + '</td><td class="num" style="color:' + (gg ? (pr <= gg ? 'var(--green)' : 'var(--amber)') : 'inherit') + '">' + (gg ? (pr <= gg ? '−' : '+') + E.clock(Math.abs(pr - gg)) : '') + '</td></tr>'; }).join('') + '</tbody></table></div>', ['#/fitness', 'VO2 max & threshold']);
+  var vh = an.vo2 ? an.vo2.hist.slice(-60) : [];
+  html += dcard('c6', 'VO2 max trend', vh.length >= 2 ? multiLine(vh.map(function (x) { return x.date; }), [{ name: 'VO2 max', vals: vh.map(function (x) { return x.v; }), color: 'var(--violet)', dots: vh.length < 40 }], { fmt: function (v) { return v.toFixed(1); }, label: 'VO2 max', h: 190 }) : '<p class="empty">Not enough readings yet.</p>', ['#/fitness', 'Details']);
+  /* strength */
+  var by = liftSeriesAll(), names = Object.keys(by);
+  if (names.length) { var top = names.map(function (n) { var s2 = by[n]; return { n: n, e1: s2.reduce(function (m, x) { return Math.max(m, x.e1); }, 0), last: s2[s2.length - 1] }; }).sort(function (a, b) { return b.e1 - a.e1; }).slice(0, 6);
+    html += dcard('c6', 'Strength', '<div class="scroll"><table class="t" style="margin-top:6px"><thead><tr><th>Lift</th><th>Last</th><th class="num">Best e1RM</th><th>Next step</th></tr></thead><tbody>' + top.map(function (x) { var mod = findEx(x.n), o = overload(x.n, mod ? mod.rx[0] : '3×8', E.addD(t, 1), 0); return '<tr><td>' + esc(x.n) + '</td><td class="small">' + x.last.sets.slice(0, 3).map(function (s3) { return (s3.w ? s3.w + '×' : '') + s3.r; }).join(', ') + '</td><td class="num">' + x.e1 + '</td><td class="small">' + (o.kind === 'up' ? '↑ ' + o.w + ' lb' : o.kind === 'reset' ? '↓ ' + o.w + ' lb' : o.kind === 'reps' ? 'beat reps' : o.kind === 'hold' ? 'hold' : '–') + (o.plateau ? ' · plateau' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>', ['#/progress/strength', 'Strength']); }
+  /* consistency */
+  html += dcard(names.length ? 'c6' : 'c12', 'Consistency, last ' + (names.length ? 20 : 30) + ' weeks', heatmap(names.length ? 20 : 30), ['#/calendar', 'Calendar']);
+  /* activity table */
+  html += dcard('c12', 'Recent runs', '<div class="scroll"><table class="t" style="margin-top:6px"><thead><tr><th>Date</th><th>Run</th><th class="num">Miles</th><th class="num">Time</th><th class="num">Pace</th><th class="num">HR</th><th class="num">Cadence</th><th class="num">Power</th><th class="num">TE</th><th class="num">Load</th><th>Feel</th><th class="num">Effort</th></tr></thead><tbody>' + runs.slice(0, 25).map(function (a) { var gg = a.g || {}, l = a.log || {}; return '<tr><td>' + fmtD(a.date, { month: 'short', day: 'numeric' }) + '</td><td><a href="#/activity/' + encodeURIComponent(a.key) + '">' + esc(a.name) + '</a></td><td class="num">' + mi(a.mi) + '</td><td class="num">' + (a.sec ? E.clock(a.sec) : '–') + '</td><td class="num">' + (a.sec ? pace(a.sec / a.mi) : '–') + '</td><td class="num">' + (a.hr || '–') + '</td><td class="num">' + (gg.cadence || '–') + '</td><td class="num">' + (gg.pwr || '–') + '</td><td class="num">' + (gg.te || '–') + '</td><td class="num">' + (gg.load || '–') + '</td><td>' + (l.feel ? FEEL[l.feel] : gg.feel ? FEEL[gg.feel] : '–') + '</td><td class="num">' + (l.rpe || gg.rpe || '–') + '</td></tr>'; }).join('') + '</tbody></table></div>', ['#/progress/workouts', 'All workouts']);
+  return '<div class="dash">' + html + '</div>';
+};
+
+/* ---------- glance: a compact view for the home screen ---------- */
+VIEWS.glance = function () {
+  var p = App.plan; if (!p) return setupNeeded();
+  var t = App.today, day = dayOf(t), w = App.week, rd = App.rd, ev = nextRace(), zz = zonesAt(t), fp = null;
+  try { fp = fuelPlan(t); } catch (e) { fp = null; }
+  var parts = day ? day.parts : [];
+  return '<div class="glance"><div class="spread"><span class="eyebrow">' + E.fmtDate(t, { weekday: 'long', month: 'short', day: 'numeric' }) + '</span><a class="small muted" href="#/today">Open app ›</a></div>' +
+    parts.map(function (x) { var dn = partDone(t, x); return '<a class="gl t-' + x.type + '" href="#/day/' + t + '"><b>' + esc(x.title) + (dn ? ' ✓' : '') + '</b><span>' + (E.isRun(x) ? mi(x.mi) + ' mi' + (mainPace(x, zz) ? ' · ' + mainPace(x, zz) + '/mi' : '') : x.min ? x.min + ' min' : 'Recover') + '</span></a>'; }).join('') +
+    '<div class="grid3">' + '<div class="metric"><span>Ready</span><b>' + (rd && rd.factors ? rd.score : '–') + '</b></div><div class="metric"><span>Week</span><b>' + (w ? mi(weekActual(w)) + '/' + mi(w.tot.mi) : '–') + '</b></div><div class="metric"><span>' + (ev ? esc((ev.name || E.distOf(ev).label).slice(0, 12)) : 'Race') + '</span><b>' + (ev ? E.diffD(t, ev.date) + ' d' : '–') + '</b></div></div>' +
+    (fp && !fp.missing ? '<p class="small muted" style="text-align:center">Fuel ' + fp.kcal.toLocaleString() + ' kcal · C ' + fp.C + ' · P ' + fp.P + ' · F ' + fp.F + ' g</p>' : '') + '</div>';
+};
+var _render3 = render;
+render = function () {
+  document.body.classList.toggle('glancemode', App.view === 'glance');
+  document.body.classList.toggle('wide', App.view === 'dash');
+  _render3();
+};
+/* on a computer, open on the dashboard */
+if (window.matchMedia && window.matchMedia('(min-width: 1024px)').matches && (!location.hash || location.hash === '#/today' || location.hash === '#/')) { try { history.replaceState(null, '', '#/dash'); } catch (e) { /* ignore */ } }
+var _you3 = VIEWS.you;
+VIEWS.you = function () {
+  var h = _you3();
+  var at = h.indexOf('<div class="sechead"><h2>Your plan');
+  var block = '<div class="menu"><a href="#/dash">Training dashboard<span class="v">deep dive</span><span class="chev">›</span></a><a href="#/glance">Glance view<span class="v">for your home screen</span><span class="chev">›</span></a></div>';
+  return at >= 0 ? h.slice(0, at) + block + h.slice(at) : h + block;
+};
+
+/* ================= Features 4: exercise library (how-to, form tips, muscle map, substitutes), rotating gym sessions,
+   1RM calculator, race-time estimator (Daniels VDOT), quieter rating prompts ================= */
+
+/* ---------- exercise library ---------- */
+var EXDB = {};
+function X(n, pat, eq, pri, sec, how, tips, subs, deep) { EXDB[n] = { n: n, pat: pat, eq: eq, pri: pri.split(' '), sec: sec ? sec.split(' ') : [], how: how.split('|'), tips: tips.split('|'), subs: subs ? subs.split('|') : [], deep: !!deep }; }
+/* dynamic stretches */
+X("World's greatest stretch", 'stretch', 'None', 'hipflex hams', 'adductors upperback glutes', 'Step into a long lunge and put both hands inside the front foot.|Drop the elbow toward the instep, then rotate and reach that arm to the ceiling.|Straighten the front leg to stretch the hamstring, then step through.', 'Keep the back knee off the floor if you can.|Follow your hand with your eyes when you rotate.', 'Spiderman lunge with rotation|Walking lunge with reach', 1);
+X('Deep squat pry', 'squat', 'None', 'adductors glutes', 'calves hipflex', 'Sit into your deepest squat with heels down.|Press the elbows against the inside of the knees and rock gently side to side.|Hold each side for a few seconds.', 'Hold a rack or a light plate in front if you tip backwards.|Chest tall, heels on the floor.', 'Bodyweight Cossack squat|90/90 hip switch', 1);
+X('Leg swings', 'stretch', 'None', 'hams hipflex', 'glutes', 'Hold a rack and stand tall on one leg.|Swing the other leg forward and back, a little higher each time.', 'Keep the torso still; the leg moves, not the back.', 'Hamstring scoop|Walking lunge with reach', 1);
+X('Inchworm', 'core', 'None', 'hams abs', 'delts calves', 'Fold forward and walk the hands out to a plank.|Pause, then walk the feet toward the hands with legs as straight as you can.', 'Keep the hips level in the plank.', 'Cat-cow to downward dog|Hamstring scoop', 1);
+X('Open-book rotation', 'stretch', 'None', 'upperback obliques', 'chest', 'Lie on your side with knees stacked and bent, arms straight in front.|Open the top arm across to the other side and follow it with your eyes.|Pause, breathe out, and return.', 'Keep the knees together so the twist comes from the upper back.', "World's greatest stretch|Band pull-apart", 1);
+X('Walking lunge with reach', 'lunge', 'None', 'hipflex quads', 'glutes obliques', 'Step into a long lunge.|Reach both arms overhead and lean slightly away from the front leg.|Step through into the next lunge.', 'Squeeze the back glute to deepen the hip stretch.', "World's greatest stretch|Spiderman lunge with rotation", 1);
+X('90/90 hip switch', 'stretch', 'None', 'glutes adductors', 'hipflex', 'Sit with both knees bent to 90 degrees, one leg in front and one to the side.|Rotate both knees over to the other side.|Sit tall over the front shin each time.', 'Use your hands behind you at first; work toward no hands.', 'Deep squat pry|Bodyweight Cossack squat', 1);
+X('Hamstring scoop', 'hinge', 'None', 'hams', 'calves lowback', 'Step one heel forward with the toes up.|Hinge at the hips and sweep both hands down past the foot and up.|Step and repeat on the other leg.', 'Back flat, hips back.', 'Leg swings|Inchworm', 1);
+X('Scapular push-up', 'core', 'None', 'upperback chest', 'delts', 'Hold a straight-arm plank.|Let the chest sink between the shoulders, then push the floor away.|Arms stay straight throughout.', 'Small movement; only the shoulder blades move.', 'Band pull-apart|Cat-cow to downward dog');
+X('Band pull-apart', 'pullH', 'Light band', 'rdelts upperback', 'traps', 'Hold a band at chest height with straight arms.|Pull it apart until it touches your chest.|Return slowly.', 'Ribs down; do not lean back.', 'Scapular push-up|Open-book rotation');
+X('Spiderman lunge with rotation', 'stretch', 'None', 'hipflex adductors', 'upperback', 'From a plank, step one foot outside the same-side hand.|Drop the inside elbow toward the floor.|Rotate and reach to the ceiling, then switch sides.', 'Keep the back leg long and the hips low.', "World's greatest stretch|Walking lunge with reach", 1);
+X('Bodyweight Cossack squat', 'lunge', 'None', 'adductors glutes', 'quads hams', 'Stand wide.|Sit deep over one heel while the other leg stays straight with toes up.|Push across to the other side.', 'Heel of the bent leg stays down.', 'Deep squat pry|90/90 hip switch', 1);
+X('Glute bridge march', 'thrust', 'None', 'glutes', 'hams abs', 'Lift into a glute bridge.|Keeping the hips high and level, lift one knee, then the other.', 'If the hips drop or twist, slow down.', 'Glute bridge|Dead bug');
+X('Cat-cow to downward dog', 'core', 'None', 'lowback calves', 'hams delts', 'On all fours, round the back, then arch it.|Push the hips up and back, pressing the heels toward the floor.|Return and repeat.', 'Pedal the heels to open the calves.', 'Inchworm|Knee-to-wall ankle rock', 1);
+X('Knee-to-wall ankle rock', 'calf', 'Wall', 'calves', 'tib', 'Stand facing a wall with one foot a hand-width away.|Drive the knee forward to touch the wall with the heel down.|Move the foot back a little as it gets easy.', 'Knee tracks over the second toe.', 'Cat-cow to downward dog|Deficit calf raise', 1);
+/* power */
+X('Box jump', 'jump', 'Box or bench', 'quads glutes', 'calves hams', 'Stand a short step from a box, swing the arms and jump.|Land softly on the whole foot in a quarter squat.|Stand tall, then step down.', 'Step down, never jump down.|Choose a height you can land quietly on.|Full reset between reps: this is power, not cardio.', 'Squat jump|Broad jump|Dumbbell jump squat');
+X('Squat jump', 'jump', 'None', 'quads glutes', 'calves', 'Dip to a quarter squat.|Explode straight up.|Land softly and sink into the next rep.', 'Quiet landings.|Stop the set when the jumps get lower.', 'Box jump|Broad jump|Pogo hops');
+X('Broad jump', 'jump', 'None', 'glutes quads', 'hams calves', 'Swing the arms back and hinge.|Jump forward as far as you can.|Land in a quarter squat and hold for two seconds.', 'Stick the landing before you care about distance.', 'Box jump|Squat jump|Kettlebell swing');
+X('Kettlebell swing', 'swing', 'Kettlebell or dumbbell', 'glutes hams', 'lowback forearms abs', 'Hike the bell back between your legs with a flat back.|Snap the hips forward so the bell floats to chest height.|Let it fall and hinge again.', 'It is a hip hinge, not a squat or a front raise.|Squeeze the glutes hard at the top.', 'Broad jump|Dumbbell Romanian deadlift|Medicine ball slam');
+X('Medicine ball slam', 'throw', 'Medicine ball', 'abs lats', 'delts glutes', 'Reach the ball overhead on your toes.|Throw it into the floor as hard as you can, folding at the hips.|Catch the bounce and repeat.', 'Use a non-bouncing ball if you have one.|Whole body, not just arms.', 'Kettlebell swing|Medicine ball chest pass|Squat jump');
+X('Medicine ball chest pass', 'throw', 'Medicine ball and wall', 'chest triceps', 'delts abs', 'Stand facing a wall with the ball at your chest.|Step and punch the ball into the wall as fast as you can.|Catch and reset.', 'Speed is the point: use a light ball.', 'Medicine ball slam|Explosive push-up');
+X('Pogo hops', 'jump', 'None', 'calves', 'tib', 'Stand tall and hop in place on the balls of your feet.|Keep the knees almost straight and the ankles stiff.|Spend as little time on the ground as possible.', 'Quiet, quick contacts.|Stop if your shins complain.', 'Jump rope|Straight-knee calf raise');
+X('Lateral skater hops', 'jump', 'None', 'glutes adductors', 'quads calves', 'Hop sideways from one foot to the other.|Land softly, hold for a beat, then hop back.', 'Knee stays over the foot on landing.', 'Lateral lunge|Alternate-leg bounds');
+X('Alternate-leg bounds', 'jump', 'Open space', 'glutes hams', 'calves quads', 'Run with exaggerated, springy strides.|Drive the knee up and push the ground away behind you.', 'Think long and floaty, not fast.', 'Skipping for height|Lateral skater hops|Split-squat jump');
+X('Split-squat jump', 'jump', 'None', 'quads glutes', 'calves', 'Start in a lunge.|Jump straight up and land in a lunge on the same side.|Finish the reps, then switch legs.', 'Soft landings; torso tall.', 'Squat jump|Alternate-leg bounds|Dumbbell walking lunge');
+/* heavy lower */
+X('Back squat', 'squat', 'Barbell and rack', 'quads glutes', 'adductors lowback hams abs', 'Set the bar on your upper back and step back, feet about shoulder width.|Take a big breath, brace, and sit down between your hips.|Go as deep as you can keep your back position, then drive up.', 'Knees track over the toes; do not let them cave in.|Keep the whole foot planted.|The breath and brace come before every rep.', 'Goblet squat|Leg press|Front squat|Dumbbell Bulgarian split squat', 1);
+X('Front squat', 'squat', 'Barbell and rack', 'quads glutes', 'abs upperback adductors', 'Rest the bar on the front of your shoulders with elbows high.|Sit straight down with a tall chest.|Drive up, leading with the elbows.', 'If the wrists complain, cross the arms or use straps.|Elbows up the whole time.', 'Goblet squat|Back squat|Leg press', 1);
+X('Paused back squat', 'squat', 'Barbell and rack', 'quads glutes', 'adductors lowback abs', 'Squat as normal.|Hold the bottom position for a full two seconds, staying tight.|Drive up without bouncing.', 'Use about 10% less than your normal squat.|Do not relax in the hole.', 'Back squat|Goblet squat|Leg press', 1);
+X('Trap-bar deadlift', 'hinge', 'Trap (hex) bar', 'glutes hams quads', 'lowback traps forearms', 'Stand inside the bar with feet hip width.|Hinge and bend the knees to grip, chest up, back flat.|Push the floor away and stand tall; lower under control.', 'Squeeze the glutes at the top, do not lean back.|Reset each rep from a dead stop.', 'Conventional deadlift|Dumbbell Romanian deadlift|Kettlebell deadlift');
+X('Conventional deadlift', 'hinge', 'Barbell', 'glutes hams lowback', 'quads traps lats forearms', 'Bar over mid-foot, feet hip width.|Hinge to grip, shins to the bar, chest up, lats tight.|Push the floor away and stand tall, bar close to the legs.', 'Flat back from start to finish.|Think "push the floor", not "pull the bar".', 'Trap-bar deadlift|Barbell Romanian deadlift|Kettlebell deadlift');
+X('Barbell Romanian deadlift', 'hinge', 'Barbell', 'hams glutes', 'lowback lats forearms', 'Stand tall holding the bar.|Push the hips back with soft knees, sliding the bar down the thighs.|Stop when the hamstrings are fully stretched, then stand tall.', 'The bar never leaves your legs.|The knees bend a little and then stop.', 'Dumbbell Romanian deadlift|Trap-bar deadlift|Back extension', 1);
+X('Barbell reverse lunge', 'lunge', 'Barbell or dumbbells', 'quads glutes', 'hams adductors abs', 'Take a long step back and lower the back knee toward the floor.|Keep the front shin close to vertical.|Drive through the front heel to stand.', 'All reps on one leg, then switch.|Torso tall.', 'Dumbbell walking lunge|Dumbbell Bulgarian split squat|Dumbbell step-up', 1);
+X('Dumbbell step-up', 'lunge', 'Box and dumbbells', 'quads glutes', 'hams calves', 'Put one whole foot on a knee-high box.|Stand up without pushing off the bottom leg.|Lower for three seconds.', 'Lean slightly forward; keep the hips level.', 'Barbell reverse lunge|Dumbbell Bulgarian split squat|Leg press (single leg)');
+X('Front-foot-elevated split squat', 'lunge', 'Low plate and dumbbells', 'quads glutes', 'hipflex adductors', 'Front foot on a low plate, back foot behind you on the toes.|Sink straight down until the back knee nearly touches.|Drive up through the front foot.', 'The raised front foot allows a deeper stretch for the back hip.', 'Dumbbell Bulgarian split squat|Barbell reverse lunge|Dumbbell walking lunge', 1);
+/* heavy upper */
+X('Barbell bench press', 'pushH', 'Barbell and bench', 'chest triceps', 'delts', 'Lie with eyes under the bar, shoulder blades squeezed back and down.|Lower the bar to the lower chest with elbows about 45 degrees out.|Press up and slightly back.', 'Feet planted, glutes on the bench.|Use a spotter or safety arms for heavy sets.', 'Dumbbell bench press|Weighted push-up|Machine chest press');
+X('Dumbbell bench press', 'pushH', 'Dumbbells and bench', 'chest triceps', 'delts', 'Lie back with the dumbbells over your chest.|Lower them beside the chest for a deep stretch.|Press up and slightly in.', 'Shoulder blades pinned back.|Control the bottom; no bouncing.', 'Barbell bench press|Weighted push-up|Machine chest press', 1);
+X('Incline dumbbell press', 'pushH', 'Dumbbells and incline bench', 'chest delts', 'triceps', 'Set the bench to about 30 degrees.|Lower the dumbbells to the upper chest for a deep stretch.|Press up over the collarbones.', 'Elbows about 45 degrees from the body.', 'Dumbbell bench press|Landmine press|Weighted push-up', 1);
+X('Weighted push-up', 'pushH', 'Plates or handles', 'chest triceps', 'delts abs', 'Hands on plates or handles so the chest can sink below the hands.|Lower in one straight line.|Push the floor away.', 'Add a plate on your back or a band when 10 reps is easy.|Squeeze glutes so the hips do not sag.', 'Dumbbell bench press|Push-up|Machine chest press', 1);
+X('Standing barbell overhead press', 'pushV', 'Barbell', 'delts triceps', 'traps abs upperback', 'Bar on the front of the shoulders, grip just outside them.|Squeeze glutes, ribs down, and press straight up.|Move your head "through the window" at the top.', 'Do not lean back; if you have to, the weight is too heavy.', 'Seated dumbbell overhead press|Landmine press|Push press');
+X('Seated dumbbell overhead press', 'pushV', 'Dumbbells and bench', 'delts triceps', 'traps', 'Sit tall with dumbbells at ear height.|Press straight up until the arms are straight.|Lower slowly to ear height.', 'Ribs down, back against the pad.', 'Standing barbell overhead press|Dumbbell Arnold press|Landmine press', 1);
+X('Push press', 'pushV', 'Barbell', 'delts triceps', 'quads glutes abs', 'Bar on the front of the shoulders.|Dip a few inches at the knees and drive up hard.|Use the leg drive to punch the bar overhead; lower under control.', 'The dip is short and straight down.', 'Standing barbell overhead press|Seated dumbbell overhead press|Landmine press');
+X('Landmine press', 'pushV', 'Barbell in a corner or landmine', 'delts chest', 'triceps abs', 'Half-kneel holding the end of the bar at your shoulder.|Press up and forward, reaching long at the top.|Lower slowly.', 'Friendly on shoulders that dislike straight overhead pressing.', 'Seated dumbbell overhead press|Incline dumbbell press|Dumbbell Arnold press');
+X('Dumbbell Arnold press', 'pushV', 'Dumbbells', 'delts', 'triceps traps', 'Start with palms facing you at chin height.|Rotate the palms forward as you press overhead.|Reverse on the way down.', 'Smooth rotation; lighter than a normal press.', 'Seated dumbbell overhead press|Standing barbell overhead press|Landmine press', 1);
+X('One-arm dumbbell row', 'pullH', 'Dumbbell and bench', 'lats upperback', 'biceps rdelts forearms', 'One hand and knee on a bench, back flat.|Let the dumbbell hang and the shoulder blade reach forward.|Pull the elbow to the hip and pause.', 'No twisting to cheat the weight up.', 'Chest-supported dumbbell row|Seated cable row|Inverted row', 1);
+X('Chest-supported dumbbell row', 'pullH', 'Dumbbells and incline bench', 'upperback lats', 'biceps rdelts', 'Lie chest-down on an incline bench.|Reach long at the bottom.|Pull the elbows back and pause.', 'The bench stops you cheating: keep the chest on it.', 'One-arm dumbbell row|Seated cable row|Barbell bent-over row', 1);
+X('Seated cable row', 'pullH', 'Cable machine', 'lats upperback', 'biceps rdelts', 'Sit tall with a slight knee bend.|Reach forward and let the lats stretch.|Pull to the lower ribs without leaning back.', 'Pause for a second with the shoulder blades squeezed.', 'Chest-supported dumbbell row|One-arm dumbbell row|Inverted row', 1);
+X('Barbell bent-over row', 'pullH', 'Barbell', 'lats upperback', 'lowback biceps hams', 'Hinge to about 45 degrees with a flat back.|Pull the bar to the belly button.|Lower under control.', 'Torso stays still; if it bounces, go lighter.', 'Chest-supported dumbbell row|One-arm dumbbell row|Seated cable row');
+X('Inverted row', 'pullH', 'Bar in a rack or rings', 'upperback lats', 'biceps abs', 'Hang under a bar with the body in one line.|Pull the chest to the bar.|Lower to straight arms.', 'Walk the feet forward or raise them to make it harder.', 'Seated cable row|One-arm dumbbell row|Chest-supported dumbbell row');
+X('Pull-up', 'pullV', 'Pull-up bar', 'lats', 'biceps upperback forearms abs', 'Hang from the bar with palms away, arms straight.|Pull the elbows down to your ribs until the chin clears the bar.|Lower all the way to a dead hang.', 'Use a band or the assisted machine if you cannot get 5 reps.|No kicking.', 'Lat pulldown|Chin-up|Neutral-grip lat pulldown', 1);
+X('Chin-up', 'pullV', 'Pull-up bar', 'lats biceps', 'upperback forearms', 'Hang with palms facing you.|Pull the chest to the bar.|Lower to a full hang.', 'Easier on the elbows than it looks if you keep the shoulders down.', 'Lat pulldown|Pull-up|Neutral-grip lat pulldown', 1);
+X('Lat pulldown', 'pullV', 'Cable machine', 'lats', 'biceps upperback', 'Grip just outside shoulder width and reach all the way up.|Pull the bar to the upper chest, elbows down to the ribs.|Return slowly to a full stretch.', 'Slight lean back only; do not turn it into a row.', 'Pull-up|Chin-up|Neutral-grip lat pulldown', 1);
+X('Neutral-grip lat pulldown', 'pullV', 'Cable machine', 'lats', 'biceps upperback', 'Use the handle with palms facing each other.|Pull to the upper chest.|Return to a full reach.', 'The neutral grip is the kindest on the shoulders.', 'Lat pulldown|Chin-up|Pull-up', 1);
+/* finishers */
+X('Dumbbell Romanian deadlift', 'hinge', 'Dumbbells', 'hams glutes', 'lowback forearms', 'Stand tall with dumbbells on the thighs.|Push the hips back with soft knees, lowering for three seconds.|Feel the hamstrings stretch, then stand.', 'Back flat; the weights stay close to the legs.', 'Barbell Romanian deadlift|Dumbbell single-leg Romanian deadlift|Back extension', 1);
+X('Dumbbell single-leg Romanian deadlift', 'hinge', 'Dumbbell', 'hams glutes', 'lowback calves abs', 'Stand on one leg with a soft knee.|Hinge forward, reaching the other leg long behind you.|Stop when the hamstring is stretched, then stand tall.', 'Hips stay square to the floor.|Touch a wall for balance if you need it.', 'Dumbbell Romanian deadlift|Single-leg hip thrust|Back extension', 1);
+X('Dumbbell Bulgarian split squat', 'lunge', 'Bench and dumbbells', 'quads glutes', 'hipflex adductors hams', 'Rear foot on a bench behind you.|Drop straight down until the back hip stretches.|Drive through the front heel.', 'Front foot far enough forward that the heel stays down.', 'Front-foot-elevated split squat|Barbell reverse lunge|Dumbbell walking lunge', 1);
+X('Dumbbell walking lunge', 'lunge', 'Dumbbells', 'quads glutes', 'hams adductors', 'Take a long step and lower the back knee to just above the floor.|Push through the front foot and step into the next lunge.', 'Tall torso; front knee over the middle toes.', 'Barbell reverse lunge|Dumbbell Bulgarian split squat|Dumbbell step-up', 1);
+X('Cossack squat', 'lunge', 'Light dumbbell or plate', 'adductors glutes', 'quads hams', 'Stand wide holding a light weight in front of you.|Sit deep over one heel with the other leg straight, toes up.|Push across to the other side.', 'Go only as deep as the heel stays down.', 'Lateral lunge|Copenhagen plank|Deep squat pry', 1);
+X('Nordic hamstring curl', 'hinge', 'Something to anchor the ankles', 'hams', 'glutes calves', 'Kneel with the ankles anchored.|Keeping hips straight, lower your body toward the floor as slowly as you can.|Catch yourself and push back up with your hands.', 'One of the best-studied exercises for preventing hamstring strains.|Start with just the lowering.', 'Stability-ball hamstring curl|Dumbbell Romanian deadlift|Seated leg curl', 1);
+X('Copenhagen plank', 'core', 'Bench', 'adductors', 'obliques abs', 'Side plank with the top leg on a bench.|Lift the hips and the bottom leg.|Hold.', 'Bend the top knee on the bench to make it easier.', 'Cossack squat|Side plank|Lateral lunge');
+X('Barbell hip thrust', 'thrust', 'Barbell and bench', 'glutes', 'hams', 'Shoulders against a bench, bar over the hips.|Tuck the chin and drive the hips up until the body is flat.|Pause two seconds and lower.', 'Shins vertical at the top.|Do not arch the lower back.', 'Single-leg hip thrust|Glute bridge|Dumbbell Romanian deadlift');
+X('Single-leg hip thrust', 'thrust', 'Bench', 'glutes', 'hams abs', 'Shoulders on a bench, one foot on the floor.|Drive the hips up level and pause.|Lower slowly.', 'Hips stay level; no twisting.', 'Barbell hip thrust|Glute bridge|Dumbbell single-leg Romanian deadlift');
+X('Glute bridge', 'thrust', 'None', 'glutes', 'hams', 'Lie on your back with knees bent.|Push through the heels and lift the hips.|Squeeze at the top for two seconds.', 'Ribs down; the glutes do the work, not the lower back.', 'Barbell hip thrust|Single-leg hip thrust');
+X('Tibialis raise (wall)', 'calf', 'Wall', 'tib', '', 'Lean your back against a wall with heels about a foot away.|Pull the toes up as high as you can.|Lower slowly.', 'This is your shin-splint insurance: do it every gym day.|Move the feet further out to make it harder.', 'Banded dorsiflexion|Heel walks|Tib-bar raise');
+X('Deficit calf raise', 'calf', 'Step', 'calves', '', 'Stand with the balls of the feet on a step.|Sink the heels into a deep stretch for two seconds.|Rise all the way up and pause.', 'Slow down: three seconds on the way down.', 'Eccentric heel drop (single leg)|Straight-knee calf raise|Soleus raise (bent knee)', 1);
+X('Eccentric heel drop (single leg)', 'calf', 'Step', 'calves', '', 'Rise on two feet on the edge of a step.|Shift to one foot and lower the heel over three seconds into a full stretch.|Repeat.', 'A staple for Achilles and calf durability.', 'Deficit calf raise|Soleus raise (bent knee)|Straight-knee calf raise', 1);
+X('Soleus raise (bent knee)', 'calf', 'Dumbbell or machine', 'calves', '', 'Sit with knees bent 90 degrees and a weight on the thighs.|Raise the heels as high as you can.|Lower for three seconds and pause at the bottom.', 'The soleus takes most of the load when you run, and it likes heavy weight.', 'Seated calf raise machine|Eccentric heel drop (single leg)|Deficit calf raise', 1);
+X('Straight-knee calf raise', 'calf', 'None', 'calves', '', 'Stand tall and rise onto the balls of the feet.|Pause, then lower slowly.', 'Two seconds up, two seconds down.', 'Deficit calf raise|Eccentric heel drop (single leg)');
+X('Hanging knee raise', 'core', 'Pull-up bar', 'abs hipflex', 'forearms obliques', 'Hang from a bar.|Curl the pelvis up and bring the knees to the chest.|Lower slowly to a full hang.', 'No swinging.', 'Dead bug|Reverse crunch|Hollow hold', 1);
+X('Pallof press', 'core', 'Cable or band', 'obliques abs', 'glutes', 'Stand side-on to a cable held at your chest.|Press the hands straight out and resist the twist.|Bring them back in.', 'Hips and shoulders stay square.', 'Side plank|Suitcase carry|Dead bug');
+X('Dead bug', 'core', 'None', 'abs', 'hipflex obliques', 'Lie on your back, arms up, knees over hips.|Lower the opposite arm and leg toward the floor.|Return and switch.', 'The lower back stays glued to the floor.', 'Hollow hold|Pallof press|Plank');
+X('Side plank', 'core', 'None', 'obliques', 'glutes abs delts', 'Lie on your side, elbow under the shoulder.|Lift the hips into a straight line.|Hold.', 'Hips forward; do not fold at the waist.', 'Copenhagen plank|Pallof press|Suitcase carry');
+X('Suitcase carry', 'carry', 'One heavy dumbbell', 'obliques forearms', 'traps abs glutes', 'Hold one heavy dumbbell at your side.|Walk tall without leaning.|Switch hands.', 'Go heavy: it should be hard to stay upright.', 'Pallof press|Side plank|Farmer carry');
+X('Dumbbell pullover', 'pushH', 'Dumbbell and bench', 'lats chest', 'triceps abs', 'Lie across or along a bench holding one dumbbell over your chest.|Lower it behind your head with slightly bent elbows.|Pull it back over the chest.', 'Ribs down; feel the stretch in the lats.', 'Straight-arm cable pulldown|Lat pulldown', 1);
+X('Incline dumbbell curl', 'curl', 'Dumbbells and incline bench', 'biceps', 'forearms', 'Lie back on an incline so the arms hang behind you.|Curl without letting the elbows drift forward.|Lower to a full stretch.', 'Lighter than a standing curl.', 'Dumbbell curl|Cable curl|Chin-up', 1);
+X('Dumbbell jump squat', 'jump', 'Light dumbbells', 'quads glutes', 'calves', 'Hold light dumbbells at your sides.|Dip and jump.|Land softly.', 'Very light weights only.', 'Squat jump|Box jump');
+X('Goblet squat', 'squat', 'Dumbbell or kettlebell', 'quads glutes', 'abs adductors upperback', 'Hold a dumbbell against your chest.|Sit down between the hips, elbows inside the knees.|Stand tall.', 'The best squat to learn with.', 'Back squat|Front squat|Leg press', 1);
+X('Leg press', 'squat', 'Leg press machine', 'quads glutes', 'adductors hams', 'Feet shoulder width on the platform.|Lower until the knees are at about 90 degrees.|Press without locking the knees hard.', 'Keep the lower back on the pad.', 'Goblet squat|Back squat|Dumbbell Bulgarian split squat');
+X('Push-up', 'pushH', 'None', 'chest triceps', 'delts abs', 'Hands just outside the shoulders, body in one line.|Lower the chest to the floor.|Push the floor away.', 'Hands on a bench to make it easier.', 'Dumbbell bench press|Weighted push-up');
+X('Plank', 'core', 'None', 'abs', 'delts glutes obliques', 'Elbows under shoulders, body in one line.|Squeeze glutes and quads.|Hold.', 'Stop when the hips sag.', 'Dead bug|Hollow hold');
+X('Hollow hold', 'core', 'None', 'abs', 'hipflex', 'Lie on your back, press the lower back down.|Lift shoulders and legs a few inches.|Hold.', 'Bend the knees to make it easier.', 'Dead bug|Plank');
+var PAT_WORDS = [['squat', /squat|leg press/i], ['hinge', /deadlift|rdl|good morning|back extension|curl.*ham|hamstring/i], ['lunge', /lunge|split|step-up|step up/i], ['pushV', /overhead|shoulder press|arnold|pike/i], ['pushH', /press|push-up|dip/i], ['pullV', /pull-up|chin|pulldown/i], ['pullH', /row|pull-apart/i], ['jump', /jump|hop|bound|skip/i], ['calf', /calf|heel|tibialis|soleus|ankle|foot/i], ['thrust', /thrust|bridge/i], ['carry', /carry/i], ['curl', /curl|triceps/i], ['core', /plank|bug|hollow|crunch|raise|pallof/i]];
+function exInfo(n) {
+  if (EXDB[n]) return EXDB[n];
+  var pat = 'core'; PAT_WORDS.some(function (p) { if (p[1].test(n)) { pat = p[0]; return true; } return false; });
+  var m = { squat: ['quads glutes', 'adductors'], hinge: ['hams glutes', 'lowback'], lunge: ['quads glutes', 'hams'], pushH: ['chest triceps', 'delts'], pushV: ['delts triceps', 'traps'], pullH: ['lats upperback', 'biceps'], pullV: ['lats', 'biceps'], jump: ['quads glutes', 'calves'], calf: ['calves', 'tib'], thrust: ['glutes', 'hams'], carry: ['obliques forearms', 'traps'], curl: ['biceps', 'forearms'], core: ['abs', 'obliques'] }[pat];
+  var mod = findEx(n);
+  return { n: n, pat: pat, eq: '', pri: m[0].split(' '), sec: m[1].split(' '), how: [mod ? mod.cue : 'Move with control through the fullest range you can hold good form in.'], tips: ['Start light and add weight only when every rep looks the same.'], subs: [], deep: false, generic: true };
+}
+/* substitutes: listed ones first, then anything else with the same movement pattern */
+function subsFor(n) {
+  var e = exInfo(n), out = e.subs.slice();
+  Object.keys(EXDB).forEach(function (k) { var x = EXDB[k]; if (k !== n && x.pat === e.pat && out.indexOf(k) < 0 && x.pri[0] === e.pri[0] && !(findEx(k) || {}).wu) out.push(k); });
+  return out.slice(0, 7);
+}
+
+/* ---------- movement diagrams (start and finish) ---------- */
+/* pose: head, shoulder, hip, knee, ankle, elbow, hand as x,y pairs (side view, ground at y=100); extras: k2/a2 back leg, bar, bench, box, step */
+var ST = [60, 18, 60, 30, 60, 58, 61, 79, 60, 100, 63, 46, 62, 62];
+var POSES = {
+  squat: [{ p: [60, 18, 60, 30, 60, 58, 62, 79, 60, 100, 68, 38, 62, 30], bar: [60, 28] }, { p: [68, 46, 63, 56, 44, 76, 72, 78, 60, 100, 70, 64, 64, 56], bar: [63, 54] }],
+  hinge: [{ p: [88, 44, 79, 51, 47, 58, 55, 80, 53, 100, 79, 68, 78, 84], bar: [78, 86] }, { p: ST, bar: [62, 64] }],
+  lunge: [{ p: ST }, { p: [60, 32, 60, 44, 58, 72, 80, 78, 80, 100, 62, 60, 60, 74], k2: [46, 94], a2: [28, 92] }],
+  pushH: [{ p: [32, 60, 44, 64, 76, 64, 92, 70, 92, 98, 44, 48, 44, 34], bar: [44, 32], bench: 1 }, { p: [32, 60, 44, 64, 76, 64, 92, 70, 92, 98, 56, 72, 46, 56], bar: [46, 54], bench: 1 }],
+  pushV: [{ p: [60, 18, 60, 30, 60, 58, 61, 79, 60, 100, 70, 42, 66, 28], bar: [66, 26] }, { p: [60, 18, 60, 30, 60, 58, 61, 79, 60, 100, 63, 14, 63, 0], bar: [63, -2] }],
+  pullH: [{ p: [88, 44, 79, 51, 47, 58, 55, 80, 53, 100, 80, 68, 80, 84], bar: [80, 86] }, { p: [88, 44, 79, 51, 47, 58, 55, 80, 53, 100, 64, 52, 76, 64], bar: [76, 66] }],
+  pullV: [{ p: [54, 30, 60, 38, 60, 66, 63, 84, 60, 100, 60, 22, 60, 8], top: 1 }, { p: [54, 12, 60, 20, 60, 48, 66, 64, 60, 80, 70, 26, 60, 8], top: 1 }],
+  jump: [{ p: [68, 40, 63, 50, 48, 68, 70, 78, 60, 100, 52, 60, 42, 68] }, { p: [60, 4, 60, 16, 60, 44, 62, 64, 60, 84, 64, 4, 68, -8], air: 1 }],
+  calf: [{ p: ST, step: 1 }, { p: [60, 11, 60, 23, 60, 51, 61, 72, 60, 93, 63, 39, 62, 55], step: 1, toes: 1 }],
+  thrust: [{ p: [28, 54, 38, 62, 62, 86, 84, 70, 86, 100, 50, 76, 60, 82], bench2: 1 }, { p: [28, 58, 38, 62, 62, 62, 84, 64, 86, 100, 50, 60, 60, 60], bench2: 1 }],
+  swing: [{ p: [84, 46, 76, 52, 46, 58, 55, 80, 53, 100, 66, 64, 54, 74], bar: [52, 76] }, { p: [60, 18, 60, 30, 60, 58, 61, 79, 60, 100, 74, 33, 90, 34], bar: [93, 34] }],
+  throw: [{ p: [60, 18, 60, 30, 60, 58, 61, 79, 60, 100, 63, 14, 63, 0], bar: [63, -3] }, { p: [84, 50, 76, 54, 48, 60, 56, 82, 54, 100, 78, 72, 76, 88], bar: [76, 94] }],
+  curl: [{ p: ST, bar: [62, 64] }, { p: [60, 18, 60, 30, 60, 58, 61, 79, 60, 100, 63, 46, 70, 32], bar: [71, 30] }],
+  core: [{ p: [98, 70, 88, 76, 56, 82, 36, 88, 16, 94, 88, 96, 100, 96] }],
+  carry: [{ p: ST, bar: [62, 66] }],
+  stretch: [{ p: ST }, { p: [64, 30, 62, 42, 58, 72, 80, 78, 80, 100, 64, 26, 68, 10], k2: [44, 94], a2: [26, 96] }]
+};
+function figSVG(pose) {
+  var p = pose.p, s = '';
+  var L = function (a, b, c, d, w) { return '<line x1="' + a + '" y1="' + b + '" x2="' + c + '" y2="' + d + '" stroke-width="' + (w || 5) + '"/>'; };
+  s += '<line x1="6" y1="102" x2="114" y2="102" stroke="var(--line2)" stroke-width="2"/>';
+  if (pose.bench) s += '<rect x="26" y="68" width="60" height="6" rx="2" fill="var(--line2)" stroke="none"/><line x1="36" y1="74" x2="36" y2="102" stroke="var(--line2)" stroke-width="3"/><line x1="78" y1="74" x2="78" y2="102" stroke="var(--line2)" stroke-width="3"/>';
+  if (pose.bench2) s += '<rect x="14" y="66" width="30" height="36" rx="3" fill="var(--line2)" stroke="none"/>';
+  if (pose.step) s += '<rect x="40" y="' + (pose.toes ? 96 : 100) + '" width="26" height="8" rx="2" fill="var(--line2)" stroke="none" transform="translate(0,' + (pose.toes ? 4 : 2) + ')"/>';
+  if (pose.top) s += '<line x1="36" y1="6" x2="84" y2="6" stroke="var(--line2)" stroke-width="4"/>';
+  if (pose.k2) s += '<g opacity=".55">' + L(p[4], p[5], pose.k2[0], pose.k2[1]) + L(pose.k2[0], pose.k2[1], pose.a2[0], pose.a2[1]) + '</g>';
+  s += L(p[2], p[3], p[4], p[5], 7) + L(p[4], p[5], p[6], p[7]) + L(p[6], p[7], p[8], p[9]) + L(p[8], p[9], p[8] + 9, p[9], 4);
+  s += L(p[2], p[3], p[10], p[11], 4) + L(p[10], p[11], p[12], p[13], 4);
+  s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="8" fill="currentColor" stroke="none"/>';
+  if (pose.bar) s += '<circle cx="' + pose.bar[0] + '" cy="' + pose.bar[1] + '" r="6" fill="var(--blue)" stroke="none"/>';
+  return '<svg viewBox="0 -14 120 122" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">' + s + '</svg>';
+}
+function diagram(n) {
+  var ps = POSES[exInfo(n).pat] || POSES.core;
+  return '<div class="exdiag">' + ps.map(function (p, i) { return '<figure>' + figSVG(p) + '<figcaption>' + (ps.length === 1 ? 'Hold' : i === 0 ? 'Start' : 'Finish') + '</figcaption></figure>'; }).join(ps.length > 1 ? '<span class="arrow">→</span>' : '') + '</div>';
+}
+
+/* ---------- muscle map: front and back ---------- */
+var MUSCLE_NAME = { quads: 'Quads', hams: 'Hamstrings', glutes: 'Glutes', calves: 'Calves', tib: 'Shins (tibialis)', adductors: 'Inner thigh', hipflex: 'Hip flexors', abs: 'Abs', obliques: 'Obliques', lowback: 'Lower back', lats: 'Lats', traps: 'Traps', upperback: 'Upper back', chest: 'Chest', delts: 'Shoulders', rdelts: 'Rear shoulders', biceps: 'Biceps', triceps: 'Triceps', forearms: 'Forearms' };
+function muscleMap(pri, sec) {
+  var cls = function (k) { return pri.indexOf(k) >= 0 ? 'p' : sec.indexOf(k) >= 0 ? 's' : ''; };
+  var el = function (k, cx, cy, rx, ry) { return '<ellipse class="' + cls(k) + '" cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '"/>'; };
+  var pair = function (k, c, dx, cy, rx, ry) { return el(k, c - dx, cy, rx, ry) + el(k, c + dx, cy, rx, ry); };
+  var body = function (c) { return '<g class="body"><circle cx="' + c + '" cy="13" r="9"/><rect x="' + (c - 4) + '" y="20" width="8" height="8"/><path d="M' + (c - 20) + ' 28 Q' + c + ' 22 ' + (c + 20) + ' 28 L' + (c + 17) + ' 84 Q' + c + ' 92 ' + (c - 17) + ' 84 Z"/><rect x="' + (c - 33) + '" y="28" width="11" height="38" rx="5.500"/><rect x="' + (c + 22) + '" y="28" width="11" height="38" rx="5.500"/><rect x="' + (c - 36) + '" y="62" width="10" height="34" rx="5"/><rect x="' + (c + 26) + '" y="62" width="10" height="34" rx="5"/><rect x="' + (c - 20) + '" y="82" width="19" height="56" rx="9"/><rect x="' + (c + 1) + '" y="82" width="19" height="56" rx="9"/><rect x="' + (c - 18) + '" y="134" width="14" height="52" rx="7"/><rect x="' + (c + 4) + '" y="134" width="14" height="52" rx="7"/></g>'; };
+  var f = 52, b = 158;
+  var s = '<svg class="musc" viewBox="0 0 210 204" role="img" aria-label="Muscles worked">' + body(f) + body(b);
+  /* front */
+  s += pair('delts', f, 23, 33, 7, 6) + pair('chest', f, 9, 41, 9, 7) + pair('biceps', f, 27.5, 49, 5, 10) + pair('forearms', f, 31, 76, 4.5, 12) + '<rect class="' + cls('abs') + '" x="' + (f - 8) + '" y="50" width="16" height="28" rx="5"/>' + pair('obliques', f, 14, 63, 3.5, 11) + pair('hipflex', f, 9, 87, 6, 4.5) + pair('quads', f, 11, 112, 7.5, 20) + pair('adductors', f, 3, 104, 3, 13) + pair('tib', f, 11, 158, 4.5, 17);
+  /* back */
+  s += '<path class="' + cls('traps') + '" d="M' + b + ' 22 L' + (b + 15) + ' 33 L' + b + ' 52 L' + (b - 15) + ' 33 Z"/>' + pair('rdelts', b, 23, 33, 7, 6) + pair('upperback', b, 10, 44, 6, 7) + pair('lats', b, 13, 60, 6.5, 13) + pair('triceps', b, 27.5, 49, 5, 10) + pair('forearms', b, 31, 76, 4.5, 12) + '<rect class="' + cls('lowback') + '" x="' + (b - 6) + '" y="64" width="12" height="18" rx="4"/>' + pair('glutes', b, 9.5, 92, 9, 9) + pair('hams', b, 11, 118, 7.5, 16) + pair('calves', b, 11, 154, 6, 15);
+  s += '<text x="' + f + '" y="200" text-anchor="middle">Front</text><text x="' + b + '" y="200" text-anchor="middle">Back</text></svg>';
+  return s + '<div class="legend" style="justify-content:center"><span><i class="dot" style="background:var(--red)"></i>Main: ' + pri.map(function (k) { return MUSCLE_NAME[k] || k; }).join(', ') + '</span>' + (sec.length ? '<span><i class="dot" style="background:var(--amber)"></i>Also: ' + sec.map(function (k) { return MUSCLE_NAME[k] || k; }).join(', ') + '</span>' : '') + '</div>';
+}
+
+/* ---------- exercise sheet ---------- */
+function exBtn(n, extra) { return '<button class="exlink" data-act="sheet" data-arg="' + jattr(Object.assign({ sheet: 'exinfo', n: n }, extra || {})) + '">' + esc(n) + '<span class="info">i</span></button>'; }
+SHEETS.exinfo = function (a) {
+  var e = exInfo(a.n), inWk = a.i != null && App.wk && App.wk.ex[a.i];
+  var orig = a.orig || (inWk && App.wk.ex[a.i].orig) || null;
+  var subs = subsFor(orig || a.n).filter(function (x) { return x !== a.n; });
+  if (orig && orig !== a.n) subs.unshift(orig);
+  var h = liftHistory(a.n), best = h.reduce(function (m, x) { return Math.max(m, x.e1); }, 0);
+  return '<h3>' + esc(a.n) + '</h3><div class="tagsrow">' + (e.eq ? '<i>' + esc(e.eq) + '</i>' : '') + (e.deep ? '<i class="deep">Deep stretch</i>' : '') + (best ? '<i>Your e1RM ' + best + ' lb</i>' : '') + '</div>' +
+    diagram(a.n) + '<p class="tiny muted" style="text-align:center">Simple movement diagram. <a href="https://www.youtube.com/results?search_query=' + encodeURIComponent(a.n + ' proper form') + '" target="_blank" rel="noopener">Watch a video demo ↗</a></p>' +
+    '<h4>How to do it</h4><ol class="num small">' + e.how.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' +
+    '<h4>Form tips</h4><ul class="plain small">' + e.tips.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' +
+    '<h4>Muscles worked</h4>' + muscleMap(e.pri, e.sec) +
+    (subs.length ? '<h4>No equipment today? Swap it</h4><p class="tiny muted">' + (inWk ? 'Tap one to use it in this workout.' : 'Tap one to use it from now on in place of this exercise.') + '</p><div class="stack tight">' + subs.map(function (s) { var x = exInfo(s); return '<button class="btn sublink" data-act="ex-sub" data-arg="' + jattr({ from: orig || a.n, to: s, i: a.i }) + '"><span>' + esc(s) + (s === orig ? ' (the planned lift)' : '') + '</span><span class="tiny muted">' + esc(x.eq || '') + '</span></button>'; }).join('') + '</div>' +
+      (inWk ? '<label class="check" style="margin-top:8px"><input type="checkbox" id="sub-always"> Always use my swap in future workouts</label>' : '') : '') +
+    '<div class="btns" style="margin-top:6px">' + (h.length ? '<button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'exhist', n: a.n }) + '">My history</button>' : '') + '<button class="btn ghost" data-act="sheet-close">Close</button></div>';
+};
+ACTIONS['ex-sub'] = function (a) {
+  var back = a.to === a.from;
+  if (a.i != null && App.wk && App.wk.ex[a.i]) {
+    var x = App.wk.ex[a.i], always = $('#sub-always') && $('#sub-always').checked, prev = liftHistory(a.to, App.wk.date).pop();
+    x.n = a.to; x.orig = back ? null : a.from; x.cue = back ? ((findEx(a.to) || {}).cue || '') : 'Your swap for ' + a.from + '.';
+    x.sets.forEach(function (s, j) { if (!s.done) { var p = prev && (prev.sets[j] || prev.sets[prev.sets.length - 1]); s.w = p && p.w ? p.w : ''; } });
+    App.wk.touched = true; wkSave();
+    if (always || back) Store.edit('subs', a.from, function (S) { S.subs = S.subs || {}; if (back) delete S.subs[a.from]; else S.subs[a.from] = a.to; });
+    closeSheet(); render(); toast(back ? 'Back to ' + a.to : 'Swapped to ' + a.to + (always ? ' from now on' : ' for today'));
+    return;
+  }
+  Store.edit('subs', a.from, function (S) { S.subs = S.subs || {}; if (back) delete S.subs[a.from]; else S.subs[a.from] = a.to; });
+  closeSheet(); toast(back ? 'Back to ' + a.to : a.to + ' will replace ' + a.from);
+};
+ACTIONS['sub-clear'] = function (a) { Store.edit('subs', a.from, function (S) { if (S.subs) delete S.subs[a.from]; }); toast('Swap removed'); };
+
+/* session listing with tappable exercises and your swaps applied */
+moduleBody = function (key, lp, v) {
+  var m = E.liftMod(key, v); if (!m) return '';
+  var subs = st().subs || {};
+  return m.blocks.map(function (b) {
+    return '<div class="block-h"><span>' + esc(b.t) + '</span><span>' + b.min + ' min</span></div>' + b.ex.map(function (e) {
+      var n = subs[e.n] || e.n;
+      return '<div class="ex"><div class="n">' + exBtn(n, subs[e.n] ? { orig: e.n } : null) + (subs[e.n] ? '<div class="tiny muted">your swap for ' + esc(e.n) + '</div>' : '') + '</div><div class="rx">' + esc(e.rx[lp]) + (e.rest[lp] && e.rest[lp] !== '–' ? '<div class="tiny muted">rest ' + esc(e.rest[lp]) + '</div>' : '') + '</div><div class="cue">' + esc(subs[e.n] ? exInfo(n).tips[0] : e.cue) + '</div></div>';
+    }).join('');
+  }).join('');
+};
+VIEWS.strength = function () {
+  var w = App.week, prof = st().profile || {};
+  var wkPart = w && w.days ? w.days.map(function (d) { return d.parts.filter(function (x) { return x.type === 'strength'; })[0]; }).filter(Boolean)[0] : null;
+  var lp = App.ui.lp != null ? App.ui.lp : wkPart ? wkPart.lp : 0;
+  var curV = E.liftVar(w ? w.n : 1), v = App.ui.lv != null ? App.ui.lv : curV;
+  var mods = ['A', 'B', 'C', 'UB', 'HT', 'ACT'].filter(function (k) { return E.LIFT[k]; });
+  var sel = App.args[0] && E.LIFT[App.args[0]] ? App.args[0] : App.ui.mod;
+  var has = !!E.LIFT_VARS[sel], m = E.liftMod(sel, v), total = m.blocks.reduce(function (a, b) { return a + b.min; }, 0);
+  var html = '<div class="pagehead"><h1>Strength</h1><p>Every gym day runs about 45 minutes in the same order: a dynamic stretch, explosive lifts, heavy full-body compound lifts, then muscle-specific finishers. Days A, B and C are all full-body but lead with a different pattern, and each has three versions that rotate every four weeks so you keep progressing. Tap any exercise for how to do it, the muscles it works and swaps.</p></div>';
+  html += '<div class="seg" role="group" aria-label="Phase">' + E.LIFT_PHASES.map(function (p, i) { return '<button data-act="lp" data-arg="' + jattr({ lp: i }) + '" aria-pressed="' + (i === lp) + '">' + p.k + '</button>'; }).join('') + '</div><p class="small muted">' + esc(E.LIFT_PHASES[lp].d) + '</p>';
+  html += '<div class="chips">' + mods.map(function (k) { return '<button class="chip" data-act="mod" data-arg="' + jattr({ mod: k }) + '" aria-pressed="' + (k === sel) + '">' + (k.length === 1 ? 'Day ' + k + ': ' : '') + E.LIFT[k].name + '</button>'; }).join('') + '</div>';
+  if (has) html += '<div class="seg" role="group" aria-label="Version">' + [0, 1, 2].map(function (i) { return '<button data-act="ui" data-arg="' + jattr({ k: 'lv', v: i }) + '" aria-pressed="' + (i === v) + '">Version ' + (i + 1) + (i === curV ? ' · now' : '') + '</button>'; }).join('') + '</div><p class="tiny muted">You are on version ' + (curV + 1) + ' for plan weeks ' + (Math.floor(((w ? w.n : 1) - 1) / 4) * 4 + 1) + '–' + (Math.floor(((w ? w.n : 1) - 1) / 4) * 4 + 4) + '. The next version starts automatically after that.</p>';
+  html += '<section class="card t-strength" style="border-left:4px solid var(--c)"><h2>' + esc(sel.length === 1 ? 'Strength ' + sel + ': ' + m.name : m.name) + '</h2><p class="small muted">' + total + ' min · ' + esc(m.focus) + '</p>' + moduleBody(sel, lp, v) +
+    '<div class="btns" style="margin-top:10px"><a class="btn sm primary" href="#/workout/' + App.today + '/' + sel + '">Start this workout today</a></div></section>';
+  var subs = st().subs || {}, sk = Object.keys(subs);
+  if (sk.length) html += '<section class="card"><h3>Your swaps</h3>' + sk.map(function (k) { return '<div class="list-item"><div class="n small"><b>' + esc(subs[k]) + '</b></div><div class="d"><button class="btn sm ghost" data-act="sub-clear" data-arg="' + jattr({ from: k }) + '">Undo</button></div><div class="c">instead of ' + esc(k) + '</div></div>'; }).join('') + '</section>';
+  html += '<section class="card"><h3>How the app tailors lifting</h3><ul class="plain small" style="margin-top:6px"><li><b>Heavy means heavy.</b> Compound lifts work up to sets of 3–6 at an effort that leaves two reps in reserve; research on runners finds near-maximal loads improve running economy most.</li><li><b>Full body, staggered.</b> Squat, hinge and single-leg patterns lead on different days, each paired with a push and a pull, so no pattern is hit hard twice in a row.</li><li><b>Deep ranges.</b> Many lifts are chosen or cued for a loaded stretch (deep squats, Romanian deadlifts, split squats, dead hangs, deficit calf raises), which builds flexibility along with strength.</li><li><b>It keeps changing.</b> Exercises rotate every four weeks and the sets, reps and loads follow your running phase: Base, Build, Peak, Light.</li><li><b>Running comes first.</b> Heavy days go on key-run days after the run, never the day before the long run. Low readiness turns the day light.</li><li><b>Shins built in.</b> Every day ends with calf, Achilles or tibialis work.</li></ul></section>';
+  return html;
+};
+/* workout screen: dynamic stretch checklist on top, tappable exercise names, swap from the menu */
+var _workout4 = VIEWS.workout;
+VIEWS.workout = function () {
+  var h = _workout4(), w = App.wk; if (!w) return h;
+  h = h.replace(/(<section class="card excard" id="ex(\d+)"><div class="spread"><div style="min-width:0">)<h3>([\s\S]*?)<\/h3>/g, function (m, pre, i) { var x = w.ex[+i]; return pre + '<h3>' + exBtn(x.n, { i: +i }) + '</h3>'; });
+  var m = E.liftMod(w.key, w.v), dyn = m && m.blocks[0] && m.blocks[0].ex.every(function (x) { return x.wu; }) ? m.blocks[0] : null;
+  if (dyn && !w.edit) {
+    var card = '<section class="card"><div class="spread"><h3>' + esc(dyn.t) + '</h3><span class="small muted">' + dyn.min + ' min · not logged</span></div>' + dyn.ex.map(function (x) { return '<div class="ex"><div class="n">' + exBtn(x.n) + '</div><div class="rx">' + esc(x.rx[0].replace(/^1×/, '')) + '</div><div class="cue">' + esc(x.cue) + '</div></div>'; }).join('') + '</section>';
+    var at = h.indexOf('<section class="card excard" id="ex0"');
+    if (at >= 0) h = h.slice(0, at) + card + h.slice(at);
+  }
+  return h;
+};
+var _exmenu = SHEETS.exmenu;
+SHEETS.exmenu = function (a) {
+  return _exmenu(a).replace(/<button class="btn" data-act="sheet" data-arg="[^"]*">Substitute exercise<\/button>/, '<button class="btn" data-act="sheet" data-arg="' + jattr({ sheet: 'exinfo', n: App.wk.ex[a.i].n, i: a.i }) + '">How to do it, muscles and swaps</button><button class="btn" data-act="sheet" data-arg="' + jattr({ sheet: 'exadd', swap: a.i }) + '">Swap for something else…</button>');
+};
+
+/* ---------- 1RM: calculator, calculated from your lifts, or entered by you ---------- */
+function ormFormulas(w, r) { w = +w; r = +r; if (!(w > 0 && r > 0)) return null; if (r === 1) return { epley: w, brzycki: w, lombardi: w, avg: w }; var e = w * (1 + r / 30), b = r < 37 ? w * 36 / (37 - r) : e, l = w * Math.pow(r, 0.1); return { epley: e, brzycki: b, lombardi: l, avg: (e + b + l) / 3 }; }
+function ormOf(n) {
+  /* your entered 1RM if it is from the last 12 weeks, otherwise the best calculated from sets in the last 8 weeks */
+  var t = App.today, man = (st().orm || []).filter(function (o) { return o.n === n; }).sort(function (a, b) { return a.date < b.date ? 1 : -1; })[0];
+  var calc = 0, cd = null; liftHistory(n).forEach(function (h) { if (E.diffD(h.date, t) <= 56 && h.e1 > calc) { calc = h.e1; cd = h.date; } });
+  var useMan = man && E.diffD(man.date, t) <= 84 && man.w >= calc * 0.9;
+  return { manual: man || null, calc: calc || null, calcDate: cd, use: useMan ? man.w : (calc || (man ? man.w : null)), src: useMan ? 'entered' : calc ? 'calculated' : man ? 'entered' : null };
+}
+var PCT = [[100, 1], [95, 2], [90, 4], [85, 6], [80, 8], [75, 10], [70, 12], [65, 15]];
+SHEETS.ormcalc = function (a) {
+  sheetCtx.n = a.n || '';
+  return '<h3>1RM calculator</h3><p class="small muted">Enter a set you did with good form (ideally 2–10 reps). The calculator estimates the most you could lift once.</p>' +
+    '<label class="f">Exercise<input class="i" id="oc-n" list="oc-list" value="' + esc(a.n || '') + '" placeholder="e.g. Back squat"></label><datalist id="oc-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
+    '<div class="grid2"><label class="f">Weight (lb)<input class="i" id="oc-w" type="number" step="2.5" inputmode="decimal" value="' + (a.w || '') + '"></label><label class="f">Reps<input class="i" id="oc-r" type="number" min="1" max="20" inputmode="numeric" value="' + (a.r || '') + '"></label></div><div id="oc-out">' + ormOut(a.w, a.r) + '</div>' +
+    '<div class="btns"><button class="btn primary" data-act="oc-save">Save as my 1RM</button><button class="btn" data-act="sheet" data-arg="' + jattr({ sheet: 'orm', n: a.n }) + '">Enter a tested 1RM</button><button class="btn ghost" data-act="sheet-close">Close</button></div><p class="err" id="shErr"></p>';
+};
+function ormOut(w, r) {
+  var f = ormFormulas(w, r);
+  if (!f) return '<p class="empty">Enter weight and reps.</p>';
+  var one = Math.round(f.avg);
+  return '<div class="grid4" style="margin-top:4px"><div class="metric good"><span>Estimated 1RM</span><b>' + one + '</b><em>average</em></div><div class="metric"><span>Epley</span><b>' + Math.round(f.epley) + '</b></div><div class="metric"><span>Brzycki</span><b>' + Math.round(f.brzycki) + '</b></div><div class="metric"><span>Lombardi</span><b>' + Math.round(f.lombardi) + '</b></div></div>' +
+    '<div class="scroll"><table class="t" style="margin-top:8px"><thead><tr><th>% of 1RM</th><th class="num">Weight</th><th class="num">About</th></tr></thead><tbody>' + PCT.map(function (p) { return '<tr><td>' + p[0] + '%</td><td class="num">' + Math.round(one * p[0] / 100 / 5) * 5 + ' lb</td><td class="num">' + p[1] + ' rep' + (p[1] > 1 ? 's' : '') + '</td></tr>'; }).join('') + '</tbody></table></div>' + (+r > 10 ? '<p class="tiny muted">Estimates from more than 10 reps are rough. A set of 3–6 is more accurate.</p>' : '');
+}
+document.addEventListener('input', function (e) { if (e.target.id === 'oc-w' || e.target.id === 'oc-r') { var o = $('#oc-out'); if (o) o.innerHTML = ormOut($('#oc-w').value, $('#oc-r').value); } });
+ACTIONS['oc-save'] = function () {
+  var n = $('#oc-n').value.trim(), w = +$('#oc-w').value, r = +$('#oc-r').value, f = ormFormulas(w, r);
+  if (!n || !f) { $('#shErr').textContent = 'Enter the exercise, weight and reps.'; return; }
+  var o = { id: uid(), n: n, w: Math.round(f.avg), raw: w, r: r, date: App.today, calc: r > 1 };
+  Store.edit('orm', o.id, function (S) { S.orm.push(o); });
+  closeSheet(); toast(n + ' 1RM saved: ' + o.w + ' lb');
+};
+var _progStrength4 = progStrength;
+progStrength = function () {
+  var h = _progStrength4();
+  h = h.replace('<button class="btn" data-act="sheet" data-arg="' + jattr({ sheet: 'orm' }) + '">Record a 1RM</button>', '<button class="btn" data-act="sheet" data-arg="' + jattr({ sheet: 'ormcalc' }) + '">1RM calculator</button>');
+  var by = liftSeriesAll(), names = {}; Object.keys(by).forEach(function (n) { names[n] = 1; }); (st().orm || []).forEach(function (o) { names[o.n] = 1; });
+  var rows = Object.keys(names).map(function (n) { return { n: n, o: ormOf(n) }; }).filter(function (x) { return x.o.use; }).sort(function (a, b) { return b.o.use - a.o.use; });
+  var card = '<div class="sechead"><h2>Your 1RMs</h2><button data-act="sheet" data-arg="' + jattr({ sheet: 'orm' }) + '">Enter one</button></div><section class="card">' + (rows.length ? '<div class="scroll"><table class="t"><thead><tr><th>Lift</th><th class="num">Calculated</th><th class="num">Entered</th><th class="num">Using</th></tr></thead><tbody>' + rows.map(function (x) { return '<tr><td><button class="exlink" data-act="sheet" data-arg="' + jattr({ sheet: 'ormcalc', n: x.n }) + '">' + esc(x.n) + '</button></td><td class="num">' + (x.o.calc || '–') + '</td><td class="num">' + (x.o.manual ? x.o.manual.w : '–') + '</td><td class="num"><b>' + x.o.use + '</b></td></tr>'; }).join('') + '</tbody></table></div><p class="tiny muted" style="margin-top:8px">In lb. "Calculated" is from your best set in the last 8 weeks (weight × (1 + reps ÷ 30)). A 1RM you enter is used for 12 weeks unless your lifts show you have passed it.</p>' : '<p class="empty">Log sets, use the calculator, or enter a 1RM you already know.</p>') + '</section>';
+  var at = h.indexOf('<div class="sechead"><h2>Top estimated 1RM');
+  if (at < 0) at = h.indexOf('<section class="card"><h3>No sets logged yet');
+  return at >= 0 ? h.slice(0, at) + card + h.slice(at) : h + card;
+};
+/* percent of 1RM in the next-step advice */
+var _overloadHTML = overloadHTML;
+overloadHTML = function (x, i, date, lp) {
+  var h = _overloadHTML(x, i, date, lp), o = ormOf(x.n), ov = overload(x.n, x.rx, date, lp);
+  if (o.use && ov.w) h = h.replace('</p>', ' <span class="muted">That is about ' + Math.round(ov.w / o.use * 100) + '% of your ' + o.use + ' lb 1RM.</span></p>');
+  return h;
+};
+
+/* ---------- race-time estimator (Jack Daniels VDOT) ---------- */
+var EST_D = [['1mi', '1 mile'], ['5k', '5K'], ['10k', '10K'], ['15k', '15K'], ['10mi', '10 mile'], ['half', 'Half marathon'], ['full', 'Marathon']];
+function estTable(v) { return '<div class="scroll"><table class="t" style="margin-top:6px"><thead><tr><th>Distance</th><th class="num">Estimated time</th><th class="num">Pace /mi</th></tr></thead><tbody>' + EST_D.map(function (d) { var mi2 = E.DIST[d[0]].mi, s = E.predict(v, mi2); return '<tr><td>' + d[1] + '</td><td class="num">' + E.clock(s) + '</td><td class="num">' + pace(s / mi2) + '</td></tr>'; }).join('') + '</tbody></table></div>'; }
+function estimatorCard() {
+  var an = App.an || {}, S = an.sources || {}, A = an.anchor, rows = [];
+  if (S.race) rows.push(['Race or time trial', mi(S.race.mi) + ' mi in ' + E.clock(S.race.sec), S.race]);
+  if (an.effort) rows.push(['Best recent effort', E.clock(an.effort.sec) + ' for ' + (E.DIST[an.effort.key] ? E.DIST[an.effort.key].label : mi(an.effort.mi) + ' mi') + ' inside a run', an.effort]);
+  if (S.lt) rows.push(['Lactate threshold', pace(S.lt.ltPace) + '/mi' + (S.lt.ltHr ? ' at ' + S.lt.ltHr + ' bpm' : ''), S.lt]);
+  if (S.vo2) rows.push(['Garmin VO2 max', String(S.vo2.vo2), S.vo2]);
+  var html = '<section class="card"><h3>Race time estimates</h3><p class="small muted">Jack Daniels\' VDOT method: one fitness number from your running, converted to equivalent times at every distance. The app reads your recent runs and Garmin health data, then uses the strongest evidence.</p>';
+  html += '<div class="spread" style="margin-top:8px"><span class="pill solid">VDOT ' + (an.vNow ? an.vNow.toFixed(1) : '–') + '</span><span class="tiny muted">' + (A ? 'from ' + ({ race: 'your race result', lt: 'your threshold', effort: 'your best recent effort', vo2: 'Garmin VO2 max' }[A.src]) + ', ' + fmtD(A.date) : 'from your plan settings') + '</span></div>';
+  if (an.vNow) html += estTable(an.vNow);
+  if (rows.length) html += '<h4 style="margin-top:12px">What it is based on</h4><div class="scroll"><table class="t"><thead><tr><th>Evidence</th><th>Value</th><th class="num">VDOT</th><th class="num">Date</th></tr></thead><tbody>' + rows.map(function (r) { return '<tr' + (A && r[2] === A ? ' style="font-weight:800"' : '') + '><td>' + r[0] + (A && r[2] === A ? ' ✓' : '') + '</td><td>' + esc(r[1]) + '</td><td class="num">' + r[2].v.toFixed(1) + '</td><td class="num">' + fmtD(r[2].date, { month: 'short', day: 'numeric' }) + '</td></tr>'; }).join('') + '</tbody></table></div><p class="tiny muted" style="margin-top:6px">Priority: a race in the last 12 weeks, then the better of your threshold and your best recent effort, then VO2 max at half weight. A fast stretch inside a training run is a floor: you would race faster. Marathon estimates assume you have done the long runs.</p>';
+  html += '<h4 style="margin-top:12px">Try your own result</h4><div class="grid2"><label class="f">Distance<select class="i" id="est-d">' + EST_D.map(function (d) { return '<option value="' + d[0] + '"' + (d[0] === '5k' ? ' selected' : '') + '>' + d[1] + '</option>'; }).join('') + '</select></label><label class="f">Time<input class="i" id="est-t" placeholder="22:48"></label></div><div id="est-out"></div></section>';
+  return html;
+}
+function estCalc() {
+  var o = $('#est-out'); if (!o) return;
+  var t = E.parseClock($('#est-t').value), d = E.DIST[$('#est-d').value];
+  if (!(t > 0)) { o.innerHTML = ''; return; }
+  var v = E.vdotOf(d.mi, t);
+  o.innerHTML = v > 15 && v < 90 ? '<p class="small" style="margin-top:8px"><b>VDOT ' + v.toFixed(1) + '.</b> Equivalent performances:</p>' + estTable(v) + '<p class="tiny muted">To make this your fitness, log the run as a race or time trial on its day.</p>' : '<p class="err">That time looks off.</p>';
+}
+document.addEventListener('input', function (e) { if (e.target.id === 'est-t') estCalc(); });
+document.addEventListener('change', function (e) { if (e.target.id === 'est-d') estCalc(); });
+var _fitness4 = VIEWS.fitness;
+VIEWS.fitness = function () {
+  var h = _fitness4(), at = h.indexOf('<section class="card"><h3>How this sets your paces');
+  var c = estimatorCard();
+  return at >= 0 ? h.slice(0, at) + c + h.slice(at) : h + c;
+};
+TITLES.fitness = 'Fitness & race estimates';
+
+/* ---------- rating prompt: never ask about a run you already rated on Garmin ---------- */
+var _rateCard4 = rateCard;
+rateCard = function () {
+  var logs = st().logs || {}, t = App.today, now = Date.now(), items = [];
+  for (var i = 0; i < 4; i++) {
+    var d = E.addD(t, -i), l = logs[d]; if (!l) continue;
+    ['run', 'xrun'].forEach(function (k) {
+      var r = l[k]; if (!r || r.skip || !(+r.mi > 0) || r.noAsk) return;
+      if (r.rpe) return;                                        /* effort is already rated; feel is optional */
+      var g = r.gid ? gAct(r.gid) : null;
+      if (g && (g.rpe || g.feel)) return;                       /* rated on the watch or in Garmin Connect */
+      if (g && g.start) { var ended = new Date(g.start.replace(' ', 'T')).getTime() + (g.durS || 0) * 1000; if (now - ended < 4 * 3600 * 1000) return; }   /* give your Garmin rating time to sync */
+      items.push({ date: d, slot: k, r: r });
+    });
+  }
+  if (!items.length) return '';
+  return '<section class="card"><h3>How did it go?</h3><p class="small muted">No rating came through from Garmin for ' + (items.length > 1 ? 'these runs' : 'this run') + '. Answer here, or rate it in Garmin Connect and it will sync.</p>' + items.slice(0, 2).map(function (it) {
+    var r = it.r, arg = { date: it.date, slot: it.slot };
+    return '<div style="margin-top:12px"><div class="spread small"><b>' + E.fmtDate(it.date, { weekday: 'short' }) + ' · ' + esc(r.name || 'Run') + '</b><span class="mono muted">' + mi(r.mi) + ' mi' + (r.mi && r.sec ? ' · ' + pace(r.sec / r.mi) + '/mi' : '') + '</span></div><div class="eyebrow" style="margin-top:8px">How did you feel?</div>' + feelRow(r.feel, arg) + '<div class="eyebrow" style="margin-top:8px">Perceived effort</div>' + effortRow(r.rpe, arg) + '<div class="btns" style="margin-top:6px"><button class="btn sm ghost" data-act="rate-skip" data-arg="' + jattr(arg) + '">Don\'t ask about this run</button></div></div>';
+  }).join('') + '</section>';
+};
+ACTIONS['rate-skip'] = function (a) { Store.edit('logs', a.date, function (S) { var r = S.logs[a.date] && S.logs[a.date][a.slot]; if (r) r.noAsk = 1; }); };
 
 
 /* ---------------- Garmin polling ---------------- */

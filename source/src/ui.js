@@ -386,7 +386,7 @@ function partDetail(x, date, w, zz, l, idx) {
     var lp = adv ? adv.lp : x.lp;
     if (adv && adv.notes.length) body += '<div class="banner warn small">' + adv.notes.map(esc).join(' ') + '</div>';
     body += '<p class="small muted">' + esc(x.note || '') + ' · <b>' + E.LIFT_PHASES[lp].k + '</b> loads: ' + esc(E.LIFT_PHASES[lp].d) + '</p>';
-    body += moduleBody(x.key, lp);
+    body += moduleBody(x.key, lp, x.v);
     body += logBlock(date, x, l, 'lift');
   } else if (x.type === 'cross') {
     body += '<p class="small">' + esc(x.note || '') + '</p>';
@@ -646,7 +646,16 @@ function barChart(items) {
   items.forEach(function (x, i) {
     var X = pl + i * bw, ha = (H - pb - 10) * x.a / max, hb = (H - pb - 10) * x.b / max;
     s += '<rect x="' + (X + 1) + '" y="' + (H - pb - ha) + '" width="' + (bw - 2) + '" height="' + ha + '" rx="2" fill="var(--line2)"/>';
-    if (hb > 0) s += '<rect x="' + (X + bw * 0.25) + '" y="' + (H - pb - hb) + '" width="' + (bw * 0.5) + '" height="' + hb + '" rx="2" fill="var(--green)"/>';
+    var solo = x.all || !(x.a > 0), wb = solo ? bw - 2 : bw * 0.5, xb = solo ? X + 1 : X + bw * 0.25;
+    if (hb > 0) s += '<rect x="' + xb + '" y="' + (H - pb - hb) + '" width="' + wb + '" height="' + hb + '" rx="2" fill="var(--green)"/>';
+    /* value labels: inside the bar when it fits, above it when the bar is short */
+    var val = x.b > 0 ? x.b : x.a, hv = x.b > 0 ? hb : ha, lab = val >= 10 ? String(Math.round(val)) : val > 0 ? String(Math.round(val * 10) / 10) : '';
+    if (lab) {
+      var cx = X + bw / 2, top = H - pb - hv, vert = (x.b > 0 ? wb : bw - 2) < 4 + lab.length * 4.6, need = vert ? lab.length * 4.6 + 6 : 12, inside = hv >= need;
+      var fillc = inside ? (x.b > 0 ? '#04210f' : 'var(--ink)') : 'var(--muted)';
+      if (vert) s += '<text class="bl" transform="translate(' + (cx + 2.7) + ',' + (inside ? top + 4 : top - 3) + ') rotate(-90)" text-anchor="' + (inside ? 'end' : 'start') + '" style="fill:' + fillc + '">' + lab + '</text>';
+      else s += '<text class="bl" x="' + cx + '" y="' + (inside ? top + 10 : top - 3) + '" text-anchor="middle" style="fill:' + fillc + '">' + lab + '</text>';
+    }
     if (x.cur || i % 4 === 0) s += '<text x="' + (X + bw / 2) + '" y="' + (H - 3) + '" text-anchor="middle"' + (x.cur ? ' style="fill:var(--ink);font-weight:700"' : '') + '>' + x.label + '</text>';
   });
   return s + '</svg>';
@@ -1020,7 +1029,7 @@ SHEETS.lift = function (a) {
 var LIFT_SKIP = { 'Lift warm-up': 1 };
 function liftRows(key, vals) {
   var m = E.LIFT[key]; if (!m) return '';
-  var names = []; m.blocks.forEach(function (b) { b.ex.forEach(function (e) { if (!LIFT_SKIP[e.n]) names.push(e.n); }); });
+  var names = []; m.blocks.forEach(function (b) { b.ex.forEach(function (e) { if (!LIFT_SKIP[e.n] && !e.wu) names.push(e.n); }); });
   return names.map(function (n) {
     var v = vals[n] || lastWeight(n) || {};
     return '<div class="stack tight" style="padding:6px 0;border-top:1px solid var(--line)"><b class="small">' + esc(n) + '</b><div class="grid3"><label class="f">Weight (lb)<input class="i" data-ex="' + esc(n) + '" data-k="w" type="number" min="0" step="2.5" value="' + (v.w != null ? v.w : '') + '"></label><label class="f">Reps<input class="i" data-ex="' + esc(n) + '" data-k="reps" type="number" min="0" value="' + (v.reps != null ? v.reps : '') + '"></label><label class="f">Sets<input class="i" data-ex="' + esc(n) + '" data-k="sets" type="number" min="0" value="' + (v.sets != null ? v.sets : '') + '"></label></div></div>';
@@ -1421,6 +1430,8 @@ function importFile(kind, text) {
 
 /*FEATURES*/
 /*FEATURES2*/
+/*FEATURES3*/
+/*FEATURES4*/
 
 /* ---------------- Garmin polling ---------------- */
 function pollGarmin(n) {
