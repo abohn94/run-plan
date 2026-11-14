@@ -35,6 +35,13 @@ jobs:
           PROBE: ${{ github.event.inputs.probe }}
         run: python3 scripts/garmin_sync.py
 
+      - name: Read Google Calendar
+        if: always()
+        continue-on-error: true
+        env:
+          GCAL_ICS_URLS: ${{ secrets.GCAL_ICS_URLS }}
+        run: python3 scripts/calendar_sync.py
+
       - name: Save changes
         if: always()
         run: |

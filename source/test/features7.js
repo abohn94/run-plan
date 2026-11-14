@@ -1,6 +1,6 @@
 // Garmin metrics, weather, execution, shifts, sleep, goal odds, race pacing, season, sweat, share kit.
 const { chromium } = require('playwright'); const path = require('path'), fs = require('fs'), http = require('http');
-const DIST = path.resolve(__dirname, '../dist'), [stateF, dataF, extraF, SH] = process.argv.slice(2); fs.mkdirSync(SH, { recursive: true });
+const DIST = path.resolve(__dirname, '../dist'), [stateF, dataF, extraF, SH, calF] = process.argv.slice(2); const cal = calF ? JSON.parse(fs.readFileSync(calF)) : null; fs.mkdirSync(SH, { recursive: true });
 let st = JSON.parse(fs.readFileSync(stateF)); const garmin = JSON.parse(fs.readFileSync(dataF)), extra = JSON.parse(fs.readFileSync(extraF));
 const server = http.createServer((q, r) => { let p = q.url.split('?')[0]; if (p === '/') p = '/index.html'; const f = path.join(DIST, p); if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': 'text/html' }); r.end(fs.readFileSync(f)); }).listen(8835);
 function wx() { const t = [], o = { temperature_2m: [], dew_point_2m: [], apparent_temperature: [], wind_speed_10m: [], precipitation_probability: [], snowfall: [], weather_code: [] }; const d0 = new Date(); d0.setHours(0, 0, 0, 0);
@@ -14,6 +14,7 @@ function wx() { const t = [], o = { temperature_2m: [], dew_point_2m: [], appare
   await pg.route('https://api.github.com/**', r => { const q = r.request(), u = new URL(q.url()).pathname;
     if (u.endsWith('state.json') && q.method() === 'GET') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sha: 's' + sha, content: Buffer.from(JSON.stringify(st)).toString('base64') }) });
     if (u.endsWith('state.json')) { st = JSON.parse(Buffer.from(JSON.parse(q.postData()).content, 'base64').toString()); sha++; return r.fulfill({ status: 200, body: JSON.stringify({ content: { sha: 's' + sha } }) }); }
+    if (u.endsWith('calendar.json')) return cal ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sha: 'c', content: Buffer.from(JSON.stringify(cal)).toString('base64') }) }) : r.fulfill({ status: 404, body: '{}' });
     if (u.endsWith('extra.json')) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sha: 'x', content: Buffer.from(JSON.stringify(extra)).toString('base64') }) });
     if (u.endsWith('data.json')) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sha: 'g', size: 10, content: '' }) });
     if (u.includes('runs')) return r.fulfill({ status: 200, body: '{"workflow_runs":[]}' }); r.fulfill({ status: 404, body: '{}' }); });
@@ -42,4 +43,11 @@ function wx() { const t = [], o = { temperature_2m: [], dew_point_2m: [], appare
   await go('#/nutrition', 1200); await pg.click('text=Test'); await pg.waitForTimeout(300); await pg.fill('#swA', '199'); await pg.fill('#swB', '197.5'); await pg.fill('#swC', '8'); await pg.click('[data-act=sheet-save]'); await pg.waitForTimeout(500); await shot('t9-nutrition'); log('sweat', JSON.stringify(await pg.evaluate(() => window.Store.state.prefs.sweat)));
   await go('#/shareapp', 800); log('share steps', (await pg.$$('.step')).length);
   await go('#/today', 1200); await pg.evaluate(() => { window.Store.state.prefs.loc = null; }); await pg.evaluate(() => { window.__APP && 0; });
+  if (cal) {
+    await go('#/today', 2500); await shot('k1-today-cal'); log('cal: away card', !!(await pg.$('.awayc')), 'free text', /calendar is free/.test(await pg.innerText('#main')));
+    await pg.click('.awayc .btn.primary'); await pg.waitForTimeout(500); log('life added', JSON.stringify(await pg.evaluate(() => window.Store.state.life.filter(l => /calendar/.test(l.note || '')))));
+    await go('#/preview/' + nw, 1500); await shot('k2-preview-cal'); log('cal shift chips', (await pg.$$('.shc.cal')).length, 'free tags', (await pg.$$('.pvfree')).length);
+    log('shiftsAll', JSON.stringify(await pg.evaluate(() => window.Store.state.shiftsAll)), 'saved shifts key absent from JSON', !JSON.stringify(await pg.evaluate(() => window.Store.state)).includes('shiftsAll'));
+    await go('#/calsync', 1000); await shot('k3-calsync'); log('calsync status', (await pg.innerText('.pill')).trim(), 'wide', await wide());
+  }
   log('ERRORS:', errs.length ? errs : 'none'); await b.close(); server.close(); })();

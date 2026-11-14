@@ -8,6 +8,12 @@ const state = JSON.parse(fs.readFileSync('user/state.json', 'utf8'));
 let garmin = null, extra = null;
 try { garmin = JSON.parse(fs.readFileSync('garmin/data.json', 'utf8')); } catch (e) { garmin = null; }
 try { extra = JSON.parse(fs.readFileSync('garmin/extra.json', 'utf8')); } catch (e) { extra = null; }
+/* work shifts from Google Calendar, with your own taps winning ("off" clears one) */
+try {
+  const cal = JSON.parse(fs.readFileSync('garmin/calendar.json', 'utf8')), all = Object.assign({}, cal.shifts || {}), mine = state.shifts || {};
+  Object.keys(mine).forEach((d) => { if (mine[d] === 'off') delete all[d]; else all[d] = mine[d]; });
+  state.shiftsAll = all;
+} catch (e) { /* no calendar connected */ }
 /* same merge as the app: Garmin's own threshold and load balance */
 if (garmin && extra) {
   garmin.fitness = garmin.fitness || {};

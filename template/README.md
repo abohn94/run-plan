@@ -9,6 +9,7 @@ Then add these repository secrets (Settings → Secrets and variables → Action
 | `GARMIN_PERSONAL_API_KEY` | Your Garmin Connect Personal API key | Hourly Garmin sync |
 | `GARMIN_EMAIL` | Your Garmin Connect sign-in email | Watch workouts and Garmin metrics |
 | `GARMIN_PASSWORD` | Your Garmin Connect password | Watch workouts and Garmin metrics |
+| `GCAL_ICS_URLS` | Google Calendar secret iCal address(es), one per line (optional) | Work shifts, trips and free time |
 
 Finally open the Run Plan app, go to **You → Garmin & sync**, and connect this repository with a fine-grained GitHub token that has Contents and Actions read/write access to it. The app creates `user/state.json` the first time it saves.
 

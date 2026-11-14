@@ -999,7 +999,8 @@ function adapt(plan, st, analysis) {
       if (!a.parts.length) a.parts.push(restPart());
     });
     /* work shifts: key sessions move to days off, the day after a night is easy */
-    if (st.shifts) applyShifts(w, st.shifts, zz);
+    var shAll = st.shiftsAll || st.shifts;
+    if (shAll) applyShifts(w, shAll, zz);
     /* drag-and-drop arrangement: {origDate|role|kind: newDate} */
     var moved = [];
     w.days.forEach(function (d) {

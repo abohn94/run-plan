@@ -767,3 +767,6 @@ body.printband .band { display: block; }
 .durs > div { display: flex; justify-content: space-between; align-items: baseline; background: var(--card2); border-radius: 10px; padding: 7px 11px; font-size: .84rem; }
 .durs b.ok { color: var(--green); } .durs b.mid { color: var(--gold); } .durs b.low { color: var(--amber); }
 .shiftrow { margin: 0 0 10px; }
+.shc.cal::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); margin-top: 1px; }
+.pvfree { font-size: .7rem; font-weight: 700; color: var(--dim); padding: 0 2px; }
+.awayc { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--blue) 45%, transparent); }
