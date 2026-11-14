@@ -652,3 +652,11 @@ table.sets th:first-child, table.sets td:first-child { width: 34px; }
 @media (max-width: 400px) { .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .mbtns { display: flex; gap: 6px; margin-left: auto; }
 .pvchip .tx b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; }
+.coachbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 2px 4px; }
+.coachbar .cbtns { display: flex; gap: 6px; }
+.archday { padding: 0; overflow: hidden; }
+.archday summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; gap: 4px; }
+.archday summary::-webkit-details-marker { display: none; }
+.archday .ah { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.archday[open] summary { border-bottom: 1px solid var(--line); }
+.archday .thread { padding: 12px 14px 14px; margin: 0; }

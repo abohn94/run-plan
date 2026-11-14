@@ -397,3 +397,40 @@ VIEWS.dash = function () {
 };
 var _fitness6 = VIEWS.fitness;
 if (_fitness6) VIEWS.fitness = function () { var h = _fitness6(); return App.plan ? h + '<section class="card"><h3>Training balance</h3>' + loadFocusHTML() + '</section>' : h; };
+
+/* ---------- coach: today's conversation up front, earlier ones archived by day ---------- */
+function localDay(iso) { var d = new Date(iso); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+function coachCut() { var c = (st().prefs || {}).coachCut || ''; return c; }
+function isCurrentMsg(m) { return localDay(m.t) === App.today && (!coachCut() || m.t > coachCut()); }
+function msgHTML(m) {
+  return '<div class="msg ' + (m.who === 'me' ? 'me' : 'coach') + '">' + esc(m.text) + '<time>' + new Date(m.t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '</time></div>';
+}
+var _coach6 = VIEWS.coach;
+VIEWS.coach = function () {
+  var all = st().coach || [];
+  if (App.args[0] === 'archive') return coachArchive(all);
+  var cur = all.filter(isCurrentMsg), old = all.length - cur.length, h;
+  st().coach = cur;
+  try { h = _coach6(); } finally { st().coach = all; }
+  var bar = '<div class="coachbar"><span class="small muted">' + (cur.length ? 'Today' : 'New conversation') + '</span><span class="cbtns">' + (cur.length ? '<button class="btn sm ghost" data-act="coach-new">New chat</button>' : '') + (old ? '<a class="btn sm" href="#/coach/archive">Past chats</a>' : '') + '</span></div>';
+  return h.replace('<div class="thread" id="thread">', bar + '<div class="thread" id="thread">');
+};
+function coachArchive(all) {
+  var past = all.filter(function (m) { return !isCurrentMsg(m); }), byDay = {};
+  past.forEach(function (m) { var d = localDay(m.t); (byDay[d] = byDay[d] || []).push(m); });
+  var days = Object.keys(byDay).sort().reverse();
+  var html = '<div class="pagehead"><h1>Past chats</h1><p>Earlier conversations with your coach, newest first. Today\'s chat is on the <a href="#/coach">Coach</a> tab.</p></div>';
+  if (!days.length) return html + '<p class="empty">No past chats yet.</p>';
+  html += '<div class="stack tight">' + days.map(function (d, i) {
+    var ms = byDay[d], first = ms.filter(function (m) { return m.who === 'me'; })[0] || ms[0];
+    return '<details class="card archday"' + (App.ui.archOpen === d ? ' open' : '') + '><summary><div class="ah"><b>' + E.fmtDate(d, { weekday: 'short', month: 'short', day: 'numeric', year: d.slice(0, 4) !== App.today.slice(0, 4) ? 'numeric' : undefined }) + '</b><span class="tiny muted">' + plural(ms.length, 'message') + '</span></div><p class="small muted">' + esc(first.text.slice(0, 110)) + (first.text.length > 110 ? '…' : '') + '</p></summary><div class="thread">' + ms.map(msgHTML).join('') + '</div></details>';
+  }).join('') + '</div>';
+  html += '<div class="btns" style="margin-top:12px"><button class="btn ghost sm" data-act="coach-clear">Delete past chats</button></div>';
+  return html;
+}
+ACTIONS['coach-new'] = function () { Store.edit('prefs', 'coachCut', function (S) { S.prefs = S.prefs || {}; S.prefs.coachCut = new Date().toISOString(); }); toast('Started a new chat. The last one is in Past chats'); };
+ACTIONS['coach-clear'] = function (a, b) {
+  if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Tap again to delete'; b.classList.add('danger'); return; }
+  Store.edit('coach', null, function (S) { S.coach = (S.coach || []).filter(isCurrentMsg); });
+  toast('Past chats deleted'); go('#/coach');
+};

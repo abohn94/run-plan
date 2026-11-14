@@ -1,0 +1,16 @@
+const { chromium } = require('playwright'); const path = require('path'), fs = require('fs'), http = require('http');
+const DIST = path.resolve(__dirname, '../dist'), [stateF, dataF, SH] = process.argv.slice(2); fs.mkdirSync(SH, { recursive: true });
+const st = JSON.parse(fs.readFileSync(stateF)), garmin = JSON.parse(fs.readFileSync(dataF));
+const server = http.createServer((q, r) => { let p = q.url.split('?')[0]; if (p === '/') p = '/index.html'; const f = path.join(DIST, p); if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': 'text/html' }); r.end(fs.readFileSync(f)); }).listen(8831);
+(async () => { const errs = []; const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--no-sandbox'] });
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 }); const pg = await ctx.newPage(); pg.on('pageerror', e => errs.push(e.message));
+  await pg.route('https://fonts.g**', r => r.abort());
+  await pg.route('https://api.github.com/**', r => { const u = new URL(r.request().url()).pathname; if (u.endsWith('state.json') && r.request().method() === 'GET') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sha: 's1', content: Buffer.from(JSON.stringify(st)).toString('base64') }) }); if (u.endsWith('state.json')) return r.fulfill({ status: 200, body: '{"content":{"sha":"s2"}}' }); if (u.endsWith('data.json')) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(garmin) }); if (u.includes('runs')) return r.fulfill({ status: 200, body: '{"workflow_runs":[]}' }); r.fulfill({ status: 200, body: '{"private":true}' }); });
+  await ctx.addInitScript(() => localStorage.setItem('rp-conn', JSON.stringify({ owner: 'abohn94', repo: 'run-plan-data', token: 'x', branch: '' })));
+  const go = async h => { await pg.goto('http://127.0.0.1:8831/' + h); await pg.waitForTimeout(1200); };
+  await go('#/coach'); await pg.screenshot({ path: SH + '/c1.png' }); console.log('today msgs:', (await pg.$$('#thread .msg')).length, await pg.innerText('.coachbar'));
+  await pg.click('text=Past chats'); await pg.waitForTimeout(500); console.log('archive days:', (await pg.$$('.archday')).length); await pg.click('.archday summary >> nth=0'); await pg.waitForTimeout(200); await pg.screenshot({ path: SH + '/c2.png', fullPage: true });
+  await go('#/coach'); await pg.click('[data-act=coach-new]'); await pg.waitForTimeout(500); console.log('after new chat msgs:', (await pg.$$('#thread .msg')).length, '|', (await pg.innerText('#thread')).slice(0, 60));
+  await pg.fill('#coachIn', 'what are my paces'); await pg.press('#coachIn', 'Enter'); await pg.waitForTimeout(500); console.log('after send:', (await pg.$$('#thread .msg')).length);
+  console.log('wide:', await pg.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), 'errors:', errs);
+  await b.close(); server.close(); })();
