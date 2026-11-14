@@ -528,3 +528,92 @@ ACTIONS['sp-accept'] = function (a) {
 };
 /* the style list now opens the preview instead of switching */
 ACTIONS.method = function (a) { go('#/stylepick/' + a.key); };
+
+/* ---------- workouts on your watch (GitHub job signs in to Garmin Connect and schedules today's sessions) ---------- */
+TITLES.watch = 'Watch workouts';
+var WATCH_WF = 'watch-workouts.yml';
+function watchOn() { return !!(((st().prefs || {}).watch || {}).on); }
+function todaySig() {
+  var d = App.plan && dayOf(App.today); if (!d) return '';
+  return JSON.stringify(d.parts.filter(function (x) { return (E.isRun(x) && x.mi > 0) || x.type === 'strength'; }).map(function (x) { return [x.type, x.title, x.mi || 0, x.steps || null, x.key || null, x.v || 0, x.mix || null, x.lp || 0]; }));
+}
+var _watchT = null;
+function watchDispatch(why) {
+  if (Store.mode !== 'github') return Promise.reject(new Error('Connect GitHub first.'));
+  return Store.api('/actions/workflows/' + WATCH_WF + '/dispatches', { method: 'POST', body: { ref: Store.conn.branch || 'main' } }).then(function (r) {
+    if (r.status === 204) { App.ui.watchSent = Date.now(); if (why) toast(why); return true; }
+    if (r.status === 404) throw new Error('The watch workflow is not in your data repository yet.');
+    throw new Error('GitHub said ' + r.status);
+  });
+}
+/* wait until your change has been saved to GitHub, then start the job */
+function watchSoon() {
+  clearTimeout(_watchT);
+  var tries = 0;
+  (function wait() {
+    _watchT = setTimeout(function () {
+      if ((Store._saving || Object.keys(Store.touched || {}).length) && tries++ < 20) return wait();
+      watchDispatch('Updating today\'s workout on your watch').catch(function (e) { console.warn(e); });
+    }, 4000);
+  })();
+}
+var _recompute6w = recompute;
+recompute = function () {
+  _recompute6w();
+  try {
+    if (!App.plan || !watchOn() || Store.mode !== 'github') return;
+    var cur = { d: App.today, s: todaySig() }, prev = null;
+    try { prev = JSON.parse(LS.get('rp-wsig') || 'null'); } catch (e) { prev = null; }
+    LS.set('rp-wsig', JSON.stringify(cur));
+    if (prev && prev.d === cur.d && prev.s !== cur.s) watchSoon();
+  } catch (e) { console.error(e); }
+};
+ACTIONS['watch-on'] = function (a) {
+  var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Chicago';
+  Store.edit('prefs', 'watch', function (S) { S.prefs = S.prefs || {}; S.prefs.watch = { on: !!a.on, tz: tz }; });
+  toast(a.on ? 'Watch workouts on' : 'Watch workouts off. Ones already sent are removed tonight');
+  if (a.on) LS.set('rp-wsig', JSON.stringify({ d: App.today, s: todaySig() }));
+};
+ACTIONS['watch-now'] = function (a, b) {
+  b.disabled = true;
+  var go2 = function () { watchDispatch('Sending. Check your watch in a minute or two').catch(function (e) { toast(e.message); }).then(function () { b.disabled = false; setTimeout(function () { App.ui.watchLog = null; render(); }, 60000); }); };
+  if (Store._saving || Object.keys(Store.touched || {}).length) { Store.save().then(go2); } else go2();
+};
+function watchLog() {
+  if (App.ui.watchLog !== undefined && App.ui.watchLog !== null) return;
+  App.ui.watchLog = 'loading';
+  Store.getFile('garmin/watch.json').then(function (f) { App.ui.watchLog = f ? JSON.parse(f.text || '{}') : {}; if (App.view === 'watch') render(); }, function () { App.ui.watchLog = {}; });
+}
+VIEWS.watch = function () {
+  var gh = Store.mode === 'github', on = watchOn(), c = Store.conn || {};
+  if (gh) watchLog();
+  var lg = App.ui.watchLog && App.ui.watchLog !== 'loading' ? App.ui.watchLog : null;
+  var secrets = 'https://github.com/' + encodeURIComponent(c.owner || 'abohn94') + '/' + encodeURIComponent(c.repo || 'run-plan-data') + '/settings/secrets/actions/new';
+  var html = '<div class="pagehead"><h1>Workouts on your watch</h1><p>Each night just after midnight, today\'s run and lift go to your Garmin calendar as <b>' + (function () { var p = App.today.split('-'); return +p[1] + '/' + +p[2] + '/' + p[0].slice(2); })() + ' Run</b> and <b>Lift</b>, and yesterday\'s are deleted. Your watch picks them up the next time it syncs with your phone.</p></div>';
+  if (!gh) return html + '<div class="banner warn small">This needs your private data repository. <a href="#/sync">Connect it first</a>.</div>';
+  html += '<section class="card stack"><div class="spread"><h3>Status</h3><span class="pill ' + (on ? 'good' : '') + '">' + (on ? 'On' : 'Off') + '</span></div>';
+  if (lg) {
+    var today = (lg.days || {})[App.today] || [];
+    html += today.length ? '<div class="stack tight">' + today.map(function (x) { return '<div class="wrow"><b>' + esc(x.name) + '</b><span class="small muted">' + esc(x.title || '') + '</span></div>'; }).join('') + '</div>' : '<p class="small muted">Nothing on the watch for today' + (on ? ' yet.' : '.') + '</p>';
+    if (lg.updated) html += '<p class="tiny muted">Last update ' + new Date(lg.updated).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }) + '</p>';
+    if (lg.errors && lg.errors.length) html += '<div class="banner warn small">' + esc(lg.errors[0]) + '</div>';
+  } else html += '<p class="small muted">' + (App.ui.watchLog === 'loading' ? 'Checking…' : 'Nothing sent yet.') + '</p>';
+  html += '<div class="btns">' + (on ? '<button class="btn primary sm" data-act="watch-now">Send today\'s workouts now</button><button class="btn ghost sm" data-act="watch-on" data-arg="' + jattr({ on: false }) + '">Turn off</button>' : '<button class="btn primary sm" data-act="watch-on" data-arg="' + jattr({ on: true }) + '">Turn on</button>') + '</div></section>';
+  html += '<div class="sechead"><h2>One-time setup</h2></div><section class="card stack">' +
+    '<div class="step"><span>1</span><div><b>Add your Garmin email</b><p class="small muted">Open <a href="' + secrets + '" target="_blank" rel="noopener">your data repository\'s secrets</a>. Name: <code>GARMIN_EMAIL</code>. Secret: the email you sign in to Garmin Connect with. Tap <b>Add secret</b>.</p></div></div>' +
+    '<div class="step"><span>2</span><div><b>Add your Garmin password</b><p class="small muted">Same page, <b>New repository secret</b> again. Name: <code>GARMIN_PASSWORD</code>. Secret: your Garmin password. GitHub keeps secrets encrypted, and no one (including this app) can read them back.</p></div></div>' +
+    '<div class="step"><span>3</span><div><b>Turn it on and send a test</b><p class="small muted">Tap <b>Turn on</b> above, then <b>Send today\'s workouts now</b>. After a minute, open the Garmin Connect app: today\'s workouts appear in the calendar and on your watch after it syncs.</p></div></div></section>';
+  html += '<section class="card stack"><h3>How it works</h3><ul class="plain small">' +
+    '<li><b>Runs</b> carry each step with a pace range: warm-up, intervals and recoveries, cool-down. Your watch alerts you if you drift outside it.</li>' +
+    '<li><b>Lifts</b> include only the power moves, main lifts and finishers, with sets, reps, rest and a suggested weight when you have history. No warm-up or stretches.</li>' +
+    '<li><b>Changes:</b> when you change today\'s workout here, the new version replaces the old one within about a minute. Open Garmin Connect on your phone to push it to the watch right away.</li>' +
+    '<li><b>Cleanup:</b> each night it deletes the workouts it sent on earlier days. It never touches workouts you made yourself.</li></ul>' +
+    '<p class="tiny muted" style="margin-top:6px">This signs in to Garmin Connect the way the website does, not through Garmin\'s official API, so a Garmin change can pause it until it\'s updated. Your Garmin data sync isn\'t affected.</p></section>';
+  return html;
+};
+var _you6w = VIEWS.you;
+VIEWS.you = function () {
+  var h = _you6w(), link = '<a href="#/watch">Workouts on your watch<span class="v">' + (watchOn() ? 'On' : 'Off') + '</span><span class="chev">›</span></a>';
+  var i = h.indexOf('<a href="#/notify"');
+  return i < 0 ? h : h.slice(0, i) + link + h.slice(i);
+};

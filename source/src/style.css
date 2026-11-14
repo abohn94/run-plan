@@ -688,3 +688,5 @@ table.sets th:first-child, table.sets td:first-child { width: 34px; }
 .swk p { margin-top: 3px; }
 .sptags { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
 .sptags i { font-style: normal; font-size: .76rem; font-weight: 700; background: var(--card2); border-radius: 999px; padding: 4px 10px; }
+.wrow { display: grid; gap: 1px; background: var(--card2); border-radius: 12px; padding: 9px 12px; box-shadow: inset 4px 0 0 var(--blue); }
+code { font-size: .85em; background: var(--card2); border-radius: 6px; padding: 1px 5px; overflow-wrap: anywhere; }
