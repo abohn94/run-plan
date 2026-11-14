@@ -660,3 +660,31 @@ table.sets th:first-child, table.sets td:first-child { width: 34px; }
 .archday .ah { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .archday[open] summary { border-bottom: 1px solid var(--line); }
 .archday .thread { padding: 12px 14px 14px; margin: 0; }
+.cmp { padding: 6px 14px; }
+.cmprow { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--line); }
+.cmprow:first-child { border-top: 0; }
+.cmprow.head .cv { font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: normal; line-height: 1.25; }
+.cmprow.head .cv.new { color: var(--ink); }
+.cmprow .cl { font-size: .86rem; color: var(--muted); font-weight: 600; }
+.cmprow .cv { text-align: right; font-weight: 800; font-size: 1rem; white-space: nowrap; color: var(--muted); }
+.cmprow .cv.new { color: var(--ink); }
+.cmprow .cv small { font-size: .72rem; font-weight: 700; color: var(--muted); }
+.cmprow .cv em { font-style: normal; font-size: .62rem; margin-left: 4px; vertical-align: 2px; }
+.cmprow .cv em.up { color: var(--green); } .cmprow .cv em.down { color: var(--amber); }
+.cmpweek { padding: 4px 12px; }
+.cwrow { display: grid; grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 9px 0; border-top: 1px solid var(--line); align-items: start; }
+.cwrow.one { grid-template-columns: 34px minmax(0, 1fr); }
+.cwrow:first-child { border-top: 0; }
+.cwrow.head span { font-size: .68rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); line-height: 1.25; }
+.cwrow.head span:last-child { color: var(--ink); }
+.cwrow > b { font-size: .72rem; font-weight: 800; text-transform: uppercase; color: var(--muted); padding-top: 2px; }
+.cwrow.diff > b { color: var(--blue); }
+.cwc { display: grid; gap: 4px; min-width: 0; font-size: .8rem; font-weight: 700; line-height: 1.3; }
+.cwc > span { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.cwc > span i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); transform: translateY(-1px); }
+.cwc .rest { color: var(--dim); }
+.cwrow:not(.one) .cwc:nth-child(2) { color: var(--muted); }
+.swk { padding: 12px 14px; box-shadow: inset 4px 0 0 var(--c); }
+.swk p { margin-top: 3px; }
+.sptags { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
+.sptags i { font-style: normal; font-size: .76rem; font-weight: 700; background: var(--card2); border-radius: 999px; padding: 4px 10px; }

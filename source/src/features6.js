@@ -434,3 +434,97 @@ ACTIONS['coach-clear'] = function (a, b) {
   Store.edit('coach', null, function (S) { S.coach = (S.coach || []).filter(isCurrentMsg); });
   toast('Past chats deleted'); go('#/coach');
 };
+
+/* ---------- training style: explore a plan, compare it with yours, then change and confirm ---------- */
+TITLES.stylepick = 'Plan preview'; TABOF.stylepick = 'plan';
+var _altPlans = {};
+function planFor(key) {
+  var s = st(), sig = key + '|' + s.updatedAt + '|' + App.today;
+  if (_altPlans[key] && _altPlans[key].sig === sig) return _altPlans[key].plan;
+  var copy = JSON.parse(JSON.stringify(s)); copy.profile.method = key;
+  var p = null;
+  try { p = E.generate(copy); E.adapt(p, copy, E.analyze(p, copy, Store.garmin)); } catch (e) { console.error(e); p = null; }
+  E.setWeekStart(wsOf());
+  _altPlans[key] = { sig: sig, plan: p };
+  return p;
+}
+function planStats(p) {
+  var t = App.today, fut = p.weeks.filter(function (w) { return w.end >= t; }), build = fut.filter(function (w) { return w.kind === 'build' && w.phase.key !== 'race' && w.phase.key !== 'taper'; });
+  var avg = function (f) { return build.length ? build.reduce(function (a, w) { return a + f(w); }, 0) / build.length : 0; };
+  var easyMi = 0, allMi = 0;
+  fut.forEach(function (w) { w.days.forEach(function (d) { d.parts.forEach(function (x) { if (!E.isRun(x)) return; allMi += x.mi || 0; if (x.type === 'easy' || x.type === 'recovery' || x.type === 'long') easyMi += x.mi || 0; }); }); });
+  var cnt = function (w, f) { var n = 0; w.days.forEach(function (d) { d.parts.forEach(function (x) { if (f(x)) n++; }); }); return n; };
+  var longest = 0; fut.forEach(function (w) { w.days.forEach(function (d) { d.parts.forEach(function (x) { if (x.type === 'long') longest = Math.max(longest, x.mi || 0); }); }); });
+  return {
+    peak: Math.max.apply(null, fut.map(function (w) { return w.tot.mi; }).concat([0])),
+    gym: avg(function (w) { return cnt(w, function (x) { return E.isRun(x) && x.role === 'gym'; }); }),
+    avg: avg(function (w) { return w.tot.mi; }),
+    runs: avg(function (w) { return cnt(w, function (x) { return E.isRun(x) && x.role !== 'gym'; }); }),
+    quality: avg(function (w) { return cnt(w, function (x) { return x.type === 'speed'; }); }),
+    lifts: avg(function (w) { return w.tot.lifts; }),
+    long: longest,
+    total: allMi, easy: allMi ? easyMi / allMi : 0
+  };
+}
+function sampleWorkouts(p, n) {
+  var seen = {}, out = [], t = App.today;
+  p.weeks.forEach(function (w) { if (w.end < t) return; w.days.forEach(function (d) { d.parts.forEach(function (x) { if (x.type === 'speed' && !seen[x.title] && out.length < n) { seen[x.title] = 1; out.push({ x: x, w: w }); } }); }); });
+  return out;
+}
+function cmpRow(label, a, b, fmt, unit) {
+  var fa = fmt(a), fb = fmt(b), d = b - a, same = fa === fb;
+  return '<div class="cmprow"><span class="cl">' + label + '</span><span class="cv">' + fa + '<small>' + (unit || '') + '</small></span><span class="cv new">' + fb + '<small>' + (unit || '') + '</small>' + (same ? '' : '<em class="' + (d > 0 ? 'up' : 'down') + '">' + (d > 0 ? '▲' : '▼') + '</em>') + '</span></div>';
+}
+function weekLine(d) { var r = d.parts.filter(function (x) { return x.type !== 'rest'; }); return r.length ? r.map(function (x) { return '<span class="t-' + x.type + '"><i></i>' + esc(x.title) + (E.isRun(x) ? ' ' + mi(x.mi) : '') + '</span>'; }).join('') : '<span class="rest">Rest</span>'; }
+VIEWS.stylepick = function () {
+  var key = App.args[0], m = E.METHODS[key], cur = App.plan, prof = st().profile;
+  if (!m || !cur || !prof) return '<section class="card"><p>Plan not found.</p><div class="btns"><a class="btn" href="#/style">Back to styles</a></div></section>';
+  var isCur = prof.method === key, alt = isCur ? cur : planFor(key);
+  if (!alt) return '<section class="card"><p>Could not build that plan.</p></section>';
+  var sug = E.suggestMethods(prof, st().events), s = sug.filter(function (x) { return x.key === key; })[0] || {};
+  var A = planStats(cur), B = planStats(alt), cm = cur.method;
+  var html = '<div class="pagehead"><div class="eyebrow">' + (isCur ? 'Your current plan' : 'Exploring') + '</div><h1>' + esc(m.name) + '</h1><p>' + esc(m.desc) + '</p></div>';
+  html += '<div class="tags sptags"><i>' + (m.focus === 'mixed' ? 'Running + lifting' : 'Run-focused') + '</i><i>' + esc(m.days) + '</i><i>' + (m.quality >= 3 ? 'Up to 3 key sessions' : m.quality === 2 ? '2 key workouts' : m.quality === 1 ? '1 key workout' : 'No hard workouts') + '</i></div>';
+  if (s.why && !isCur) html += '<div class="banner ' + (s.stretch ? 'warn' : 'info') + ' small"><b>' + (s.stretch ? 'A stretch for now. ' : 'For you: ') + '</b>' + esc(s.stretch ? 'This asks for about ' + m.minMpw + '+ miles a week. The plan builds up gradually, but a style at your level is safer.' : s.why) + '</div>';
+  /* comparison */
+  if (!isCur) {
+    html += '<div class="sechead"><h2>Compared with your plan</h2></div><section class="card cmp"><div class="cmprow head"><span></span><span class="cv">' + esc(cm.short || cm.name) + '</span><span class="cv new">' + esc(m.short || m.name) + '</span></div>' +
+      cmpRow('Typical week', A.avg, B.avg, mi, ' mi') + cmpRow('Peak week', A.peak, B.peak, mi, ' mi') + cmpRow('Runs a week', A.runs, B.runs, function (x) { return (Math.round(x * 2) / 2).toString(); }) + (A.gym || B.gym ? cmpRow('Gym treadmill runs', A.gym, B.gym, function (x) { return (Math.round(x * 2) / 2).toString(); }) : '') +
+      cmpRow('Key workouts', A.quality, B.quality, function (x) { return (Math.round(x * 2) / 2).toString(); }, '/wk') + cmpRow('Lifts a week', A.lifts, B.lifts, function (x) { return (Math.round(x * 2) / 2).toString(); }) +
+      cmpRow('Longest run', A.long, B.long, mi, ' mi') + cmpRow('Easy running', A.easy * 100, B.easy * 100, function (x) { return Math.round(x) + ''; }, '%') + cmpRow('Miles to race day', A.total, B.total, function (x) { return Math.round(x).toLocaleString(); }) + '</section>';
+  }
+  /* a week side by side */
+  var cw = App.week ? App.week.n : 1, n = Math.min(cur.weeks.length, alt.weeks.length, cw + 4), wa = cur.weeks[n - 1], wb = alt.weeks[n - 1];
+  html += '<div class="sechead"><h2>' + (isCur ? 'A typical week' : 'The same week, side by side') + '</h2></div><p class="small muted" style="margin:-8px 2px 8px">Week ' + n + ' · ' + fmtD(wb.start, { month: 'short', day: 'numeric' }) + ' · ' + esc(wb.phase.name) + '</p>';
+  html += '<section class="card cmpweek">' + (isCur ? '' : '<div class="cwrow head"><span></span><span>' + esc(cm.short || cm.name) + ' · ' + mi(wa.tot.mi) + ' mi</span><span>' + esc(m.short || m.name) + ' · ' + mi(wb.tot.mi) + ' mi</span></div>') +
+    wb.days.map(function (d, i) { var da = wa.days[i], diff = !isCur && weekLine(da) !== weekLine(d); return '<div class="cwrow' + (isCur ? ' one' : '') + (diff ? ' diff' : '') + '"><b>' + d.dow + '</b>' + (isCur ? '' : '<div class="cwc">' + weekLine(da) + '</div>') + '<div class="cwc">' + weekLine(d) + '</div></div>'; }).join('') + '</section>';
+  /* what the workouts look like */
+  var sw = sampleWorkouts(alt, 4);
+  if (sw.length) html += '<div class="sechead"><h2>Workouts you would do</h2></div><div class="stack tight">' + sw.map(function (o) { return '<div class="card swk t-speed"><div class="spread"><b>' + esc(o.x.title) + '</b><span class="tiny muted">from week ' + o.w.n + '</span></div><p class="small muted">' + esc(o.x.purpose || o.x.note || '') + '</p></div>'; }).join('') + '</div>';
+  html += '<p class="tiny muted" style="margin-top:12px"><b>Why it works:</b> ' + esc(m.evidence) + ' Inspired by ' + esc(m.inspired) + '. Our own plan, not the published one.</p>';
+  html += '<div class="btns pvfoot">' + (isCur ? '<a class="btn" href="#/style">Back to styles</a>' : '<button class="btn primary" data-act="sp-change" data-arg="' + jattr({ key: key }) + '">Change to this plan</button><a class="btn ghost" href="#/style">Keep my plan</a>') + '</div>';
+  return html;
+};
+SHEETS.spconfirm = function (a) {
+  var m = E.METHODS[a.key], cm = App.plan.method, alt = planFor(a.key), A = planStats(App.plan), B = planStats(alt);
+  var lines = [];
+  var d = function (x, y, what, f) { if (f(x) !== f(y)) lines.push(what + ': ' + f(x) + ' → ' + f(y)); };
+  var r = function (x) { return (Math.round(x * 2) / 2).toString(); };
+  d(A.avg, B.avg, 'Typical week', function (x) { return mi(x) + ' mi'; }); d(A.runs, B.runs, 'Runs a week', r); d(A.quality, B.quality, 'Key workouts a week', r); d(A.lifts, B.lifts, 'Lifts a week', r); d(A.long, B.long, 'Longest run', function (x) { return mi(x) + ' mi'; });
+  return '<h3>Switch to ' + esc(m.name) + '?</h3><p class="small muted">From ' + esc(cm.name) + '. Future weeks are rebuilt; your logged runs, lifts, races and readings stay. Any sessions you moved or removed in upcoming weeks are reset.</p>' +
+    (lines.length ? '<ul class="plain small">' + lines.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul>' : '') +
+    '<div class="btns"><button class="btn primary" data-act="sp-accept" data-arg="' + jattr({ key: a.key }) + '">Accept change</button><button class="btn ghost" data-act="sheet-close">Cancel</button></div>';
+};
+ACTIONS['sp-change'] = function (a) { openSheet('spconfirm', a); };
+ACTIONS['sp-accept'] = function (a) {
+  var t = App.today, from = (App.plan && App.plan.method.name) || '';
+  var ks = Object.keys(st().arr || {}).filter(function (k) { return k.split('|')[0] > t; }), mk = Object.keys(st().liftmix || {}).filter(function (k) { return k.split('|')[0] > t; });
+  Store.editMany([['profile', null]].concat(ks.map(function (k) { return ['arr', k]; }), mk.map(function (k) { return ['liftmix', k]; })), function (S) {
+    S.profile.method = a.key; ks.forEach(function (k) { delete S.arr[k]; }); mk.forEach(function (k) { delete S.liftmix[k]; });
+  });
+  _altPlans = {};
+  closeSheet();
+  setTimeout(function () { toast('Switched from ' + from + ' to ' + E.METHODS[a.key].name); go('#/plan'); }, 60);
+};
+/* the style list now opens the preview instead of switching */
+ACTIONS.method = function (a) { go('#/stylepick/' + a.key); };

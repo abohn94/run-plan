@@ -1,0 +1,22 @@
+// Training style: tapping a style opens a preview + comparison; changing needs Change + Accept.
+const { chromium } = require('playwright'); const path = require('path'), fs = require('fs'), http = require('http');
+const DIST = path.resolve(__dirname, '../dist'), [stateF, dataF, SH] = process.argv.slice(2); fs.mkdirSync(SH, { recursive: true });
+const st = JSON.parse(fs.readFileSync(stateF)), garmin = JSON.parse(fs.readFileSync(dataF));
+const server = http.createServer((q, r) => { let p = q.url.split('?')[0]; if (p === '/') p = '/index.html'; const f = path.join(DIST, p); if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': 'text/html' }); r.end(fs.readFileSync(f)); }).listen(8832);
+(async () => { const errs = []; const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--no-sandbox'] });
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 }); const pg = await ctx.newPage(); pg.on('pageerror', e => errs.push(e.message));
+  await pg.route('https://fonts.g**', r => r.abort());
+  await pg.route('https://api.github.com/**', r => { const u = new URL(r.request().url()).pathname; if (u.endsWith('state.json') && r.request().method() === 'GET') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sha: 's1', content: Buffer.from(JSON.stringify(st)).toString('base64') }) }); if (u.endsWith('state.json')) return r.fulfill({ status: 200, body: '{"content":{"sha":"s2"}}' }); if (u.endsWith('data.json')) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(garmin) }); if (u.includes('runs')) return r.fulfill({ status: 200, body: '{"workflow_runs":[]}' }); r.fulfill({ status: 200, body: '{"private":true}' }); });
+  await ctx.addInitScript(() => localStorage.setItem('rp-conn', JSON.stringify({ owner: 'abohn94', repo: 'run-plan-data', token: 'x', branch: '' })));
+  const go = async h => { await pg.goto('http://127.0.0.1:8832/' + h); await pg.waitForTimeout(1200); };
+  const meth = () => pg.evaluate(() => window.Store.state.profile.method);
+  await go('#/style'); console.log('start method:', await meth());
+  await pg.click('button.method[aria-pressed=false] >> nth=0'); await pg.waitForTimeout(800);
+  console.log('url:', pg.url().split('#')[1], '| method still:', await meth()); await pg.screenshot({ path: SH + '/s1.png', fullPage: true });
+  console.log('cmp rows:', (await pg.$$('.cmprow')).length, 'week rows:', (await pg.$$('.cwrow')).length, 'workouts:', (await pg.$$('.swk')).length, 'wide:', await pg.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1));
+  await pg.click('[data-act=sp-change]'); await pg.waitForTimeout(400); await pg.screenshot({ path: SH + '/s2.png' }); console.log('confirm sheet, method still:', await meth());
+  await pg.click('[data-act=sheet-close]'); await pg.waitForTimeout(300); console.log('cancel, method:', await meth());
+  await pg.click('[data-act=sp-change]'); await pg.waitForTimeout(400); await pg.click('[data-act=sp-accept]'); await pg.waitForTimeout(800);
+  console.log('accepted, method:', await meth(), 'url:', pg.url().split('#')[1]);
+  await go('#/stylepick/' + await meth()); console.log('current preview has change btn:', !!(await pg.$('[data-act=sp-change]')));
+  console.log('errors:', errs); await b.close(); server.close(); })();
