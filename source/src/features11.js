@@ -1,0 +1,163 @@
+/* ================= features11: calmer screens. Order of operations (act → decide → reference), reference material in
+   accordions that remember their state, a grouped dashboard on phones, and motion ================= */
+
+/* ---------- accordions ---------- */
+var FOLDS = (function () { try { return JSON.parse(LS.get('rp-folds') || '{}') || {}; } catch (e) { return {}; } })();
+function foldOpen(key, dflt) { return FOLDS[key] == null ? !!dflt : !!FOLDS[key]; }
+/* a fold whose body sits outside the summary card, so cards never nest */
+function foldWrap(key, title, teaser, bodyHTML, dflt) {
+  return '<details class="fold" data-fold="' + esc(key) + '"' + (foldOpen(key, dflt) ? ' open' : '') + '><summary><span class="ft"><b>' + esc(title) + '</b>' + (teaser ? '<span>' + esc(teaser) + '</span>' : '') + '</span><i class="fchev" aria-hidden="true"></i></summary><div class="foldbody">' + bodyHTML + '</div></details>';
+}
+document.addEventListener('toggle', function (e) {
+  var d = e.target; if (!d || !d.dataset || !d.dataset.fold) return;
+  FOLDS[d.dataset.fold] = d.open; try { LS.set('rp-folds', JSON.stringify(FOLDS)); } catch (err) { /* ignore */ }
+}, true);
+function domOf(h) { var t = document.createElement('template'); t.innerHTML = h; return t.content; }
+function htmlOf(nodes) { return nodes.map(function (n) { return n.outerHTML; }).join(''); }
+function txt1(el, sel) { var x = el && el.querySelector(sel); return x ? (x.textContent || '').replace(/\s+/g, ' ').trim() : ''; }
+function cls(el, re) { return re.test(' ' + (el.className || '') + ' '); }
+
+/* ---------- Today: reference sections fold; the readiness card keeps its live readings behind one tap ---------- */
+var _today11 = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today11();
+  try {
+    var root = domOf(h), kids = [].slice.call(root.children), out = '';
+    for (var i = 0; i < kids.length; i++) {
+      var el = kids[i], head = (el.textContent || '').replace(/\s+/g, ' ').trim().toUpperCase();
+      if (cls(el, / sechead /) && kids[i + 1]) {
+        var title = txt1(el, 'h2') || head, body = kids[i + 1], key = null, teaser = '';
+        if (/^TOMORROW/.test(head)) { key = 'today-tomorrow'; var td = dayOf(E.addD(App.today, 1)); teaser = td ? td.parts.map(function (p) { return p.title + (E.isRun(p) && p.mi ? ' · ' + mi(p.mi) + ' mi' : ''); }).join(' + ') : ''; }
+        else if (/^FUEL/.test(head)) { key = 'today-fuel'; teaser = (body.textContent.match(/[\d,]+\s*kcal/) || [''])[0].replace(/(\d)\s*kcal/, '$1 kcal'); }
+        else if (/^COACH NOTES/.test(head)) { key = 'today-coach'; var n = body.children.length; teaser = n + (n === 1 ? ' note' : ' notes'); title = 'Coach notes'; }
+        if (key) { out += foldWrap(key, title.replace(/\s*(See plan|Details|Coach)\s*$/, ''), teaser, body.outerHTML + (txt1(el, 'a') ? '<div class="foldmore">' + (el.querySelector('a') ? el.querySelector('a').outerHTML : '') + '</div>' : ''), false); i++; continue; }
+        out += el.outerHTML; continue;
+      }
+      if (cls(el, / progc /)) { out += foldWrap('today-progress', 'You\'re getting fitter', txt1(el, '.pf b') + ' · ' + txt1(el, '.pf span'), el.outerHTML, false); continue; }
+      if (cls(el, / lv-/) && el.querySelector('.livehd')) {
+        /* live readings inside the readiness card */
+        var live = el.querySelector('.livehd'), rest = [], nx = live; while (nx) { rest.push(nx); nx = nx.nextElementSibling; }
+        var bits = [].slice.call(el.querySelectorAll('.gready > div')).slice(0, 3).map(function (d) { return txt1(d, 'span') + ' ' + txt1(d, 'b'); });
+        var det = document.createElement('details'); det.className = 'infold'; det.dataset.fold = 'today-live'; if (foldOpen('today-live', false)) det.setAttribute('open', '');
+        det.innerHTML = '<summary><span class="ft"><b>Right now</b><span>' + esc(bits.join(' · ').replace(/Garmin readiness/i, 'Garmin').replace(/Body Battery/i, 'Battery')) + '</span></span><i class="fchev" aria-hidden="true"></i></summary>';
+        live.parentNode.insertBefore(det, live); rest.forEach(function (r) { det.appendChild(r); });
+        out += el.outerHTML; continue;
+      }
+      out += el.outerHTML;
+    }
+    return out;
+  } catch (e) { console.warn(e); return h; }
+};
+
+/* ---------- Plan: this week first; races and the season overview fold underneath ---------- */
+var _plan11 = VIEWS.plan;
+VIEWS.plan = function () {
+  var h = _plan11();
+  try {
+    var root = domOf(h), kids = [].slice.call(root.children), g = { top: [], week: [], decide: [], days: [], after: [], races: [], season: [], tools: [] };
+    kids.forEach(function (el) {
+      if (cls(el, / racecard /)) g.races.push(el);
+      else if (cls(el, / (calrev|advc) /)) g.decide.push(el);
+      else if (el.querySelector && el.querySelector('.pager')) g.week.push(el);
+      else if (el.querySelector && el.querySelector('.phasebar, .seasonbars, .rflag') || /^YOUR SEASON/i.test((el.textContent || '').trim())) g.season.push(el);
+      else if (el.querySelector && el.querySelector('.dayblock')) g.days.push(el);
+      else if (cls(el, / banner /)) g.decide.push(el);
+      else if (cls(el, / (addwk|legend) /) || (cls(el, / card /) && el.querySelector('.lockrow'))) g.after.push(el);
+      else if (cls(el, / btns /)) g.tools.push(el);
+      else (g.days.length ? g.after : g.top).push(el);
+    });
+    if (!g.week.length || !g.days.length) return h;
+    var next = (typeof upcoming === 'function' ? upcoming() : [])[0];
+    var strip = (typeof upcoming === 'function' ? upcoming() : []).slice(0, 2).map(function (e) { return '<a href="#/goals" class="rpill"><b>' + E.diffD(App.today, e.date) + '</b> days · ' + esc(e.name || E.distOf(e).label) + '</a>'; }).join('');
+    var out = (strip ? '<div class="rstrip">' + strip + '</div>' : '') + htmlOf(g.top) + htmlOf(g.week) + htmlOf(g.decide) + htmlOf(g.days) + htmlOf(g.after);
+    if (g.races.length || g.season.length) out += foldWrap('plan-season', 'Races and season', next ? E.diffD(App.today, next.date) + ' days to ' + (next.name || E.distOf(next).label) : App.plan.weeks.length + ' weeks', htmlOf(g.races) + htmlOf(g.season), false);
+    return out + htmlOf(g.tools);
+  } catch (e) { console.warn(e); return h; }
+};
+
+/* ---------- Calendar: the month stays; each week's detail is an accordion (this week open) ---------- */
+var _calendar11 = VIEWS.calendar;
+VIEWS.calendar = function () {
+  var h = _calendar11();
+  try {
+    var root = domOf(h), kids = [].slice.call(root.children), out = '', n = 0;
+    for (var i = 0; i < kids.length; i++) {
+      var el = kids[i], nx = kids[i + 1];
+      if (cls(el, / sechead /) && nx && cls(nx, / calweek /)) {
+        var title = txt1(el, 'h2'), sub = txt1(el, 'span').replace(/\s*·\s*Edit\s*$/, ''), isNow = !!nx.querySelector('.calday.today'), edit = el.querySelector('a');
+        out += foldWrap('cal-wk-' + n, title, sub + (isNow ? ' · this week' : ''), nx.outerHTML + (edit ? '<div class="foldmore">' + edit.outerHTML.replace('>Edit<', '>Edit this week ›<') + '</div>' : ''), isNow).replace('data-fold="cal-wk-' + n + '"', 'data-calwk="1"');
+        n++; i++; continue;
+      }
+      out += el.outerHTML;
+    }
+    return out;
+  } catch (e) { console.warn(e); return h; }
+};
+
+/* ---------- Progress → Overview: the long week-by-week table folds ---------- */
+var _progress11 = VIEWS.progress;
+VIEWS.progress = function () {
+  var h = _progress11(); if ((App.args[0] || 'overview') !== 'overview') return h;
+  try {
+    var root = domOf(h), kids = [].slice.call(root.children), out = '';
+    kids.forEach(function (el) {
+      var t = txt1(el, 'h3');
+      if (/^Week by week/i.test(t)) { var rows = el.querySelectorAll('tbody tr').length; out += foldWrap('prog-weeks', 'Week by week', rows + (rows === 1 ? ' week' : ' weeks') + ' · planned against run', el.outerHTML, false); }
+      else out += el.outerHTML;
+    });
+    return out;
+  } catch (e) { return h; }
+};
+
+/* ---------- Dashboard on phones: five groups instead of twenty cards ---------- */
+var DASH_GROUPS = [
+  ['Load and volume', /^(Training load|Weekly miles|Intensity mix|Training balance|Consistency)/i, true],
+  ['Fitness and predictions', /^(Aerobic efficiency|VO2 max|Race predictions|Goal odds|Long-run progression|Garmin metrics)/i, false],
+  ['Recovery', /^(HRV|Sleep|Shin load|Recovery)/i, false],
+  ['Running form', /^(Running dynamics|Durability)/i, false],
+  ['Strength', /^(Strength)/i, false],
+  ['Recent runs', /^(Recent runs)/i, false]
+];
+var _dash11 = VIEWS.dash;
+VIEWS.dash = function () {
+  var h = _dash11(); if (window.innerWidth >= 1024) return h;
+  try {
+    var root = domOf(h), wrap = root.querySelector('.dash'); if (!wrap) return h;
+    var kids = [].slice.call(wrap.children), top = '', groups = DASH_GROUPS.map(function () { return []; }), other = [];
+    kids.forEach(function (el) {
+      var t = txt1(el, 'h3') || txt1(el, 'h2');
+      if (cls(el, / pagehead /) || cls(el, / tiles /) || el.querySelector('.cdstrip') || cls(el, / cdstrip /)) { top += el.outerHTML; return; }
+      if (/^Today$/i.test(t)) return;   /* the Today tab already shows this */
+      var gi = -1; DASH_GROUPS.forEach(function (g, k) { if (gi < 0 && g[1].test(t)) gi = k; });
+      (gi < 0 ? other : groups[gi]).push(el);
+    });
+    var out = top;
+    DASH_GROUPS.forEach(function (g, k) {
+      if (!groups[k].length) return;
+      var names = groups[k].map(function (el) { return (txt1(el, 'h3') || '').replace(/,.*$/, ''); }).join(' · ');
+      out += foldWrap('dash-' + k, g[0], groups[k].length > 1 ? names : '', htmlOf(groups[k]), g[2]);
+    });
+    if (other.length) out += foldWrap('dash-more', 'More', other.length + ' cards', htmlOf(other), false);
+    return '<div class="dash dashm">' + out + '</div>';
+  } catch (e) { console.warn(e); return h; }
+};
+/* a calmer dashboard card on You: three numbers and one line */
+dashHero = function () {
+  var x = App.extra || {}, chips = [];
+  if (x.status && x.status.acwr) chips.push(['Load', x.status.acwr + (x.status.acwr > 1.3 ? ' high' : x.status.acwr < 0.8 ? ' low' : ' safe')]);
+  var hv = x.hrv && x.hrv[Object.keys(x.hrv).sort().pop()]; if (hv && hv.status) chips.push(['HRV', String(hv.status).charAt(0) + String(hv.status).slice(1).toLowerCase().replace(/_/g, ' ')]);
+  var acts = (Store.garmin && Store.garmin.activities) || [], cut = E.addD(App.today, -28), m4 = acts.filter(function (a) { return a.run && a.date > cut; }).reduce(function (s, a) { return s + a.distM / E.MI_M; }, 0);
+  if (m4) chips.push(['Avg week', mi(m4 / 4) + ' mi']);
+  return '<a class="dashhero" href="#/dash"><div class="spread"><div><div class="eyebrow">Deep dive</div><h2>Training dashboard</h2></div><span class="dh-go" aria-hidden="true">›</span></div>' +
+    (chips.length ? '<div class="dh-row">' + chips.slice(0, 3).map(function (c) { return '<div><b>' + esc(String(c[1])) + '</b><span>' + c[0] + '</span></div>'; }).join('') + '</div>' : '') +
+    '<p class="small muted">Load, fitness, recovery, running form and strength trends, week by week.</p></a>';
+};
+
+/* ---------- motion: a screen eases in when you arrive (not on background refreshes) ---------- */
+var _render11 = render, _lastView = null;
+render = function () {
+  var key = App.view + '/' + (App.args || []).join('/'), fresh = key !== _lastView; _lastView = key;
+  _render11();
+  var m = $('#main'); if (!m) return;
+  if (fresh) { m.classList.remove('enter'); void m.offsetWidth; m.classList.add('enter'); clearTimeout(render._t); render._t = setTimeout(function () { m.classList.remove('enter'); }, 900); }
+};

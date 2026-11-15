@@ -10,7 +10,7 @@ const server = http.createServer((q, r) => { let p = q.url.split('?')[0]; if (p 
   const go = async h => { await pg.goto('http://127.0.0.1:8831/' + h); await pg.waitForTimeout(1200); };
   await go('#/coach'); await pg.screenshot({ path: SH + '/c1.png' }); console.log('today msgs:', (await pg.$$('#thread .msg')).length, await pg.innerText('.coachbar'));
   await pg.click('text=Past chats'); await pg.waitForTimeout(500); console.log('archive days:', (await pg.$$('.archday')).length); await pg.click('.archday summary >> nth=0'); await pg.waitForTimeout(200); await pg.screenshot({ path: SH + '/c2.png', fullPage: true });
-  await go('#/coach'); await pg.click('[data-act=coach-new]'); await pg.waitForTimeout(500); console.log('after new chat msgs:', (await pg.$$('#thread .msg')).length, '|', (await pg.innerText('#thread')).slice(0, 60));
+  await go('#/coach'); if (await pg.$('[data-act=coach-new]')) await pg.click('[data-act=coach-new]'); await pg.waitForTimeout(500); console.log('after new chat msgs:', (await pg.$$('#thread .msg')).length, '|', (await pg.innerText('#thread')).slice(0, 60));
   await pg.fill('#coachIn', 'what are my paces'); await pg.press('#coachIn', 'Enter'); await pg.waitForTimeout(500); console.log('after send:', (await pg.$$('#thread .msg')).length);
   console.log('wide:', await pg.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), 'errors:', errs);
   await b.close(); server.close(); })();

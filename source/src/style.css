@@ -980,3 +980,60 @@ a.dashhero { display: grid; gap: 10px; text-decoration: none; color: inherit; bo
 .dh-list { display: flex; flex-wrap: wrap; gap: 5px; }
 .dh-list span { font-size: .72rem; font-weight: 700; padding: 4px 9px; border-radius: 99px; background: color-mix(in srgb, var(--ink) 9%, transparent); color: var(--ink); }
 .dh-btn { justify-self: start; }
+
+/* ---------- accordions ---------- */
+details.fold { display: block; }
+details.fold > summary, details.infold > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; -webkit-tap-highlight-color: transparent; }
+details.fold > summary::-webkit-details-marker, details.infold > summary::-webkit-details-marker { display: none; }
+details.fold > summary { background: var(--card); border-radius: 20px; padding: 14px 16px; transition: background .15s, transform .12s; }
+details.fold > summary:active { transform: scale(.985); }
+details.fold[open] > summary { background: transparent; padding: 6px 4px 2px; }
+.ft { display: grid; gap: 1px; min-width: 0; } .ft b { font-size: 1rem; font-weight: 800; } details.fold[open] > summary .ft b { font-size: 1.15rem; }
+.ft span { font-size: .78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+details.fold[open] > summary .ft span { display: none; }
+.fchev { width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s; flex: 0 0 auto; margin-right: 4px; }
+details[open] > summary .fchev { transform: rotate(-135deg); }
+.foldbody { display: grid; gap: 12px; margin-top: 8px; }
+.foldmore { text-align: right; font-size: .82rem; font-weight: 700; } .foldmore a { color: var(--muted); }
+details.infold { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+details.infold .livehd { border-top: 0; margin-top: 8px; padding-top: 0; }
+details.infold .livehd .eyebrow { display: none; }
+/* plan: slim countdowns at the top */
+.rstrip { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.rpill { flex: 1 1 0; min-width: 0; text-decoration: none; color: var(--muted); font-size: .76rem; font-weight: 700; padding: 8px 12px; border-radius: 99px; background: color-mix(in srgb, var(--violet) 16%, var(--card)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rpill b { color: var(--ink); font-size: .9rem; }
+/* dashboard on phones */
+.dashm { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.dashm > * { grid-column: 1 / -1 !important; min-width: 0; }
+.dashm .foldbody > * { grid-column: auto !important; }
+@media (max-width: 1023px) { svg.chart.wide text { font-size: 13px; } svg.chart.wide text.bl { font-size: 9px; } }
+/* calmer dashboard card on You */
+.dh-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.dh-row > div { display: grid; gap: 0; min-width: 0; } .dh-row b { font-size: 1.15rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dh-row span { font-size: .64rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+
+/* ---------- motion ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes growx { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes growy { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes ringfill { from { stroke-dasharray: 0 999; } }
+@keyframes pop { 0% { transform: scale(.82); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes sheetup { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+#main.enter > * { animation: rise .42s cubic-bezier(.2, .75, .25, 1) both; }
+#main.enter > *:nth-child(2) { animation-delay: .04s; } #main.enter > *:nth-child(3) { animation-delay: .08s; } #main.enter > *:nth-child(4) { animation-delay: .12s; }
+#main.enter > *:nth-child(5) { animation-delay: .16s; } #main.enter > *:nth-child(6) { animation-delay: .2s; } #main.enter > *:nth-child(n+7) { animation-delay: .24s; }
+#main.enter .ring svg circle:last-of-type, #main.enter .odds svg circle:last-of-type { animation: ringfill 1s .15s cubic-bezier(.3, .7, .2, 1) both; }
+#main.enter .lfbar .val, #main.enter .bar > i, #main.enter .busy i { transform-origin: left center; animation: growx .7s .15s cubic-bezier(.2, .75, .25, 1) both; }
+#main.enter .structure > i, #main.enter .bbspark i, #main.enter .minis i, #main.enter .seasonbars button > i { transform-origin: center bottom; animation: growy .6s .12s cubic-bezier(.2, .75, .25, 1) both; }
+#main.enter .sm-ring { animation: pop .5s .2s both; }
+details.fold[open] > .foldbody, details.gdet[open] > *:not(summary), details.infold[open] > *:not(summary) { animation: rise .3s cubic-bezier(.2, .75, .25, 1) both; }
+.btn, .iconbtn, .sess, .herow, .liftbub, .racecard, .dashhero, .addopt, .pev, .rpill, a.card, .menu a, .tabs button, .segs button, .hrc { transition: transform .12s ease, background .15s ease, opacity .15s ease; }
+.btn:active, .iconbtn:active, .addopt:active, .tabs button:active, .segs button:active, .hrc:active { transform: scale(.95); }
+.sess:active, .herow:active, .liftbub:active, .racecard:active, .dashhero:active, a.card:active { transform: scale(.985); }
+.menu a:active { background: var(--card2); }
+.tabbar a[aria-current="page"] svg { animation: pop .32s ease both; }
+#sheet:not([hidden]) { animation: fadein .18s ease both; }
+#sheet:not([hidden]) #sheetCard { animation: sheetup .28s cubic-bezier(.2, .8, .25, 1) both; }
+.toggle i, .toggle { transition: transform .18s ease, background .18s ease; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
