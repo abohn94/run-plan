@@ -333,7 +333,7 @@ table.t td:first-child, table.t th { white-space: nowrap; }
 .actrow.done .sh b::after { content: ' ✓'; color: var(--green); }
 .calgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
 .calgrid em { font-style: normal; text-align: center; font-size: .66rem; font-weight: 800; color: var(--muted); padding-bottom: 4px; }
-.calgrid > a, .calgrid > span { display: grid; justify-items: center; align-items: center; grid-template-rows: 20px 12px 12px; gap: 2px; padding: 6px 0 4px; border-radius: 12px; text-decoration: none; color: var(--ink); height: 62px; box-sizing: border-box; overflow: hidden; }
+.calgrid > a, .calgrid > span { display: grid; justify-items: center; align-items: center; grid-template-rows: 20px 12px 12px 4px; gap: 2px; padding: 6px 0 4px; border-radius: 12px; text-decoration: none; color: var(--ink); height: 68px; box-sizing: border-box; overflow: hidden; }
 .calgrid > a:hover { background: var(--card2); }
 .calgrid b { font-size: .9rem; font-weight: 800; }
 .calgrid small { font-size: .62rem; color: var(--green); font-weight: 800; line-height: 12px; }
@@ -889,6 +889,19 @@ b.shk { font-size: .8rem; padding: 2px 9px; }
 .rpt .rprow, .card .rprow { display: flex; justify-content: space-between; margin-top: 6px; font-size: .9rem; }
 .rpt .tiny { display: inline-block; margin-top: 8px; }
 .postrace { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--violet) 55%, transparent); }
+
+/* personal calendar events (read-only) */
+.pevs { display: grid; gap: 4px; margin-top: 6px; }
+.pev { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; font-size: .78rem; padding: 5px 10px; border-radius: 10px; background: color-mix(in srgb, var(--blue) 10%, transparent); border-left: 3px solid color-mix(in srgb, var(--blue) 60%, transparent); color: var(--ink); cursor: default; user-select: none; -webkit-user-select: none; }
+.pev .pt { font-weight: 800; color: var(--muted); white-space: nowrap; font-size: .72rem; }
+.pev .pn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pev.free { opacity: .65; border-left-style: dashed; }
+.pvitems .pevs { margin: 0 0 6px; }
+.calgrid .busy { width: 70%; height: 4px; border-radius: 2px; background: var(--card2); display: flex; overflow: hidden; }
+.calgrid .busy i { display: block; height: 100%; background: color-mix(in srgb, var(--blue) 75%, transparent); }
+.calgrid .busy i.w { background: var(--gold); }
+.calgrid .today .busy { background: color-mix(in srgb, var(--inv) 20%, transparent); }
+.busykey { white-space: nowrap; } .busykey i { display: inline-block; width: 10px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--blue) 75%, transparent); margin: 0 4px 2px 2px; vertical-align: middle; } .busykey i.w { background: var(--gold); }
 
 </style>
 </head>
@@ -4116,6 +4129,7 @@ VIEWS.plan = function () {
   html += '<div class="stack">' + w.days.map(function (d2) {
     var items = d2.parts.map(function (x) { return x.type === 'rest' ? restRow(x, d2.date) : sessHTML(x, d2.date, w.zonesAdj, { struct: false }); }).join('');
     if (d2.dropped) items += '<div class="tiny muted">No free day this week for: ' + esc(d2.dropped.join(', ')) + '</div>';
+    if (typeof dayEventsHTML === 'function') items += dayEventsHTML(d2.date);
     return '<div class="dayblock' + (d2.date === t ? ' today' : '') + '"><div class="d">' + d2.dow + '<b>' + E.pd(d2.date).getDate() + '</b></div><div class="items">' + items + '</div></div>';
   }).join('') + '</div>';
   if (typeof addWkBtn === 'function') html += addWkBtn(w);
@@ -5603,7 +5617,7 @@ VIEWS.calendar = function () {
     if (!day) dots = acts.slice(0, 3).map(function (a) { return '<i class="t-' + (a.kind === 'run' ? 'easy' : a.kind === 'lift' ? 'strength' : 'cross') + ' dn"></i>'; }).join('');
     var runMi = sumMi(acts.filter(function (a) { return a.kind === 'run'; }));
     var href = day ? '#/day/' + d : acts.length ? '#/activity/' + encodeURIComponent(acts[0].key) : '';
-    cells += '<' + (href ? 'a href="' + href + '"' : 'span') + ' class="' + (d === t ? 'today ' : '') + (out ? 'out ' : '') + '"><b>' + E.pd(d).getDate() + '</b><span class="dots">' + dots + '</span><small>' + (runMi ? mi(runMi) : '') + '</small></' + (href ? 'a' : 'span') + '>';
+    cells += '<' + (href ? 'a href="' + href + '"' : 'span') + ' class="' + (d === t ? 'today ' : '') + (out ? 'out ' : '') + '"><b>' + E.pd(d).getDate() + '</b><span class="dots">' + dots + '</span><small>' + (runMi ? mi(runMi) : '') + '</small>' + (typeof busyBar === 'function' ? busyBar(d) : '') + '</' + (href ? 'a' : 'span') + '>';
   }
   html += '<section class="card"><div class="calgrid">' + E.DOW.map(function (x) { return '<em>' + x.charAt(0) + '</em>'; }).join('') + cells + '</div><p class="tiny muted" style="margin-top:8px">Dots are planned sessions (ringed when done). Numbers are miles run.</p></section>';
   /* week by week */
@@ -5619,6 +5633,7 @@ VIEWS.calendar = function () {
         if (partDone(dd, x)) return;
         items += '<a class="calplan t-' + x.type + '" href="#/day/' + dd + '"><i></i>' + esc(x.title) + (E.isRun(x) ? ' · ' + mi(x.mi) + ' mi' : x.min ? ' · ' + x.min + ' min' : '') + (dd < t ? ' <span class="pill warn" style="padding:0 7px">missed</span>' : '') + '</a>';
       });
+      if (typeof dayEventsHTML === 'function') items += dayEventsHTML(dd);
       if (!items) items = '<span class="calplan rest">–</span>';
       html += '<div class="calday' + (dd === t ? ' today' : '') + '"><div class="d">' + E.DOW[E.dow(dd)] + '<b>' + E.pd(dd).getDate() + '</b></div><div class="items">' + items + '</div></div>';
     }
@@ -8902,6 +8917,52 @@ VIEWS.today = function () {
   if (!add) return h;
   var i = h.indexOf('<section class="card cond'); if (i < 0) i = h.indexOf('<section', h.indexOf('<section') + 1);
   return i > 0 ? h.slice(0, i) + add + h.slice(i) : h + add;
+};
+
+/* ---------- your personal Google Calendar events beside the training (read-only: they can't be moved here) ---------- */
+function calEvents(date) { return ((App.cal && App.cal.events) || {})[date] || []; }
+function evTime(ev) { if (ev.a) return 'All day'; var f = function (m) { var h = Math.floor(m / 60) % 24, mm = m % 60; return (h % 12 || 12) + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); }; return f(ev.s) + (ev.e && ev.e !== ev.s ? '–' + f(Math.min(ev.e, 1439)) : ''); }
+function evRow(ev, cls) { return '<div class="pev' + (ev.f ? ' free' : '') + (cls ? ' ' + cls : '') + '" title="From your Google Calendar (change it there)"><span class="pt">' + evTime(ev) + '</span><span class="pn">' + esc(ev.t) + '</span></div>'; }
+function dayEventsHTML(date) {
+  var ev = calEvents(date); if (!ev.length) return '';
+  return '<div class="pevs" aria-label="Calendar events">' + ev.map(function (e) { return evRow(e); }).join('') + '</div>';
+}
+/* how booked a day is: personal events plus work, as a share of a 16-hour waking day */
+function busyShare(date) {
+  var mins = 0, sh = (typeof allShifts === 'function' ? allShifts() : {})[date];
+  /* each event counts at least 2 hours (getting there, getting ready), so a busy day reads as busy */
+  calEvents(date).forEach(function (e) { if (e.f) return; mins += e.a ? 120 : Math.max(120, Math.min(e.e || e.s, 1440) - e.s); });
+  if (sh) mins += sh === 'day' ? 570 : 510;
+  return Math.min(1, mins / 960);
+}
+/* week preview: events under each day, not draggable */
+var _preview8 = VIEWS.preview;
+VIEWS.preview = function () {
+  var h = _preview8(); if (!App.cal || !App.cal.events) return h;
+  Object.keys(App.cal.events).forEach(function (d) {
+    var k = 'data-pvday="' + d + '"', i = h.indexOf(k); if (i < 0) return;
+    var j = h.indexOf('<div class="pvitems', i); if (j < 0) return;
+    var e = h.indexOf('>', j) + 1; h = h.slice(0, e) + dayEventsHTML(d) + h.slice(e);
+  });
+  return h;
+};
+/* session page: what else is on that day */
+var _day8e = VIEWS.day;
+VIEWS.day = function () {
+  var h = _day8e(), date = App.args[0] || App.today, ev = calEvents(date); if (!ev.length) return h;
+  var c = '<section class="card"><div class="spread"><h3>On your calendar</h3><span class="tiny muted">Google Calendar</span></div><div class="pevs" style="margin-top:8px">' + ev.map(function (e) { return evRow(e); }).join('') + '</div></section>';
+  var i = h.indexOf('<section class="card"><h3>Day actions'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c;
+};
+/* calendar tab: a busy bar in every day (the week-by-week list shows the events themselves) */
+function busyBar(d) {
+  if (!App.cal) return '';
+  var b = busyShare(d), sh = (typeof allShifts === 'function' ? allShifts() : {})[d], n = calEvents(d).length, pw = sh ? Math.min(b, (sh === 'day' ? 570 : 510) / 960) : 0;
+  return '<span class="busy" title="' + (n ? plural(n, 'event') : 'No events') + (sh ? ' · ' + sh + ' shift' : '') + '"><i class="w" style="width:' + Math.round(pw * 100) + '%"></i><i style="width:' + Math.round((b - pw) * 100) + '%"></i></span>';
+}
+var _calendar8 = VIEWS.calendar;
+VIEWS.calendar = function () {
+  var h = _calendar8(); if (!App.cal) return h;
+  return h.replace('Dots are planned sessions (ringed when done). Numbers are miles run.', 'Dots are planned sessions (ringed when done). Numbers are miles run. The bar under each day shows how booked it is: <span class="busykey"><i class="w"></i>work</span> <span class="busykey"><i></i>personal</span>. Your events are listed under each week below.');
 };
 
 

@@ -220,3 +220,49 @@ VIEWS.today = function () {
   var i = h.indexOf('<section class="card cond'); if (i < 0) i = h.indexOf('<section', h.indexOf('<section') + 1);
   return i > 0 ? h.slice(0, i) + add + h.slice(i) : h + add;
 };
+
+/* ---------- your personal Google Calendar events beside the training (read-only: they can't be moved here) ---------- */
+function calEvents(date) { return ((App.cal && App.cal.events) || {})[date] || []; }
+function evTime(ev) { if (ev.a) return 'All day'; var f = function (m) { var h = Math.floor(m / 60) % 24, mm = m % 60; return (h % 12 || 12) + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); }; return f(ev.s) + (ev.e && ev.e !== ev.s ? '–' + f(Math.min(ev.e, 1439)) : ''); }
+function evRow(ev, cls) { return '<div class="pev' + (ev.f ? ' free' : '') + (cls ? ' ' + cls : '') + '" title="From your Google Calendar (change it there)"><span class="pt">' + evTime(ev) + '</span><span class="pn">' + esc(ev.t) + '</span></div>'; }
+function dayEventsHTML(date) {
+  var ev = calEvents(date); if (!ev.length) return '';
+  return '<div class="pevs" aria-label="Calendar events">' + ev.map(function (e) { return evRow(e); }).join('') + '</div>';
+}
+/* how booked a day is: personal events plus work, as a share of a 16-hour waking day */
+function busyShare(date) {
+  var mins = 0, sh = (typeof allShifts === 'function' ? allShifts() : {})[date];
+  /* each event counts at least 2 hours (getting there, getting ready), so a busy day reads as busy */
+  calEvents(date).forEach(function (e) { if (e.f) return; mins += e.a ? 120 : Math.max(120, Math.min(e.e || e.s, 1440) - e.s); });
+  if (sh) mins += sh === 'day' ? 570 : 510;
+  return Math.min(1, mins / 960);
+}
+/* week preview: events under each day, not draggable */
+var _preview8 = VIEWS.preview;
+VIEWS.preview = function () {
+  var h = _preview8(); if (!App.cal || !App.cal.events) return h;
+  Object.keys(App.cal.events).forEach(function (d) {
+    var k = 'data-pvday="' + d + '"', i = h.indexOf(k); if (i < 0) return;
+    var j = h.indexOf('<div class="pvitems', i); if (j < 0) return;
+    var e = h.indexOf('>', j) + 1; h = h.slice(0, e) + dayEventsHTML(d) + h.slice(e);
+  });
+  return h;
+};
+/* session page: what else is on that day */
+var _day8e = VIEWS.day;
+VIEWS.day = function () {
+  var h = _day8e(), date = App.args[0] || App.today, ev = calEvents(date); if (!ev.length) return h;
+  var c = '<section class="card"><div class="spread"><h3>On your calendar</h3><span class="tiny muted">Google Calendar</span></div><div class="pevs" style="margin-top:8px">' + ev.map(function (e) { return evRow(e); }).join('') + '</div></section>';
+  var i = h.indexOf('<section class="card"><h3>Day actions'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c;
+};
+/* calendar tab: a busy bar in every day (the week-by-week list shows the events themselves) */
+function busyBar(d) {
+  if (!App.cal) return '';
+  var b = busyShare(d), sh = (typeof allShifts === 'function' ? allShifts() : {})[d], n = calEvents(d).length, pw = sh ? Math.min(b, (sh === 'day' ? 570 : 510) / 960) : 0;
+  return '<span class="busy" title="' + (n ? plural(n, 'event') : 'No events') + (sh ? ' · ' + sh + ' shift' : '') + '"><i class="w" style="width:' + Math.round(pw * 100) + '%"></i><i style="width:' + Math.round((b - pw) * 100) + '%"></i></span>';
+}
+var _calendar8 = VIEWS.calendar;
+VIEWS.calendar = function () {
+  var h = _calendar8(); if (!App.cal) return h;
+  return h.replace('Dots are planned sessions (ringed when done). Numbers are miles run.', 'Dots are planned sessions (ringed when done). Numbers are miles run. The bar under each day shows how booked it is: <span class="busykey"><i class="w"></i>work</span> <span class="busykey"><i></i>personal</span>. Your events are listed under each week below.');
+};

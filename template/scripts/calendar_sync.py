@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Read your Google Calendar (its private iCal address) and work out your schedule for the plan.
 
-The private address(es) come from the GCAL_ICS_URLS secret (one per line). Nothing about event
-titles is saved: only what the plan needs, per day, in garmin/calendar.json:
+The private address(es) come from the GCAL_ICS_URLS secret (one per line). Saved per day in garmin/calendar.json
+(your private data repository):
   shifts  {date: "day" | "eve" | "night"}   work shifts (by keyword and length)
   busy    {date: [[startMin, endMin], ...]}  timed events, minutes after local midnight
   away    {date: "travel" | "vacation"}     trips and time off
   starts  {date: minutes}                   when a day shift starts (for wake-up times)
+  events  {date: [{s, e, t, a, f}]}         personal events to show beside your training: start/end minutes,
+                                           title (shortened), a = all day, f = marked free; work shifts are left out
 Keywords are read from user/state.json (prefs.cal), with sensible defaults.
 """
 
@@ -162,7 +164,7 @@ def main():
     work, vac, trav, tz = prefs()
     today = dt.datetime.now(tz).date()
     lo, hi = today - dt.timedelta(days=DAYS_BACK), today + dt.timedelta(days=DAYS_AHEAD)
-    res = {"shifts": {}, "busy": {}, "away": {}, "starts": {}, "ends": {}}
+    res = {"shifts": {}, "busy": {}, "away": {}, "starts": {}, "ends": {}, "events": {}}
     n = 0
     for i, u in enumerate(urls):
         if u.startswith("webcal://"):
@@ -179,6 +181,19 @@ def main():
             title = e.get("title", "")
             for s in occurrences(e, lo, hi):
                 d0 = s.date().isoformat()
+                is_work = has(work, title) and not e.get("allday") and dur.total_seconds() >= 5 * 3600
+                if not is_work and s.date() >= today - dt.timedelta(days=DAYS_BACK):
+                    t = re.sub(r"\s+", " ", title or "Busy").strip()[:60] or "Busy"
+                    if e.get("allday"):
+                        days = max(1, round(dur.total_seconds() / 86400))
+                        for k in range(days):
+                            res["events"].setdefault((s.date() + dt.timedelta(days=k)).isoformat(), []).append({"t": t, "a": 1})
+                    else:
+                        en = s + dur
+                        ev = {"t": t, "s": s.hour * 60 + s.minute, "e": (en.hour * 60 + en.minute) if en.date() == s.date() else 1440}
+                        if e.get("free"):
+                            ev["f"] = 1
+                        res["events"].setdefault(d0, []).append(ev)
                 if e.get("allday"):
                     days = max(1, round(dur.total_seconds() / 86400))
                     kind = "vacation" if has(vac, title) else "travel" if has(trav, title) else None
@@ -218,6 +233,14 @@ def main():
             else:
                 merged.append([a, b])
         res["busy"][d] = merged
+    for d in res["events"]:
+        seen, out = set(), []
+        for ev in sorted(res["events"][d], key=lambda x: (0 if x.get("a") else 1, x.get("s", 0), x["t"])):
+            k = (ev["t"], ev.get("s"), ev.get("a"))
+            if k not in seen:
+                seen.add(k)
+                out.append(ev)
+        res["events"][d] = out
     res = {k: dict(sorted(v.items())) for k, v in res.items()}
     try:
         with open(OUT) as f:
@@ -238,7 +261,7 @@ def main():
     with open(OUT, "w") as f:
         json.dump(res, f, separators=(",", ":"))
         f.write("\n")
-    print(f"calendar: {n} events read; shifts={len(res['shifts'])} away={len(res['away'])} busy days={len(res['busy'])}")
+    print(f"calendar: {n} events read; personal days={len(res['events'])} shifts={len(res['shifts'])} away={len(res['away'])} busy days={len(res['busy'])}")
     return 0
 
 

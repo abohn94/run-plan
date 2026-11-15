@@ -312,7 +312,7 @@ table.t td:first-child, table.t th { white-space: nowrap; }
 .actrow.done .sh b::after { content: ' ✓'; color: var(--green); }
 .calgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
 .calgrid em { font-style: normal; text-align: center; font-size: .66rem; font-weight: 800; color: var(--muted); padding-bottom: 4px; }
-.calgrid > a, .calgrid > span { display: grid; justify-items: center; align-items: center; grid-template-rows: 20px 12px 12px; gap: 2px; padding: 6px 0 4px; border-radius: 12px; text-decoration: none; color: var(--ink); height: 62px; box-sizing: border-box; overflow: hidden; }
+.calgrid > a, .calgrid > span { display: grid; justify-items: center; align-items: center; grid-template-rows: 20px 12px 12px 4px; gap: 2px; padding: 6px 0 4px; border-radius: 12px; text-decoration: none; color: var(--ink); height: 68px; box-sizing: border-box; overflow: hidden; }
 .calgrid > a:hover { background: var(--card2); }
 .calgrid b { font-size: .9rem; font-weight: 800; }
 .calgrid small { font-size: .62rem; color: var(--green); font-weight: 800; line-height: 12px; }
@@ -868,3 +868,16 @@ b.shk { font-size: .8rem; padding: 2px 9px; }
 .rpt .rprow, .card .rprow { display: flex; justify-content: space-between; margin-top: 6px; font-size: .9rem; }
 .rpt .tiny { display: inline-block; margin-top: 8px; }
 .postrace { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--violet) 55%, transparent); }
+
+/* personal calendar events (read-only) */
+.pevs { display: grid; gap: 4px; margin-top: 6px; }
+.pev { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline; font-size: .78rem; padding: 5px 10px; border-radius: 10px; background: color-mix(in srgb, var(--blue) 10%, transparent); border-left: 3px solid color-mix(in srgb, var(--blue) 60%, transparent); color: var(--ink); cursor: default; user-select: none; -webkit-user-select: none; }
+.pev .pt { font-weight: 800; color: var(--muted); white-space: nowrap; font-size: .72rem; }
+.pev .pn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pev.free { opacity: .65; border-left-style: dashed; }
+.pvitems .pevs { margin: 0 0 6px; }
+.calgrid .busy { width: 70%; height: 4px; border-radius: 2px; background: var(--card2); display: flex; overflow: hidden; }
+.calgrid .busy i { display: block; height: 100%; background: color-mix(in srgb, var(--blue) 75%, transparent); }
+.calgrid .busy i.w { background: var(--gold); }
+.calgrid .today .busy { background: color-mix(in srgb, var(--inv) 20%, transparent); }
+.busykey { white-space: nowrap; } .busykey i { display: inline-block; width: 10px; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--blue) 75%, transparent); margin: 0 4px 2px 2px; vertical-align: middle; } .busykey i.w { background: var(--gold); }

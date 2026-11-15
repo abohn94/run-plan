@@ -381,7 +381,7 @@ VIEWS.calendar = function () {
     if (!day) dots = acts.slice(0, 3).map(function (a) { return '<i class="t-' + (a.kind === 'run' ? 'easy' : a.kind === 'lift' ? 'strength' : 'cross') + ' dn"></i>'; }).join('');
     var runMi = sumMi(acts.filter(function (a) { return a.kind === 'run'; }));
     var href = day ? '#/day/' + d : acts.length ? '#/activity/' + encodeURIComponent(acts[0].key) : '';
-    cells += '<' + (href ? 'a href="' + href + '"' : 'span') + ' class="' + (d === t ? 'today ' : '') + (out ? 'out ' : '') + '"><b>' + E.pd(d).getDate() + '</b><span class="dots">' + dots + '</span><small>' + (runMi ? mi(runMi) : '') + '</small></' + (href ? 'a' : 'span') + '>';
+    cells += '<' + (href ? 'a href="' + href + '"' : 'span') + ' class="' + (d === t ? 'today ' : '') + (out ? 'out ' : '') + '"><b>' + E.pd(d).getDate() + '</b><span class="dots">' + dots + '</span><small>' + (runMi ? mi(runMi) : '') + '</small>' + (typeof busyBar === 'function' ? busyBar(d) : '') + '</' + (href ? 'a' : 'span') + '>';
   }
   html += '<section class="card"><div class="calgrid">' + E.DOW.map(function (x) { return '<em>' + x.charAt(0) + '</em>'; }).join('') + cells + '</div><p class="tiny muted" style="margin-top:8px">Dots are planned sessions (ringed when done). Numbers are miles run.</p></section>';
   /* week by week */
@@ -397,6 +397,7 @@ VIEWS.calendar = function () {
         if (partDone(dd, x)) return;
         items += '<a class="calplan t-' + x.type + '" href="#/day/' + dd + '"><i></i>' + esc(x.title) + (E.isRun(x) ? ' · ' + mi(x.mi) + ' mi' : x.min ? ' · ' + x.min + ' min' : '') + (dd < t ? ' <span class="pill warn" style="padding:0 7px">missed</span>' : '') + '</a>';
       });
+      if (typeof dayEventsHTML === 'function') items += dayEventsHTML(dd);
       if (!items) items = '<span class="calplan rest">–</span>';
       html += '<div class="calday' + (dd === t ? ' today' : '') + '"><div class="d">' + E.DOW[E.dow(dd)] + '<b>' + E.pd(dd).getDate() + '</b></div><div class="items">' + items + '</div></div>';
     }
