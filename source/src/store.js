@@ -156,7 +156,7 @@ var Store = {
     var touchedNow = this.touched;
     this.touched = {};
     this.setStatus('saving');
-    var body = { message: 'Run Plan update ' + new Date().toISOString().slice(0, 16), content: b64enc(JSON.stringify(this.state, null, 1)) };
+    var body = { message: 'Personal Run update ' + new Date().toISOString().slice(0, 16), content: b64enc(JSON.stringify(this.state, null, 1)) };
     if (this.sha) body.sha = this.sha;
     if (this.conn.branch) body.branch = this.conn.branch;
     this._saving = this.api('/contents/' + STATE_PATH, { method: 'PUT', body: body }).then(function (r) {

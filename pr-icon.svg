@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="114" fill="#45d19a"/><rect x="60" y="88" width="392" height="336" rx="24" fill="#ffffff"/>
+<g fill="#0a0a0c"><circle cx="94" cy="122" r="11"/><circle cx="418" cy="122" r="11"/><circle cx="94" cy="390" r="11"/><circle cx="418" cy="390" r="11"/></g>
+<rect x="104" y="140" width="304" height="196" rx="98" fill="#0a0a0c"/><rect x="116" y="152" width="280" height="172" rx="86" fill="none" stroke="#45d19a" stroke-width="5" stroke-dasharray="11 8"/>
+<g transform="translate(124 150) scale(0.88)"><path d="M62 70 C58 54 72 50 80 62" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+<path d="M54 106 C52 88 58 74 70 66 C78 62 88 64 96 70 C110 78 130 78 148 70 L162 64 C198 82 240 96 272 104 C286 108 294 112 294 116 C220 120 120 116 54 106 Z" fill="#ffffff"/>
+<path d="M50 104 C120 114 220 120 298 108 C302 124 288 144 262 152 C252 155 242 156 230 156 L84 158 C60 160 44 148 44 128 C44 118 46 110 50 104 Z" fill="#45d19a"/>
+<path d="M58 136 C130 144 212 142 286 122" fill="none" stroke="#0a0a0c" stroke-width="6" stroke-linecap="round"/>
+<path d="M76 158 L230 156 C246 155 258 152 268 146" fill="none" stroke="#0a0a0c" stroke-width="5" stroke-linecap="round"/>
+<g stroke="#0a0a0c" stroke-width="6" stroke-linecap="round"><path d="M156 78 l14 -8"/><path d="M176 88 l14 -8"/><path d="M196 97 l14 -8"/></g>
+<path d="M84 96 C130 104 180 106 232 106" fill="none" stroke="#0a0a0c" stroke-width="5" stroke-linecap="round" opacity=".55"/></g>
+<text x="256" y="400" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="58" fill="#0a0a0c" letter-spacing="8">PR</text></svg>

@@ -97,7 +97,7 @@ function go(h) { if (location.hash === h) route(); else location.hash = h; }
 
 function render() {
   var top = !!TOP[App.view];
-  $('#title').textContent = top ? '' : (TITLES[App.view] || 'Run Plan');
+  $('#title').textContent = top ? '' : (TITLES[App.view] || 'Personal Run');
   $('#backBtn').hidden = top; $('#backSpacer').hidden = !top;
   document.body.classList.toggle('onboarding', App.view === 'setup');
   var tab = (typeof TABOF !== 'undefined' && TABOF[App.view]) || (TOP[App.view] ? App.view : 'you');
@@ -880,7 +880,7 @@ VIEWS.data = function () {
     '<section class="card stack"><h3>Start over</h3><p class="small muted">Clears your plan setup on this device and in your repository. Logs stay unless you also clear them.</p><div class="btns"><button class="btn sm danger" data-act="reset-plan">Re-run setup</button></div></section>';
 };
 VIEWS.about = function () {
-  return '<div class="pagehead"><h1>About & terms</h1></div><section class="card stack small"><p><b>Run Plan</b> is a personal training app built by a runner for his own training. It is free and has no ads, accounts or tracking.</p><p><b>Not medical advice.</b> Training, recovery and nutrition suggestions are general guidance. Stop and see a clinician for pain that persists, chest pain, dizziness, or anything that worries you.</p><p><b>Your data.</b> Your plan, logs and Garmin data are stored in your own private GitHub repository (or only on this device). Your GitHub token and Garmin key are never shared with anyone else.</p><p><b>Training styles</b> are original plans inspired by well-known coaching approaches. They are not affiliated with or endorsed by those coaches, and do not reproduce their published plans.</p><p><b>Garmin.</b> Garmin and Garmin Connect are trademarks of Garmin Ltd. This app uses Garmin\'s Personal API with your own key and is not affiliated with Garmin.</p></section>';
+  return '<div class="pagehead"><h1>About & terms</h1></div><section class="card stack small"><p><b>Personal Run</b> is a personal training app built by a runner for his own training. It is free and has no ads, accounts or tracking.</p><p><b>Not medical advice.</b> Training, recovery and nutrition suggestions are general guidance. Stop and see a clinician for pain that persists, chest pain, dizziness, or anything that worries you.</p><p><b>Your data.</b> Your plan, logs and Garmin data are stored in your own private GitHub repository (or only on this device). Your GitHub token and Garmin key are never shared with anyone else.</p><p><b>Training styles</b> are original plans inspired by well-known coaching approaches. They are not affiliated with or endorsed by those coaches, and do not reproduce their published plans.</p><p><b>Garmin.</b> Garmin and Garmin Connect are trademarks of Garmin Ltd. This app uses Garmin\'s Personal API with your own key and is not affiliated with Garmin.</p></section>';
 };
 
 /* ---- onboarding: one question per screen ---- */
@@ -906,7 +906,7 @@ VIEWS.setup = function () {
   var bar = '<div class="wizard-steps" aria-label="Step ' + s + ' of ' + (WIZ_STEPS.length - 1) + '">' + WIZ_STEPS.slice(1).map(function (x, i) { return '<i class="' + (i < s ? 'on' : '') + '"></i>'; }).join('') + '</div>';
   var html = s > 0 ? bar : '';
   if (name === 'welcome') {
-    return '<div class="q" style="padding-top:8vh"><div class="eyebrow">Run Plan</div><h1 style="font-size:2.6rem;margin-top:6px">Train smarter.<br>Recover better.</h1><p class="lead">A running and strength plan built around your races, your week and your gym days. It adapts every day to your Garmin sleep, HRV, resting heart rate and Body Battery.</p></div>' +
+    return '<div class="q" style="padding-top:8vh"><div class="eyebrow">Personal Run</div><h1 style="font-size:2.6rem;margin-top:6px">Train smarter.<br>Recover better.</h1><p class="lead">A running and strength plan built around your races, your week and your gym days. It adapts every day to your Garmin sleep, HRV, resting heart rate and Body Battery.</p></div>' +
       '<div class="card small" style="margin-top:8px"><b>' + (z.hs && z.hs.runs >= 3 ? 'Garmin connected: ' + z.hs.runs + ' runs found' : 'Garmin not connected yet') + '</b><p class="muted" style="margin-top:4px">' + (z.hs && z.hs.runs >= 3 ? 'Your history will fill in your current mileage, longest run and pace in the next steps.' : 'Connecting Garmin first lets the app fill in your mileage and pace from your history. You can also skip it and connect any time: your plan then starts adapting to your sleep and recovery.') + '</p><p class="muted" style="margin-top:4px">This app builds and manages its own plan. It does not import the plan inside Garmin Connect, so use one or the other for day-to-day training.</p></div>' +
       '<div class="stack" style="margin-top:8px"><button class="btn primary block" data-act="wiz-next">Build my plan</button>' + (z.hs && z.hs.runs >= 3 ? '' : '<a class="btn ghost block" href="#/sync">Connect Garmin first</a>') + '</div>' +
       '<div class="card small" style="margin-top:10px"><b>Before you start</b><ul class="plain muted" style="margin-top:6px"><li><b>Not medical advice.</b> This is general training guidance. See a clinician for pain that persists, chest pain or dizziness.</li><li><b>Your data stays yours.</b> It lives in your own private GitHub repository, or only on this device.</li></ul><p class="muted" style="margin-top:6px">By continuing you accept the <a href="#/about">terms</a>.</p></div>';
@@ -1412,7 +1412,7 @@ function isoFrom(s) { var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s.trim()); 
 function importFile(kind, text) {
   var msg = $('#impMsg');
   try {
-    if (kind === 'backup') { var s = JSON.parse(text); if (!s || typeof s !== 'object' || !('logs' in s)) throw new Error('Not a Run Plan backup.'); if (confirm('Replace everything with this backup?')) { Store.replaceAll(s); toast('Backup restored'); } return; }
+    if (kind === 'backup') { var s = JSON.parse(text); if (!s || typeof s !== 'object' || !('logs' in s)) throw new Error('Not a Personal Run backup.'); if (confirm('Replace everything with this backup?')) { Store.replaceAll(s); toast('Backup restored'); } return; }
     if (kind === 'garmin') { var g = JSON.parse(text); Store.setGarminLocal(g); toast('Garmin data loaded'); return; }
     var rows = parseCSV(text), head = rows.shift().map(function (h) { return h.trim().toLowerCase(); }), col = function (n) { return head.indexOf(n); };
     var n = 0, touches = [], adds = [];

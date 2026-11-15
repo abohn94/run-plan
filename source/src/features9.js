@@ -242,7 +242,7 @@ ACTIONS['share-week'] = function (a) {
   tiles.forEach(function (t, i) { var y = 360 + i * 230; g.fillStyle = 'rgba(255,255,255,.07)'; if (g.roundRect) { g.beginPath(); g.roundRect(80, y, 920, 200, 36); g.fill(); } else g.fillRect(80, y, 920, 200); g.fillStyle = i === 2 ? '#34d399' : '#fff'; g.font = F(96, 800); g.fillText(t[0], 130, y + 120); g.fillStyle = '#9a9aa8'; g.font = F(38, 700); g.fillText(t[1], 130, y + 172); });
   var ev = (st().events || []).filter(function (e) { return e.date > App.today; }).sort(function (x, y) { return x.date < y.date ? -1 : 1; })[0];
   g.fillStyle = '#fff'; g.font = F(44, 700); if (ev) g.fillText(E.diffD(App.today, ev.date) + ' days to ' + (ev.name || E.distOf(ev).label), 80, 1140);
-  g.fillStyle = '#6b6b78'; g.font = F(32, 700); g.fillText('Run Plan', 80, 1270);
+  g.fillStyle = '#6b6b78'; g.font = F(32, 700); g.fillText('Personal Run', 80, 1270);
   cv.toBlob(function (blob) {
     var file = new File([blob], 'week-' + w.n + '.png', { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: 'My training week' }).catch(function () {});
