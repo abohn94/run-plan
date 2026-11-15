@@ -45,7 +45,7 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   await pg.fill('#est-t', '22:48'); await pg.waitForTimeout(200); log('calc:', ((await pg.innerText('#est-out')).split('\n')[0]));
   await go('#/progress/strength', 700); await sheet({ sheet: 'ormcalc', n: 'Back squat', w: 225, r: 5 }); await pg.screenshot({ path: SHOTS + '/b10-ormcalc.png' }); log('1RM calc:', (await pg.innerText('#oc-out')).split('\n').slice(0, 8).join(' ')); await pg.click('[data-act=oc-save]'); await pg.waitForTimeout(400); await shot('b11-strength-prog', true);
   await go('#/progress/performance', 700); await shot('b12-bars');
-  await go('#/glance', 600); await shot('b13-glance');
+  await go('#/you', 600); await shot('b13-you-dash'); log('dash hero', !!(await pg.$('.dashhero')), 'glance link gone', !(await pg.$('a[href="#/glance"]')));
   await go('#/today', 900); log('rating card shown:', /How did it go/i.test(await text()));
   await pg.setViewportSize({ width: 1440, height: 900 }); await go('#/dash', 1500); await shot('c1-dash', true); log('dash cards:', (await pg.$$('.dash .card')).length, '| sidebar links:', (await pg.$$eval('.tabbar a', a => a.filter(x => getComputedStyle(x).display !== 'none').map(x => x.textContent.trim()))).join(','));
   await go('#/plan', 800); await shot('c2-plan-desktop'); await go('#/progress/health', 800); await shot('c3-health-desktop');

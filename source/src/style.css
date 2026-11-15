@@ -433,12 +433,6 @@ textarea.i { min-height: 80px; padding: 10px 12px; resize: vertical; font: inher
 .heat i { aspect-ratio: 1; border-radius: 3px; background: var(--card2); min-width: 0; }
 .dyn { display: grid; gap: 4px 16px; grid-template-columns: minmax(0, 1fr); }
 .chart.wide { width: 100%; height: auto; }
-.glance { display: grid; gap: 12px; }
-.glance .gl { display: grid; gap: 2px; background: var(--card); border-radius: 20px; padding: 14px 16px; text-decoration: none; color: inherit; box-shadow: inset 5px 0 0 var(--c); }
-.glance .gl b { font-size: 1.25rem; font-weight: 800; }
-.glance .gl span { color: var(--muted); font-weight: 700; }
-body.glancemode .topbar, body.glancemode .tabbar { display: none; }
-body.glancemode main { padding-top: calc(14px + var(--safe-t)); padding-bottom: 20px; }
 @media (min-width: 1024px) {
   .deskonly { display: grid !important; }
   body { padding-left: 236px; }
@@ -457,7 +451,6 @@ body.glancemode main { padding-top: calc(14px + var(--safe-t)); padding-bottom: 
   .restbar { left: calc(50% + 118px); bottom: 28px; }
   .composer { bottom: 20px; }
   .sheet { padding-left: 236px; }
-  body.glancemode { padding-left: 0; }
 }
 @media (min-width: 1024px) and (max-width: 1280px) { .dash .c4, .dash .c8 { grid-column: span 12; } .dash .tiles.k6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .dyn { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
@@ -975,3 +968,15 @@ a.card.anlink { display: block; text-decoration: none; color: inherit; }
 .smchecks li::before { content: '✓'; color: var(--green); font-weight: 800; margin-right: 8px; }
 .smchecks li.no::before { content: '•'; color: var(--amber); }
 .smchecks li.no { color: var(--muted); }
+
+/* training dashboard hero on You */
+a.dashhero { display: grid; gap: 10px; text-decoration: none; color: inherit; border-radius: 26px; padding: 18px; margin-bottom: 12px; background: linear-gradient(150deg, color-mix(in srgb, var(--blue) 38%, var(--card)), var(--card) 78%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 35%, transparent); }
+.dashhero h2 { font-size: 1.45rem; margin-top: 2px; }
+.dh-go { font-size: 1.8rem; color: var(--muted); line-height: 1; }
+.dh-chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.dh-chips > div { background: color-mix(in srgb, var(--bg, #000) 35%, transparent); border-radius: 14px; padding: 9px 12px; display: grid; min-width: 0; }
+.dh-chips span { font-size: .64rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.dh-chips b { font-size: 1.05rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dh-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.dh-list span { font-size: .72rem; font-weight: 700; padding: 4px 9px; border-radius: 99px; background: color-mix(in srgb, var(--ink) 9%, transparent); color: var(--ink); }
+.dh-btn { justify-self: start; }

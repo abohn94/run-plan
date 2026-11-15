@@ -6,7 +6,7 @@ IC.shoe = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wid
 IC.heart = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>';
 IC.fuel = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3 4 5 6.5 5 10a5 5 0 0 1-10 0c0-3.500 2-6 5-10z"/></svg>';
 IC.lift = TICON.strength;
-Object.assign(TITLES, { dash: 'Dashboard', glance: 'Glance' });
+Object.assign(TITLES, { dash: 'Training dashboard' });
 TOP.dash = 1;
 Object.assign(TABOF, { dash: 'dash', shoes: 'shoes', shoe: 'shoes', fitness: 'fitness', nutrition: 'nutrition', strength: 'strength', workout: 'plan' });
 
@@ -262,20 +262,8 @@ VIEWS.dash = function () {
   return '<div class="dash">' + html + '</div>';
 };
 
-/* ---------- glance: a compact view for the home screen ---------- */
-VIEWS.glance = function () {
-  var p = App.plan; if (!p) return setupNeeded();
-  var t = App.today, day = dayOf(t), w = App.week, rd = App.rd, ev = nextRace(), zz = zonesAt(t), fp = null;
-  try { fp = fuelPlan(t); } catch (e) { fp = null; }
-  var parts = day ? day.parts : [];
-  return '<div class="glance"><div class="spread"><span class="eyebrow">' + E.fmtDate(t, { weekday: 'long', month: 'short', day: 'numeric' }) + '</span><a class="small muted" href="#/today">Open app ›</a></div>' +
-    parts.map(function (x) { var dn = partDone(t, x); return '<a class="gl t-' + x.type + '" href="#/day/' + t + '"><b>' + esc(x.title) + (dn ? ' ✓' : '') + '</b><span>' + (E.isRun(x) ? mi(x.mi) + ' mi' + (mainPace(x, zz) ? ' · ' + mainPace(x, zz) + '/mi' : '') : x.min ? x.min + ' min' : 'Recover') + '</span></a>'; }).join('') +
-    '<div class="grid3">' + '<div class="metric"><span>Ready</span><b>' + (rd && rd.factors ? rd.score : '–') + '</b></div><div class="metric"><span>Week</span><b>' + (w ? mi(weekActual(w)) + '/' + mi(w.tot.mi) : '–') + '</b></div><div class="metric"><span>' + (ev ? esc((ev.name || E.distOf(ev).label).slice(0, 12)) : 'Race') + '</span><b>' + (ev ? E.diffD(t, ev.date) + ' d' : '–') + '</b></div></div>' +
-    (fp && !fp.missing ? '<p class="small muted" style="text-align:center">Fuel ' + fp.kcal.toLocaleString() + ' kcal · C ' + fp.C + ' · P ' + fp.P + ' · F ' + fp.F + ' g</p>' : '') + '</div>';
-};
 var _render3 = render;
 render = function () {
-  document.body.classList.toggle('glancemode', App.view === 'glance');
   document.body.classList.toggle('wide', App.view === 'dash');
   _render3();
 };
@@ -283,8 +271,21 @@ render = function () {
 if (window.matchMedia && window.matchMedia('(min-width: 1024px)').matches && (!location.hash || location.hash === '#/today' || location.hash === '#/')) { try { history.replaceState(null, '', '#/dash'); } catch (e) { /* ignore */ } }
 var _you3 = VIEWS.you;
 VIEWS.you = function () {
-  var h = _you3();
-  var at = h.indexOf('<div class="sechead"><h2>Your plan');
-  var block = '<div class="menu"><a href="#/dash">Training dashboard<span class="v">deep dive</span><span class="chev">›</span></a><a href="#/glance">Glance view<span class="v">for your home screen</span><span class="chev">›</span></a></div>';
-  return at >= 0 ? h.slice(0, at) + block + h.slice(at) : h + block;
+  var h = _you3(), at = h.indexOf('<div class="tiles');
+  var c = dashHero();
+  return at >= 0 ? h.slice(0, at) + c + h.slice(at) : c + h;
 };
+/* the deep dive, shown big at the top of You: live numbers and what's inside */
+function dashHero() {
+  var x = App.extra || {}, an = App.an || {}, chips = [];
+  if (x.status && x.status.acwr) chips.push(['Load ratio', x.status.acwr + (x.status.acwr > 1.3 ? ' · high' : x.status.acwr < 0.8 ? ' · low' : ' · safe')]);
+  var hv = x.hrv && x.hrv[Object.keys(x.hrv).sort().pop()]; if (hv && hv.status) chips.push(['HRV', String(hv.status).charAt(0) + String(hv.status).slice(1).toLowerCase().replace(/_/g, ' ')]);
+  if (x.endurance && x.endurance.score) chips.push(['Endurance', Math.round(x.endurance.score)]);
+  var acts = (Store.garmin && Store.garmin.activities) || [], cut = E.addD(App.today, -28), m4 = acts.filter(function (a) { return a.run && a.date > cut; }).reduce(function (s, a) { return s + a.distM / E.MI_M; }, 0);
+  if (m4) chips.push(['Avg week', mi(m4 / 4) + ' mi']);
+  var inside = ['Training load', 'Aerobic efficiency', 'Weekly miles', 'Intensity mix', 'HRV & resting HR', 'Sleep', 'Race predictions', 'VO2 max trend', 'Running dynamics', 'Long-run progression', 'Strength'];
+  return '<a class="dashhero" href="#/dash"><div class="spread"><div><div class="eyebrow">Deep dive</div><h2>Training dashboard</h2></div><span class="dh-go" aria-hidden="true">›</span></div>' +
+    '<p class="small">Every trend in one place: how your fitness, load, recovery and running form are moving week to week.</p>' +
+    (chips.length ? '<div class="dh-chips">' + chips.slice(0, 4).map(function (c) { return '<div><span>' + c[0] + '</span><b>' + esc(String(c[1])) + '</b></div>'; }).join('') + '</div>' : '') +
+    '<div class="dh-list">' + inside.map(function (t) { return '<span>' + t + '</span>'; }).join('') + '</div><span class="btn sm primary dh-btn">Open dashboard</span></a>';
+}
