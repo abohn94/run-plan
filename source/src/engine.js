@@ -1081,6 +1081,8 @@ function adapt(plan, st, analysis) {
     /* training balance from Garmin load focus: small, safe nudges to future sessions this week and next */
     var lf = analysis && analysis.loadFocus;
     if (lf && lf.nudge && !(mod && mod.m < 1)) applyLoadFocus(w, lf, zz);
+    /* daylight: no running in the dark if you'd rather not */
+    applyDaylight(w, st, zz);
     /* personal shin-load ceiling: trims easy and long runs in this week and next when the plan asks for more */
     var sh = analysis && analysis.shin;
     if (sh && st.profile && st.profile.injuryProne && (st.prefs || {}).shinCap !== false && w.end >= today() && w.start <= addD(today(), 7) && w.phase.key !== 'race' && w.phase.key !== 'taper') capWeek(w, sh.ceiling, zz);
@@ -2034,6 +2036,47 @@ function sleepTarget(needH, wakeMin, hardTomorrow, debtH) {
   return { bedMin: bed, needH: Math.round(need * 4) / 4 };
 }
 
+
+/* ---------- daylight: sunrise and sunset for a place (NOAA approximation), in local minutes after midnight ---------- */
+function sunTimes(date, lat, lon) {
+  if (lat == null || lon == null) return null;
+  var d = pd(date), start = new Date(d.getFullYear(), 0, 1), doy = Math.round((d - start) / 864e5) + 1;
+  var g = 2 * Math.PI / 365 * (doy - 1);
+  var eq = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  var decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  var la = lat * Math.PI / 180;
+  function ha(zen) { var c = Math.cos(zen * Math.PI / 180) / (Math.cos(la) * Math.cos(decl)) - Math.tan(la) * Math.tan(decl); return c > 1 || c < -1 ? null : Math.acos(c) * 180 / Math.PI; }
+  var off = -new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12).getTimezoneOffset();
+  function at(h, sign) { return h == null ? null : Math.round(720 - 4 * (lon + sign * h) - eq + off); }
+  var h0 = ha(90.833), h6 = ha(96);
+  return { rise: at(h0, 1), set: at(h0, -1), dawn: at(h6, 1), dusk: at(h6, -1) };
+}
+function clockMin(m) { if (m == null) return '–'; var h = Math.floor(m / 60) % 24, mm = m % 60; return (h % 12 || 12) + ':' + (mm < 10 ? '0' : '') + mm + ' ' + (h < 12 ? 'AM' : 'PM'); }
+/* Runs that would happen in the dark become treadmill runs (after a day shift) or get a "finish before sunset" note.
+   prefs.darkRun: false = daylight only; prefs.runHour: usual training hour; prefs.commute: minutes; st.shiftEnds: {date: minutes} */
+function applyDaylight(w, st, zz) {
+  var pr = (st && st.prefs) || {}, L = pr.loc; if (!L || pr.darkRun !== false) return;
+  var sh = st.shiftsAll || st.shifts || {}, ends = st.shiftEnds || {}, commute = +pr.commute || 40;
+  w.days.forEach(function (d) {
+    if (d.date < today()) return;
+    var sun = sunTimes(d.date, L.lat, L.lon); if (!sun || sun.set == null) return;
+    var kind = sh[d.date];
+    d.parts = d.parts.map(function (p) {
+      if (!isRun(p) || p.treadmill || p.type === 'race') return p;
+      var mins = Math.round((p.mi || 3) * 10);
+      if (kind === 'day') {
+        var start = (ends[d.date] || 930) + commute;
+        if (start + mins > sun.set - 15) return Object.assign({}, p, { treadmill: true, changed: true, dark: true, note: 'Treadmill after work: it’s dark by ' + clockMin(sun.set) + '. Set a 1% incline. ' + (p.note || '') });
+        return Object.assign({}, p, { note: 'After work, finish by sunset (' + clockMin(sun.set) + '). ' + (p.note || '') });
+      }
+      if (kind === 'eve' || kind === 'night') return p;
+      var h = pr.runHour == null ? 17 : +pr.runHour, t0 = h * 60;
+      if (t0 + mins > sun.set - 15 || t0 < sun.rise) return Object.assign({}, p, { daylight: true, note: 'Daylight runs only: ' + (t0 < sun.rise ? 'sunrise is ' + clockMin(sun.rise) : 'sunset is ' + clockMin(sun.set)) + ', so go between ' + clockMin(sun.rise + 15) + ' and ' + clockMin(sun.set - mins) + ', or use the treadmill. ' + (p.note || '') });
+      return p;
+    });
+  });
+}
+
 /* ---------------- exports ---------------- */
 var api = {
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
@@ -2041,7 +2084,7 @@ var api = {
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
   vdotOf: vdotOf, paceAt: paceAt, predict: predict, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
-  heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
+  sunTimes: sunTimes, clockMin: clockMin, applyDaylight: applyDaylight, heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
   weekOf: weekOf, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,

@@ -792,6 +792,7 @@ body.printband .band { display: block; }
 .pvfree { font-size: .7rem; font-weight: 700; color: var(--dim); padding: 0 2px; }
 .awayc { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--blue) 45%, transparent); }
 .shc.eve { background: color-mix(in srgb, var(--amber) 24%, var(--card2)); }
+.locpick { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--card2); border-radius: 12px; padding: 8px 8px 8px 12px; margin-top: 6px; }
 
 </style>
 </head>
@@ -2080,6 +2081,8 @@ function adapt(plan, st, analysis) {
     /* training balance from Garmin load focus: small, safe nudges to future sessions this week and next */
     var lf = analysis && analysis.loadFocus;
     if (lf && lf.nudge && !(mod && mod.m < 1)) applyLoadFocus(w, lf, zz);
+    /* daylight: no running in the dark if you'd rather not */
+    applyDaylight(w, st, zz);
     /* personal shin-load ceiling: trims easy and long runs in this week and next when the plan asks for more */
     var sh = analysis && analysis.shin;
     if (sh && st.profile && st.profile.injuryProne && (st.prefs || {}).shinCap !== false && w.end >= today() && w.start <= addD(today(), 7) && w.phase.key !== 'race' && w.phase.key !== 'taper') capWeek(w, sh.ceiling, zz);
@@ -3136,6 +3139,47 @@ function sleepTarget(needH, wakeMin, hardTomorrow, debtH) {
   return { bedMin: bed, needH: Math.round(need * 4) / 4 };
 }
 
+
+/* ---------- daylight: sunrise and sunset for a place (NOAA approximation), in local minutes after midnight ---------- */
+function sunTimes(date, lat, lon) {
+  if (lat == null || lon == null) return null;
+  var d = pd(date), start = new Date(d.getFullYear(), 0, 1), doy = Math.round((d - start) / 864e5) + 1;
+  var g = 2 * Math.PI / 365 * (doy - 1);
+  var eq = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  var decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  var la = lat * Math.PI / 180;
+  function ha(zen) { var c = Math.cos(zen * Math.PI / 180) / (Math.cos(la) * Math.cos(decl)) - Math.tan(la) * Math.tan(decl); return c > 1 || c < -1 ? null : Math.acos(c) * 180 / Math.PI; }
+  var off = -new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12).getTimezoneOffset();
+  function at(h, sign) { return h == null ? null : Math.round(720 - 4 * (lon + sign * h) - eq + off); }
+  var h0 = ha(90.833), h6 = ha(96);
+  return { rise: at(h0, 1), set: at(h0, -1), dawn: at(h6, 1), dusk: at(h6, -1) };
+}
+function clockMin(m) { if (m == null) return '–'; var h = Math.floor(m / 60) % 24, mm = m % 60; return (h % 12 || 12) + ':' + (mm < 10 ? '0' : '') + mm + ' ' + (h < 12 ? 'AM' : 'PM'); }
+/* Runs that would happen in the dark become treadmill runs (after a day shift) or get a "finish before sunset" note.
+   prefs.darkRun: false = daylight only; prefs.runHour: usual training hour; prefs.commute: minutes; st.shiftEnds: {date: minutes} */
+function applyDaylight(w, st, zz) {
+  var pr = (st && st.prefs) || {}, L = pr.loc; if (!L || pr.darkRun !== false) return;
+  var sh = st.shiftsAll || st.shifts || {}, ends = st.shiftEnds || {}, commute = +pr.commute || 40;
+  w.days.forEach(function (d) {
+    if (d.date < today()) return;
+    var sun = sunTimes(d.date, L.lat, L.lon); if (!sun || sun.set == null) return;
+    var kind = sh[d.date];
+    d.parts = d.parts.map(function (p) {
+      if (!isRun(p) || p.treadmill || p.type === 'race') return p;
+      var mins = Math.round((p.mi || 3) * 10);
+      if (kind === 'day') {
+        var start = (ends[d.date] || 930) + commute;
+        if (start + mins > sun.set - 15) return Object.assign({}, p, { treadmill: true, changed: true, dark: true, note: 'Treadmill after work: it’s dark by ' + clockMin(sun.set) + '. Set a 1% incline. ' + (p.note || '') });
+        return Object.assign({}, p, { note: 'After work, finish by sunset (' + clockMin(sun.set) + '). ' + (p.note || '') });
+      }
+      if (kind === 'eve' || kind === 'night') return p;
+      var h = pr.runHour == null ? 17 : +pr.runHour, t0 = h * 60;
+      if (t0 + mins > sun.set - 15 || t0 < sun.rise) return Object.assign({}, p, { daylight: true, note: 'Daylight runs only: ' + (t0 < sun.rise ? 'sunrise is ' + clockMin(sun.rise) : 'sunset is ' + clockMin(sun.set)) + ', so go between ' + clockMin(sun.rise + 15) + ' and ' + clockMin(sun.set - mins) + ', or use the treadmill. ' + (p.note || '') });
+      return p;
+    });
+  });
+}
+
 /* ---------------- exports ---------------- */
 var api = {
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
@@ -3143,7 +3187,7 @@ var api = {
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
   vdotOf: vdotOf, paceAt: paceAt, predict: predict, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
-  heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
+  sunTimes: sunTimes, clockMin: clockMin, applyDaylight: applyDaylight, heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
   weekOf: weekOf, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,
@@ -7681,7 +7725,8 @@ zonesAt = function (date) { var z = _zonesAt7(date), p = date >= App.today ? hea
 var WX_ICON = function (c) { return c >= 95 ? '⛈' : c >= 71 && c <= 86 ? '❄' : c >= 51 && c <= 67 ? '🌧' : c >= 45 && c <= 48 ? '🌫' : c >= 2 ? '⛅' : '☀'; };
 function bestHour(date) {
   var best = null, cold = (wxAt(date, 12) || {}).temp < 40;
-  for (var h = 5; h <= 20; h++) { var w = wxAt(date, h); if (!w) continue; var sc = cold ? -(w.feels) + (w.pop || 0) / 10 : E.heatPct(w.dew, w.temp) * 100 + (w.pop || 0) / 20 + (w.temp > 80 ? (w.temp - 80) / 4 : 0); if (!best || sc < best.sc) best = { h: h, sc: sc, w: w }; }
+  var L0 = loc(), sun0 = L0 && E.sunTimes(date, L0.lat, L0.lon), dayOnly = (st().prefs || {}).darkRun === false;
+  for (var h = 5; h <= 20; h++) { var w = wxAt(date, h); if (!w) continue; if (dayOnly && sun0 && (h * 60 < sun0.rise || h * 60 + 45 > sun0.set)) continue; var sc = cold ? -(w.feels) + (w.pop || 0) / 10 : E.heatPct(w.dew, w.temp) * 100 + (w.pop || 0) / 20 + (w.temp > 80 ? (w.temp - 80) / 4 : 0); if (!best || sc < best.sc) best = { h: h, sc: sc, w: w }; }
   return best;
 }
 function hrLabel(h) { return (h % 12 || 12) + (h < 12 ? 'a' : 'p'); }
@@ -7698,6 +7743,8 @@ function conditionsCard() {
   else if (runs.length) notes.push('No pace adjustment needed: dew point ' + Math.round(w.dew) + '°F.');
   if (best && best.h !== h0 && runs.length) notes.push('Best window: <b>' + hrLabel(best.h) + '</b> (' + Math.round(best.w.temp) + '°F' + (best.w.temp < 40 ? ', the warmest daylight hour' : ', the least humid') + ').');
   var fw = freeWindows(t); if (fw && runs.length) notes.push('Your calendar is free ' + fw + '.');
+  var sun = E.sunTimes(t, loc().lat, loc().lon);
+  if (sun && runs.length) { var dark = h0 * 60 + 40 > sun.set || h0 * 60 < sun.rise; notes.push('Daylight ' + E.clockMin(sun.rise) + '–' + E.clockMin(sun.set) + '.' + (dark && (st().prefs || {}).darkRun === false && !runs.some(function (p) { return p.treadmill; }) ? ' <b>Your usual time is after dark</b>: run earlier or use the treadmill.' : '')); }
   if (w.temp <= 32 && !win && runs.length) notes.push('Below freezing: wear layers and watch for ice on bridges and shaded corners.');
   html += notes.length ? '<p class="small" style="margin-top:10px">' + notes.join(' ') + '</p>' : '';
   var ov = (st().overrides || {})[t];
@@ -8074,6 +8121,7 @@ function allShifts() {
 var _recompute7c = recompute;
 recompute = function () {
   try { Object.defineProperty(Store.state, 'shiftsAll', { value: allShifts(), configurable: true, enumerable: false, writable: true }); } catch (e) { /* no state yet */ }
+  try { Object.defineProperty(Store.state, 'shiftEnds', { value: (App.cal && App.cal.ends) || {}, configurable: true, enumerable: false, writable: true }); } catch (e) { /* no state yet */ }
   _recompute7c();
 };
 function fmtMin(m) { var h = Math.floor(m / 60), mm = m % 60; return (h % 12 || 12) + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); }
@@ -8146,6 +8194,33 @@ ACTIONS['cal-save'] = function () {
 };
 var _you7c = VIEWS.you;
 VIEWS.you = function () { var h = _you7c(), link = '<a href="#/calsync">Google Calendar<span class="v">' + (App.cal ? 'Connected' : 'Off') + '</span><span class="chev">›</span></a>', i = h.indexOf('<a href="#/notify"'); return i < 0 ? h : h.slice(0, i) + link + h.slice(i); };
+
+
+/* ---------- where you train, daylight comfort and usual time (setup step + settings card) ---------- */
+if (WIZ_STEPS.indexOf('place') < 0) WIZ_STEPS.splice(WIZ_STEPS.indexOf('match'), 0, 'place');
+function placeBody(compact) {
+  var pr = st().prefs || {}, L = pr.loc, sun = L && E.sunTimes(App.today, L.lat, L.lon), dk = pr.darkRun, rh = pr.runHour;
+  var chip = function (act, arg, on, label) { return '<button type="button" class="chip" data-act="' + act + '" data-arg="' + jattr(arg) + '" aria-pressed="' + !!on + '">' + label + '</button>'; };
+  return '<div class="card stack"><label class="f">Where do you do most of your running?' + (L ? '<div class="locpick"><b>' + esc(L.name) + '</b><button type="button" class="btn sm ghost" data-act="sheet" data-arg="' + jattr({ sheet: 'loc' }) + '">Change</button></div>' : '<div class="btns"><button type="button" class="btn sm primary" data-act="loc-gps">Use my location</button><button type="button" class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'loc' }) + '">Enter a city</button></div>') + '</label>' +
+    (sun ? '<p class="small muted">Today there: sunrise ' + E.clockMin(sun.rise) + ', sunset ' + E.clockMin(sun.set) + '.</p>' : '') +
+    '<label class="f">Are you comfortable running outside in the dark?<div class="chips">' + chip('pl-dark', { v: true }, dk === true, 'Yes, that\'s fine') + chip('pl-dark', { v: false }, dk === false, 'No, daylight only') + '</div></label>' +
+    '<label class="f">When do you usually train?<div class="chips">' + [[6, 'Early morning'], [9, 'Mid-morning'], [12, 'Midday'], [17, 'After work'], [19, 'Evening']].map(function (o) { return chip('pl-hour', { v: o[0] }, +rh === o[0], o[1]); }).join('') + '</div></label>' +
+    '<p class="tiny muted">Your location is used for sunrise and sunset times and the weather forecast, so runs land in daylight' + (dk === false ? ' (after-work runs move to the treadmill once it\'s dark)' : '') + ' and paces adjust for heat. It stays in your private data.</p></div>';
+}
+ACTIONS['pl-dark'] = function (a) { Store.edit('prefs', 'darkRun', function (S) { S.prefs = S.prefs || {}; S.prefs.darkRun = a.v; }); };
+ACTIONS['pl-hour'] = function (a) { Store.edit('prefs', 'runHour', function (S) { S.prefs = S.prefs || {}; S.prefs.runHour = a.v; }); };
+var _setup7p = VIEWS.setup;
+VIEWS.setup = function () {
+  var h = _setup7p(), z = App.wiz;
+  if (!z || WIZ_STEPS[z.step] !== 'place') return h;
+  var ok = (st().prefs || {}).darkRun != null;
+  return h + '<div class="stack"><div class="q"><h1>Where and when do you train?</h1><p class="lead">This tailors your plan to daylight and weather where you live.</p></div>' + placeBody() + '<p class="err" id="wizErr">' + (ok ? '' : '') + '</p>' + wizFoot('Continue', ok, false) + '</div>';
+};
+var _settings7p = VIEWS.settings;
+VIEWS.settings = function () {
+  var h = _settings7p();
+  return h.replace('<section class="card stack"><h3>App</h3>', '<section class="card stack"><h3>Location & daylight</h3>' + placeBody(true).replace(/^<div class="card stack">/, '').replace(/<\/div>$/, '') + '</section><section class="card stack"><h3>App</h3>');
+};
 
 
 /* ---------------- Garmin polling ---------------- */

@@ -13,6 +13,7 @@ try {
   const cal = JSON.parse(fs.readFileSync('garmin/calendar.json', 'utf8')), all = Object.assign({}, cal.shifts || {}), mine = state.shifts || {};
   Object.keys(mine).forEach((d) => { if (mine[d] === 'off') delete all[d]; else all[d] = mine[d]; });
   state.shiftsAll = all;
+  state.shiftEnds = cal.ends || {};
 } catch (e) { /* no calendar connected */ }
 /* same merge as the app: Garmin's own threshold and load balance */
 if (garmin && extra) {

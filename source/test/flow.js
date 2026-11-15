@@ -40,6 +40,7 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   await pg.fill('input[name=weightLb]', '175'); await pg.check('input[name=injuryProne]'); await pg.click('.wizfoot .btn.primary'); await pg.waitForTimeout(250);
   await shot('w5-days'); await pg.fill('input[name=startDate]', '2026-10-12'); await pg.click('.wizfoot .btn.primary'); await pg.waitForTimeout(250);
   await pg.click('[data-pick="liftDays"][data-v="2"]'); await pg.click('[data-pick="crossDays"][data-v="1"]'); await shot('w6-gym'); await pg.click('.wizfoot .btn.primary'); await pg.waitForTimeout(250);
+  if (await pg.$('[data-act=pl-dark]')) { await pg.click('text=No, daylight only'); await pg.waitForTimeout(300); await shot('w6b-place'); await pg.click('.wizfoot .btn.primary'); await pg.waitForTimeout(250); }
   await shot('w7-match', true); log('match:', (await pg.innerText('.match')).replace(/\n/g, ' | ').slice(0, 200));
   await pg.click('.wizfoot .btn.primary'); await pg.waitForTimeout(250); await shot('w8-review', true);
   await pg.click('text=Start training'); await pg.waitForTimeout(800);

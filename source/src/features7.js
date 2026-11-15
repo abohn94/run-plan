@@ -63,7 +63,8 @@ zonesAt = function (date) { var z = _zonesAt7(date), p = date >= App.today ? hea
 var WX_ICON = function (c) { return c >= 95 ? '⛈' : c >= 71 && c <= 86 ? '❄' : c >= 51 && c <= 67 ? '🌧' : c >= 45 && c <= 48 ? '🌫' : c >= 2 ? '⛅' : '☀'; };
 function bestHour(date) {
   var best = null, cold = (wxAt(date, 12) || {}).temp < 40;
-  for (var h = 5; h <= 20; h++) { var w = wxAt(date, h); if (!w) continue; var sc = cold ? -(w.feels) + (w.pop || 0) / 10 : E.heatPct(w.dew, w.temp) * 100 + (w.pop || 0) / 20 + (w.temp > 80 ? (w.temp - 80) / 4 : 0); if (!best || sc < best.sc) best = { h: h, sc: sc, w: w }; }
+  var L0 = loc(), sun0 = L0 && E.sunTimes(date, L0.lat, L0.lon), dayOnly = (st().prefs || {}).darkRun === false;
+  for (var h = 5; h <= 20; h++) { var w = wxAt(date, h); if (!w) continue; if (dayOnly && sun0 && (h * 60 < sun0.rise || h * 60 + 45 > sun0.set)) continue; var sc = cold ? -(w.feels) + (w.pop || 0) / 10 : E.heatPct(w.dew, w.temp) * 100 + (w.pop || 0) / 20 + (w.temp > 80 ? (w.temp - 80) / 4 : 0); if (!best || sc < best.sc) best = { h: h, sc: sc, w: w }; }
   return best;
 }
 function hrLabel(h) { return (h % 12 || 12) + (h < 12 ? 'a' : 'p'); }
@@ -80,6 +81,8 @@ function conditionsCard() {
   else if (runs.length) notes.push('No pace adjustment needed: dew point ' + Math.round(w.dew) + '°F.');
   if (best && best.h !== h0 && runs.length) notes.push('Best window: <b>' + hrLabel(best.h) + '</b> (' + Math.round(best.w.temp) + '°F' + (best.w.temp < 40 ? ', the warmest daylight hour' : ', the least humid') + ').');
   var fw = freeWindows(t); if (fw && runs.length) notes.push('Your calendar is free ' + fw + '.');
+  var sun = E.sunTimes(t, loc().lat, loc().lon);
+  if (sun && runs.length) { var dark = h0 * 60 + 40 > sun.set || h0 * 60 < sun.rise; notes.push('Daylight ' + E.clockMin(sun.rise) + '–' + E.clockMin(sun.set) + '.' + (dark && (st().prefs || {}).darkRun === false && !runs.some(function (p) { return p.treadmill; }) ? ' <b>Your usual time is after dark</b>: run earlier or use the treadmill.' : '')); }
   if (w.temp <= 32 && !win && runs.length) notes.push('Below freezing: wear layers and watch for ice on bridges and shaded corners.');
   html += notes.length ? '<p class="small" style="margin-top:10px">' + notes.join(' ') + '</p>' : '';
   var ov = (st().overrides || {})[t];
@@ -456,6 +459,7 @@ function allShifts() {
 var _recompute7c = recompute;
 recompute = function () {
   try { Object.defineProperty(Store.state, 'shiftsAll', { value: allShifts(), configurable: true, enumerable: false, writable: true }); } catch (e) { /* no state yet */ }
+  try { Object.defineProperty(Store.state, 'shiftEnds', { value: (App.cal && App.cal.ends) || {}, configurable: true, enumerable: false, writable: true }); } catch (e) { /* no state yet */ }
   _recompute7c();
 };
 function fmtMin(m) { var h = Math.floor(m / 60), mm = m % 60; return (h % 12 || 12) + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); }
@@ -528,3 +532,30 @@ ACTIONS['cal-save'] = function () {
 };
 var _you7c = VIEWS.you;
 VIEWS.you = function () { var h = _you7c(), link = '<a href="#/calsync">Google Calendar<span class="v">' + (App.cal ? 'Connected' : 'Off') + '</span><span class="chev">›</span></a>', i = h.indexOf('<a href="#/notify"'); return i < 0 ? h : h.slice(0, i) + link + h.slice(i); };
+
+
+/* ---------- where you train, daylight comfort and usual time (setup step + settings card) ---------- */
+if (WIZ_STEPS.indexOf('place') < 0) WIZ_STEPS.splice(WIZ_STEPS.indexOf('match'), 0, 'place');
+function placeBody(compact) {
+  var pr = st().prefs || {}, L = pr.loc, sun = L && E.sunTimes(App.today, L.lat, L.lon), dk = pr.darkRun, rh = pr.runHour;
+  var chip = function (act, arg, on, label) { return '<button type="button" class="chip" data-act="' + act + '" data-arg="' + jattr(arg) + '" aria-pressed="' + !!on + '">' + label + '</button>'; };
+  return '<div class="card stack"><label class="f">Where do you do most of your running?' + (L ? '<div class="locpick"><b>' + esc(L.name) + '</b><button type="button" class="btn sm ghost" data-act="sheet" data-arg="' + jattr({ sheet: 'loc' }) + '">Change</button></div>' : '<div class="btns"><button type="button" class="btn sm primary" data-act="loc-gps">Use my location</button><button type="button" class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'loc' }) + '">Enter a city</button></div>') + '</label>' +
+    (sun ? '<p class="small muted">Today there: sunrise ' + E.clockMin(sun.rise) + ', sunset ' + E.clockMin(sun.set) + '.</p>' : '') +
+    '<label class="f">Are you comfortable running outside in the dark?<div class="chips">' + chip('pl-dark', { v: true }, dk === true, 'Yes, that\'s fine') + chip('pl-dark', { v: false }, dk === false, 'No, daylight only') + '</div></label>' +
+    '<label class="f">When do you usually train?<div class="chips">' + [[6, 'Early morning'], [9, 'Mid-morning'], [12, 'Midday'], [17, 'After work'], [19, 'Evening']].map(function (o) { return chip('pl-hour', { v: o[0] }, +rh === o[0], o[1]); }).join('') + '</div></label>' +
+    '<p class="tiny muted">Your location is used for sunrise and sunset times and the weather forecast, so runs land in daylight' + (dk === false ? ' (after-work runs move to the treadmill once it\'s dark)' : '') + ' and paces adjust for heat. It stays in your private data.</p></div>';
+}
+ACTIONS['pl-dark'] = function (a) { Store.edit('prefs', 'darkRun', function (S) { S.prefs = S.prefs || {}; S.prefs.darkRun = a.v; }); };
+ACTIONS['pl-hour'] = function (a) { Store.edit('prefs', 'runHour', function (S) { S.prefs = S.prefs || {}; S.prefs.runHour = a.v; }); };
+var _setup7p = VIEWS.setup;
+VIEWS.setup = function () {
+  var h = _setup7p(), z = App.wiz;
+  if (!z || WIZ_STEPS[z.step] !== 'place') return h;
+  var ok = (st().prefs || {}).darkRun != null;
+  return h + '<div class="stack"><div class="q"><h1>Where and when do you train?</h1><p class="lead">This tailors your plan to daylight and weather where you live.</p></div>' + placeBody() + '<p class="err" id="wizErr">' + (ok ? '' : '') + '</p>' + wizFoot('Continue', ok, false) + '</div>';
+};
+var _settings7p = VIEWS.settings;
+VIEWS.settings = function () {
+  var h = _settings7p();
+  return h.replace('<section class="card stack"><h3>App</h3>', '<section class="card stack"><h3>Location & daylight</h3>' + placeBody(true).replace(/^<div class="card stack">/, '').replace(/<\/div>$/, '') + '</section><section class="card stack"><h3>App</h3>');
+};
