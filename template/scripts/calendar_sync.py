@@ -3,7 +3,7 @@
 
 The private address(es) come from the GCAL_ICS_URLS secret (one per line). Nothing about event
 titles is saved: only what the plan needs, per day, in garmin/calendar.json:
-  shifts  {date: "day" | "night"}           work shifts (by keyword and length)
+  shifts  {date: "day" | "eve" | "night"}   work shifts (by keyword and length)
   busy    {date: [[startMin, endMin], ...]}  timed events, minutes after local midnight
   away    {date: "travel" | "vacation"}     trips and time off
   starts  {date: minutes}                   when a day shift starts (for wake-up times)
@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 
 OUT = "garmin/calendar.json"
 STATE = "user/state.json"
-DAYS_BACK, DAYS_AHEAD = 7, 56
+DAYS_BACK, DAYS_AHEAD = 7, 70   # your schedule comes 6 weeks at a time; look 10 weeks ahead
 DEFAULT_WORK = ["work", "shift", "cvicu", "icu", "hospital", "on call", "on-call", "charge"]
 DEFAULT_VAC = ["vacation", "pto", "holiday", "day off", "time off"]
 DEFAULT_TRAVEL = ["flight", "fly ", "travel", "trip", "airport", "hotel", "conference"]
@@ -189,9 +189,10 @@ def main():
                 end = s + dur
                 hours = dur.total_seconds() / 3600
                 if has(work, title) and hours >= 5:
-                    night = s.hour >= 15 or end.date() > s.date() and end.hour >= 3
-                    res["shifts"][d0] = "night" if night else "day"
-                    if not night:
+                    night = s.hour >= 19 or (end.date() > s.date() and end.hour >= 3)
+                    eve = not night and s.hour >= 11
+                    res["shifts"][d0] = "night" if night else "eve" if eve else "day"
+                    if not night and not eve:
                         res["starts"][d0] = s.hour * 60 + s.minute
                         res["ends"][d0] = end.hour * 60 + end.minute
                 if e.get("free"):
@@ -224,6 +225,13 @@ def main():
     except (OSError, ValueError):
         old = {}
     same = {k: old.get(k) for k in res} == res
+    # did today or tomorrow change? then the watch workouts should be re-sent right away
+    soon = [today.isoformat(), (today + dt.timedelta(days=1)).isoformat()]
+    pick = lambda r: [(r.get("shifts") or {}).get(d) for d in soon] + [(r.get("away") or {}).get(d) for d in soon]
+    if old and pick(old) != pick(res) and os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write("soon=1\n")
+        print("calendar: today or tomorrow changed")
     res["updated"] = old.get("updated") if same and old.get("updated") else dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     res["calendars"] = len(urls)
     os.makedirs("garmin", exist_ok=True)

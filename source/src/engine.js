@@ -1906,6 +1906,16 @@ function applyShifts(w, shifts, zz) {
   w.days.forEach(function (d) {
     if (!on(d) || d.date < today()) return;
     d.shift = on(d);
+    /* evening shift: the morning is free, so sessions stay; long runs are capped to finish well before work */
+    if (on(d) === 'eve') {
+      d.parts = d.parts.map(function (p) {
+        if (!isRun(p)) return p;
+        var q = p.type === 'long' && p.mi > 10 ? Object.assign(scaleRun(p, 10 / p.mi, zz), { changed: true }) : Object.assign({}, p);
+        q.note = 'Evening shift today: do this in the morning' + (p.type === 'long' && p.mi > 10 ? ', capped at 10 mi so you are fresh for work.' : '.') + (p.note ? ' ' + p.note : '');
+        return q;
+      });
+      return;
+    }
     d.parts.forEach(function (p, i) {
       if (!hard(p)) return;
       var easyIdx = function (x) { return x.parts.findIndex(function (q) { return isRun(q) && !hard(q) && q.role !== 'gym'; }); };
@@ -1913,6 +1923,13 @@ function applyShifts(w, shifts, zz) {
       /* prefer swapping with an easy run, then a day with no run at all; nearest first */
       cand.sort(function (a, b) { return ((easyIdx(a) >= 0 ? 0 : 10) + Math.abs(a.i - d.i)) - ((easyIdx(b) >= 0 ? 0 : 10) + Math.abs(b.i - d.i)); });
       var to = cand[0];
+      /* nothing clean: a long run still beats a workout, so take a free day next to the workout and make the workout easy */
+      if (!to && p.type === 'long') {
+        var c2 = w.days.filter(function (x) { return !on(x) && x.date >= today() && x !== d && !x.parts.some(function (q) { return q.type === 'long'; }) && (easyIdx(x) >= 0 || !x.parts.some(isRun) || x.parts.some(function (q) { return q.type === 'speed'; })); });
+        c2.sort(function (a, b) { return Math.abs(a.i - d.i) - Math.abs(b.i - d.i); });
+        to = c2[0];
+        if (to) w.days.forEach(function (y) { if (Math.abs(y.i - to.i) <= 1) y.parts = y.parts.map(function (q) { return q.type === 'speed' ? toEasy(q, 0.85, 'Easy run', 'Easy this week: the long run moved next to it because of your shifts.') : q; }); });
+      }
       if (to) {
         var ei = to.parts.findIndex(function (x) { return isRun(x) && !hard(x) && x.role !== 'gym'; });
         var moved = Object.assign({}, p, { moved: p.moved || d.date, note: 'Moved off your ' + on(d) + ' shift.' });

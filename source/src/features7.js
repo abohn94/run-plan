@@ -134,11 +134,11 @@ SHEETS.wake = function () { var p = st().prefs || {}; return '<h3>Wake-up times<
 SAVE2.wake = function () { var u = $('#wkU').value, s2 = $('#wkS').value; Store.edit('prefs', 'wake', function (S) { S.prefs = S.prefs || {}; S.prefs.wake = u; S.prefs.shiftWake = s2; }); closeSheet(); return true; };
 
 /* ---------- work shifts ---------- */
-var SHIFT_NEXT = { '': 'day', day: 'night', night: 'off', off: '' };
+var SHIFT_NEXT = { '': 'day', day: 'eve', eve: 'night', night: 'off', off: '' };
 ACTIONS['shift-cycle'] = function (a) { Store.edit('shifts', a.d, function (S) { S.shifts = S.shifts || {}; var cur = S.shifts[a.d] || ((App.cal && App.cal.shifts || {})[a.d]) || ''; var n = SHIFT_NEXT[cur]; if (n === 'off' && !(App.cal && App.cal.shifts && App.cal.shifts[a.d])) n = ''; if (n) S.shifts[a.d] = n; else delete S.shifts[a.d]; }); };
 function shiftRow(w) {
   var sh = allShifts(), cal = (App.cal && App.cal.shifts) || {}, mine = st().shifts || {};
-  return '<section class="card shiftrow"><div class="spread"><h3>Work shifts</h3><span class="tiny muted">' + (App.cal ? 'from your calendar · tap to change' : 'tap: day → night → off') + '</span></div><div class="shchips">' + w.days.map(function (d) { var v = sh[d.date] || ''; return '<button class="shc ' + v + (cal[d.date] && !mine[d.date] ? ' cal' : '') + '" data-act="shift-cycle" data-arg="' + jattr({ d: d.date }) + '"' + (d.date < App.today ? ' disabled' : '') + '><span>' + d.dow.charAt(0) + '</span><b>' + (v === 'day' ? '☀' : v === 'night' ? '☾' : '·') + '</b></button>'; }).join('') + '</div><p class="tiny muted" style="margin-top:8px">Key sessions move to your days off; runs on shift days get shorter, and the day after a night shift stays easy.</p></section>';
+  return '<section class="card shiftrow"><div class="spread"><h3>Work shifts</h3><span class="tiny muted">' + (App.cal ? 'from your calendar · tap to change' : 'tap: day → evening → night → off') + '</span></div><div class="shchips">' + w.days.map(function (d) { var v = sh[d.date] || ''; return '<button class="shc ' + v + (cal[d.date] && !mine[d.date] ? ' cal' : '') + '" data-act="shift-cycle" data-arg="' + jattr({ d: d.date }) + '"' + (d.date < App.today ? ' disabled' : '') + '><span>' + d.dow.charAt(0) + '</span><b>' + (v === 'day' ? '☀' : v === 'night' ? '☾' : '·') + '</b></button>'; }).join('') + '</div><p class="tiny muted" style="margin-top:8px">Key sessions move off day and night shifts; on evening shifts you run in the morning. Runs on shift days get shorter, and the day after a night shift stays easy.</p></section>';
 }
 var _preview7 = VIEWS.preview;
 VIEWS.preview = function () {
@@ -398,7 +398,7 @@ var _today7 = VIEWS.today;
 VIEWS.today = function () {
   var h = _today7(); if (!App.plan) return h;
   var sh = allShifts()[App.today], day = dayOf(App.today);
-  var shiftNote = sh ? '<div class="banner small"><b>' + (sh === 'night' ? 'Night shift tonight.' : 'Work day.') + '</b> ' + (day && day.parts.some(function (p) { return p.note && /shift/i.test(p.note); }) ? 'Today\'s plan is adjusted around it.' : 'Keep today easy and fuel well.') + '</div>' : '';
+  var shiftNote = sh ? '<div class="banner small"><b>' + (sh === 'night' ? 'Night shift tonight.' : sh === 'eve' ? 'Evening shift today.' : 'Work day.') + '</b> ' + (day && day.parts.some(function (p) { return p.note && /shift/i.test(p.note); }) ? 'Today\'s plan is adjusted around it.' : 'Keep today easy and fuel well.') + '</div>' : '';
   var add = shiftNote + conditionsCard() + cycleChip();
   var i = h.indexOf('<section class="card lv-');
   if (i < 0) i = h.indexOf('<div class="sechead"><h2>This week');
@@ -504,7 +504,7 @@ VIEWS.calsync = function () {
   var nextShifts = c ? Object.keys(allShifts()).filter(function (d) { return d >= App.today && d <= E.addD(App.today, 13); }).sort() : [];
   var html = '<div class="pagehead"><h1>Google Calendar</h1><p>Your work shifts, trips and busy times shape the plan: key runs land on days off, wake-up times follow your shifts, and runs are suggested in your free windows.</p></div>';
   html += '<section class="card stack"><div class="spread"><h3>Status</h3><span class="pill ' + (c ? 'good' : '') + '">' + (c ? 'Connected' : 'Not connected') + '</span></div>' +
-    (c ? '<p class="small">' + plural(c.calendars || 1, 'calendar') + ' · ' + (nextShifts.length ? plural(nextShifts.length, 'shift') + ' in the next 2 weeks: ' + nextShifts.map(function (d) { return fmtD(d, { weekday: 'short', month: 'numeric', day: 'numeric' }) + (allShifts()[d] === 'night' ? ' ☾' : ''); }).join(', ') : 'no work shifts found in the next 2 weeks (check the keywords below)') + '</p><p class="tiny muted">Checked every hour with your Garmin sync. Last change ' + new Date(c.updated).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '.</p>' : '<p class="small muted">' + (gh ? 'Follow the steps below; the first read happens at the next hourly sync, or tap Sync now.' : 'Connect your data repository first (You → Garmin & sync).') + '</p>') +
+    (c ? '<p class="small">' + plural(c.calendars || 1, 'calendar') + ' · ' + (nextShifts.length ? plural(nextShifts.length, 'shift') + ' in the next 2 weeks: ' + nextShifts.map(function (d) { return fmtD(d, { weekday: 'short', month: 'numeric', day: 'numeric' }) + (allShifts()[d] === 'night' ? ' ☾' : allShifts()[d] === 'eve' ? ' (evening)' : ''); }).join(', ') : 'no work shifts found in the next 2 weeks (check the keywords below)') + '</p><p class="tiny muted">Checked every hour with your Garmin sync. Last change ' + new Date(c.updated).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '.</p>' : '<p class="small muted">' + (gh ? 'Follow the steps below; the first read happens at the next hourly sync, or tap Sync now.' : 'Connect your data repository first (You → Garmin & sync).') + '</p>') +
     (gh ? '<div class="btns"><button class="btn sm" data-act="syncnow">Sync now</button></div>' : '') + '</section>';
   html += '<div class="sechead"><h2>One-time setup</h2></div><section class="card stack">' +
     '<div class="step"><span>1</span><div><b>Copy your calendar\'s private address</b><p class="small muted">On a computer, open Google Calendar → ⚙ Settings → under "Settings for my calendars" pick the calendar with your shifts → <b>Integrate calendar</b> → copy <b>Secret address in iCal format</b>. (The phone app doesn\'t show it.) Repeat for a second calendar if your shifts and personal events are separate.</p></div></div>' +
@@ -516,7 +516,7 @@ VIEWS.calsync = function () {
     '<label class="f">Time-off words (all-day events)<input class="i" id="calV" value="' + v('vacation', ['vacation', 'pto', 'holiday', 'day off', 'time off']) + '"></label>' +
     '<label class="f">Travel words<input class="i" id="calT" value="' + v('travel', ['flight', 'travel', 'trip', 'airport', 'hotel', 'conference']) + '"></label>' +
     '<label class="f">Commute to work (minutes)<input class="i" id="calC" type="number" inputmode="numeric" value="' + esc((st().prefs || {}).commute || 40) + '"></label>' +
-    '<p class="tiny muted">A work event 5+ hours long starting after 3 PM, or running past 3 AM, counts as a night shift. You can still tap any day in the week preview to change it.</p><div class="btns"><button class="btn primary sm" data-act="cal-save">Save</button></div></section>';
+    '<p class="tiny muted">A work event 5+ hours long counts as a shift: starting before 11 AM is a day shift, 11 AM to 7 PM an evening shift, and after 7 PM (or running past 3 AM) a night shift. You can still tap any day in the week preview to change it.</p><div class="btns"><button class="btn primary sm" data-act="cal-save">Save</button></div></section>';
   return html;
 };
 ACTIONS['cal-save'] = function () {

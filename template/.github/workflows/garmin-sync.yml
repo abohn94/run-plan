@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: garmin-sync
@@ -36,6 +37,7 @@ jobs:
         run: python3 scripts/garmin_sync.py
 
       - name: Read Google Calendar
+        id: cal
         if: always()
         continue-on-error: true
         env:
@@ -58,3 +60,9 @@ jobs:
             sleep 5
           done
           exit 1
+
+      - name: Re-send today's watch workouts after a schedule change
+        if: steps.cal.outputs.soon == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run watch-workouts.yml --ref main
