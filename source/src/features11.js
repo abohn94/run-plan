@@ -51,7 +51,7 @@ VIEWS.today = function () {
   } catch (e) { console.warn(e); return h; }
 };
 
-/* ---------- Plan: races and the season chart on top, then this week, decisions, days ---------- */
+/* ---------- This Week: the week card, decisions, then the days ---------- */
 var _plan11 = VIEWS.plan;
 VIEWS.plan = function () {
   var h = _plan11();
@@ -69,16 +69,28 @@ VIEWS.plan = function () {
       else (g.days.length ? g.after : g.top).push(el);
     });
     if (!g.week.length || !g.days.length) return h;
-    /* top: your races side by side (full names), then the season chart, then this week */
-    var out = (g.races.length ? '<div class="racegrid' + (g.races.length === 1 ? ' one' : '') + '">' + htmlOf(g.races) + '</div>' : '') + htmlOf(g.season) + htmlOf(g.top) + htmlOf(g.week) + htmlOf(g.decide) + htmlOf(g.days) + htmlOf(g.after);
+    /* This Week is about this week: the week, decisions, the days. Races and the season chart live on the Season tab. */
+    var out = htmlOf(g.top) + htmlOf(g.week) + htmlOf(g.decide) + htmlOf(g.days) + htmlOf(g.after);
     return out + htmlOf(g.tools);
   } catch (e) { console.warn(e); return h; }
 };
 
-/* ---------- Calendar: the month stays; each week's detail is an accordion (this week open) ---------- */
+/* races side by side and the season chart, taken from the plan's own rendering so they stay identical */
+function seasonTop() {
+  try {
+    var root = domOf(_plan11()), races = [], season = [];
+    [].slice.call(root.children).forEach(function (el) {
+      if (cls(el, / racecard /)) races.push(el);
+      else if (el.querySelector && (el.querySelector('.phasebar') || /^YOUR SEASON/i.test((el.textContent || '').trim()))) season.push(el);
+    });
+    return ((races.length ? '<div class="racegrid' + (races.length === 1 ? ' one' : '') + '">' + htmlOf(races) + '</div>' : '') + htmlOf(season)).replace('the bright bar is the week shown below', 'the bright bar is this week').replace('Tap a bar to jump to that week.', 'Tap a bar to open that week.');
+  } catch (e) { return ''; }
+}
+/* ---------- Season (calendar): races and the season chart on top, then the month; each week's detail is an accordion ---------- */
 var _calendar11 = VIEWS.calendar;
 VIEWS.calendar = function () {
   var h = _calendar11();
+  if (App.plan) { var top = seasonTop(), at = h.indexOf('<div class="pagehead'); h = at >= 0 ? h.slice(0, at) + top + h.slice(at) : top + h; }
   try {
     var root = domOf(h), kids = [].slice.call(root.children), out = '', n = 0;
     for (var i = 0; i < kids.length; i++) {
@@ -176,3 +188,5 @@ route = function (keep) {
     requestAnimationFrame(function () { window.scrollTo(0, y); setTimeout(function () { window.scrollTo(0, y); NAV.lock = false; }, 60); });
   } else setTimeout(function () { NAV.lock = false; }, 150);
 };
+
+Object.assign(TITLES, { plan: 'This week', calendar: 'Season' });

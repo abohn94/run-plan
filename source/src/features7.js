@@ -39,16 +39,38 @@ function loc() { return (st().prefs || {}).loc || null; }
 function runHour() { var h = (st().prefs || {}).runHour; return h == null ? 17 : +h; }
 function loadWx(force) {
   var L = loc(); if (!L) return;
-  if (!force && App.wx && App.wx.lat === L.lat && Date.now() - App.wx.at < 45 * 60 * 1000) return;
+  if (!force && App.wx && App.wx.v === 2 && App.wx.lat === L.lat && Date.now() - App.wx.at < 45 * 60 * 1000) return;
   if (loadWx.busy) return; loadWx.busy = true;
-  var u = 'https://api.open-meteo.com/v1/forecast?latitude=' + L.lat + '&longitude=' + L.lon + '&hourly=temperature_2m,dew_point_2m,apparent_temperature,wind_speed_10m,precipitation_probability,snowfall,weather_code,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=16';
+  var u = 'https://api.open-meteo.com/v1/forecast?latitude=' + L.lat + '&longitude=' + L.lon + '&hourly=temperature_2m,dew_point_2m,apparent_temperature,wind_speed_10m,precipitation_probability,snowfall,weather_code,is_day,sunshine_duration,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=16';
   fetch(u).then(function (r) { return r.json(); }).then(function (j) {
     loadWx.busy = false;
     var h = j.hourly, H = {};
-    (h.time || []).forEach(function (t, i) { H[t.slice(0, 13)] = { temp: h.temperature_2m[i], dew: h.dew_point_2m[i], feels: h.apparent_temperature[i], wind: h.wind_speed_10m[i], pop: h.precipitation_probability[i], snow: h.snowfall[i], code: h.weather_code[i], day: h.is_day ? h.is_day[i] : null }; });
-    App.wx = { at: Date.now(), lat: L.lat, H: H }; try { LS.set('rp-wx', JSON.stringify(App.wx)); } catch (e) { /* storage full */ }
+    (h.time || []).forEach(function (t, i) { H[t.slice(0, 13)] = { temp: h.temperature_2m[i], dew: h.dew_point_2m[i], feels: h.apparent_temperature[i], wind: h.wind_speed_10m[i], pop: h.precipitation_probability[i], snow: h.snowfall[i], code: skyCode(h, i), raw: h.weather_code[i], day: h.is_day ? h.is_day[i] : null }; });
+    App.wx = { v: 2, at: Date.now(), lat: L.lat, H: H }; try { LS.set('rp-wx', JSON.stringify(App.wx)); } catch (e) { /* storage full */ }
     recompute(); if ($('#sheet').hidden) render();
   }).catch(function () { loadWx.busy = false; });
+}
+/* The model's weather code often says "cloudy" under thin high cloud on a bright day, and "fog" on a humid, dewy
+   morning. For dry-sky hours, decide from what actually blocks the sun: low cloud counts fully, mid cloud mostly,
+   thin high cloud a little, plus the forecast minutes of sunshine. Fog only when visibility is really under 1 km.
+   Rain, snow and storms keep their codes. */
+function skyCode(h, i) {
+  var c = +h.weather_code[i]; if ([0, 1, 2, 3, 45, 48].indexOf(c) < 0) return c;
+  var g = function (k) { var a = h[k]; return a && typeof a[i] === 'number' ? a[i] : null; };
+  var vis = g('visibility'); if ((c === 45 || c === 48) && vis != null && vis < 1000) return c;
+  var lo = g('cloud_cover_low'), md = g('cloud_cover_mid'), hi = g('cloud_cover_high');
+  if (lo == null && md == null && hi == null) return c === 45 || c === 48 ? 3 : c;
+  var eff = (lo || 0) + 0.7 * (md || 0) + 0.25 * (hi || 0);
+  var byCover = eff < 18 ? 0 : eff < 42 ? 1 : eff < 72 ? 2 : 3;
+  var day = h.is_day ? h.is_day[i] : null, sun = g('sunshine_duration');
+  if (day && sun != null) {
+    var f = sun / 3600, bySun = f >= 0.75 ? 0 : f >= 0.5 ? 1 : f >= 0.2 ? 2 : 3;
+    /* near sunrise and sunset the hour has little sunshine to measure, so trust the cover there */
+    var prev = h.is_day[i - 1], next = h.is_day[i + 1];
+    if (prev === 0 || next === 0) return byCover;
+    return Math.min(byCover, bySun);
+  }
+  return byCover;
 }
 setTimeout(function () { loadWx(); }, 800);
 function wxAt(date, hr) { var H = App.wx && App.wx.H; if (!H) return null; return H[date + 'T' + (hr < 10 ? '0' : '') + hr] || null; }
