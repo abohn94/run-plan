@@ -1541,7 +1541,7 @@ var LIFT_VARS = {
 var LIFT = {
   A: LIFT_VARS.A[0], B: LIFT_VARS.B[0], C: LIFT_VARS.C[0],
   UB: {
-    key: 'UB', name: 'Upper Body & Core', focus: 'Upper body, core and hips with no impact: presses, rows and pulldowns, then core and glute work. Gives the legs a break between run days, and is the go-to session when an injury keeps you off your feet.',
+    key: 'UB', name: 'Upper Body & Core', focus: 'Upper body, core and hips with no impact: presses, rows and pulldowns, then a short core and hip finisher (two moves). Gives the legs a break between run days, and is the go-to session when an injury keeps you off your feet.',
     blocks: [
       { min: 5, t: 'Dynamic stretch', ex: DYN[0] },
       { min: 8, t: 'Push', ex: [
@@ -1551,15 +1551,9 @@ var LIFT = {
         ex('Chest-supported dumbbell row', 'Pull the elbows to your hips, pause at the top.', same('3×10'), '60 s'),
         ex('Lat pulldown', 'Chest up, pull the elbows down to your ribs.', same('3×8'), '60 s')] },
       { min: 6, t: 'Shoulders', ex: [ex('Seated dumbbell overhead press', 'Ribs down, press straight up.', same('3×10'), '60 s')] },
-      { min: 10, t: 'Core', ex: [
-        ex('Dead bug', 'Lower back stays glued to the floor.', same('3×8/side'), '30 s'),
-        ex('Side plank', 'Straight line from head to heels.', same('3×30 s/side'), '30 s'),
-        ex('Pallof press', 'Resist the twist. Keep hips square.', same('3×10/side'), '30 s'),
-        ex('Hollow hold', 'Ribs down, low back flat.', same('3×20 s'), '30 s')] },
-      { min: 8, t: 'Hips and glutes', ex: [
-        ex('Glute bridge', 'Squeeze at the top for 2 s.', same('3×12'), '45 s'),
-        ex('Side-lying hip abduction', 'Toes slightly down, no rocking.', same('3×15/side'), '30 s'),
-        ex('Banded clamshell', 'Feet together, open the top knee.', same('2×15/side'), '30 s')] }
+      { min: 8, t: 'Core and hips', ex: [
+        ex('Side plank', 'Straight line from head to heels. Works the deep core and the side of the hip that steadies each stride.', same('3×30 s/side'), '30 s'),
+        ex('Glute bridge', 'Squeeze at the top for 2 s.', same('3×12'), '45 s')] }
     ]
   },
   HT: {
