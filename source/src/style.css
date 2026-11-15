@@ -1082,3 +1082,16 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .dl-o mark { background: none; color: var(--green); font-weight: 800; }
 /* week strips size to the week: a plan's first week can run 8–10 days */
 .weekstrip, .pvmini, .shchips { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+/* app-styled confirm dialog */
+.askd { position: fixed; inset: 0; z-index: 95; background: rgba(0,0,0,.6); display: grid; place-items: center; padding: 20px max(16px, env(safe-area-inset-left, 0px)); animation: fadein .16s ease both; }
+.askd-card { width: 100%; max-width: 380px; background: var(--card); border-radius: 26px; padding: 22px 20px 18px; display: grid; gap: 8px; box-shadow: inset 0 0 0 1px var(--line), 0 20px 60px rgba(0,0,0,.45); animation: askin .2s cubic-bezier(.2, .8, .25, 1) both; text-align: center; }
+@keyframes askin { from { opacity: 0; transform: scale(.94) translateY(6px); } to { opacity: 1; transform: none; } }
+.askd-card h3 { font-size: 1.25rem; font-weight: 800; text-wrap: balance; }
+.askd-card p { margin: 0 0 4px; text-wrap: pretty; }
+.askd-ico { width: 48px; height: 48px; border-radius: 999px; margin: 0 auto 4px; display: grid; place-items: center; background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); }
+.askd-ico.bad { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }
+.askd-ico svg { width: 24px; height: 24px; }
+.askd-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.askd-btns .btn { width: 100%; padding: 0 12px; }
+.btn.dangerfill { background: var(--danger); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .askd, .askd-card { animation: none; } }

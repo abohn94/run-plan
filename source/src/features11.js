@@ -290,3 +290,31 @@ document.addEventListener('click', function (e) {
   inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
   dlHide(inp);
 });
+
+/* ---------- App-styled confirm dialog (replaces the browser's "site says" box) ---------- */
+/* askUI({ title, text, ok, cancel, danger }) -> Promise<boolean>
+   ASK(opts, fn, self, args): synchronous guard for actions. First call opens the dialog and returns false;
+   confirming re-runs fn with the same arguments, and that run gets true. */
+var ASKS = { pass: null };
+function askUI(o) {
+  return new Promise(function (resolve) {
+    var prev = document.querySelector('.askd'); if (prev) prev.remove();
+    var d = document.createElement('div');
+    d.className = 'askd';
+    d.innerHTML = '<div class="askd-card" role="alertdialog" aria-modal="true" aria-labelledby="askd-t">' + (o.icon ? '<div class="askd-ico ' + (o.danger ? 'bad' : '') + '">' + o.icon + '</div>' : '') +
+      '<h3 id="askd-t">' + esc(o.title) + '</h3>' + (o.text ? '<p class="small muted">' + esc(o.text) + '</p>' : '') +
+      '<div class="askd-btns"><button type="button" class="btn" data-a="0">' + esc(o.cancel || 'Cancel') + '</button><button type="button" class="btn ' + (o.danger ? 'dangerfill' : 'primary') + '" data-a="1">' + esc(o.ok || 'OK') + '</button></div></div>';
+    document.body.appendChild(d);
+    var prevFocus = document.activeElement;
+    var done = function (v) { d.remove(); document.removeEventListener('keydown', key, true); try { prevFocus && prevFocus.focus && prevFocus.focus({ preventScroll: true }); } catch (e) {} resolve(v); };
+    var key = function (e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } else if (e.key === 'Tab') { e.preventDefault(); var b = d.querySelectorAll('button'); (document.activeElement === b[1] ? b[0] : b[1]).focus(); } };
+    document.addEventListener('keydown', key, true);
+    d.addEventListener('click', function (e) { if (e.target === d) return done(false); var b = e.target.closest('[data-a]'); if (b) done(b.dataset.a === '1'); });
+    setTimeout(function () { var b = d.querySelector('[data-a="1"]'); if (b) b.focus({ preventScroll: true }); }, 30);
+  });
+}
+function ASK(o, fn, self, args) {
+  if (ASKS.pass === fn) { ASKS.pass = null; return true; }
+  askUI(o).then(function (ok) { if (!ok) return; ASKS.pass = fn; try { fn.apply(self, args); } finally { ASKS.pass = null; } });
+  return false;
+}

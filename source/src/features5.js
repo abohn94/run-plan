@@ -187,7 +187,7 @@ ACTIONS['wk-end'] = function () {
   var wuDone = w.ex.filter(function (x) { return x.kind === 'wu' && x.done; }).length;
   var timedDone = w.ex.filter(function (x) { return x.kind === 'timed' && x.sets.some(function (s) { return s.done; }); }).length;
   if (!any && !wuDone && !timedDone) { toast('Tick off at least one set before ending.'); return; }
-  if (!w.edit && !confirm('End your workout?')) return;
+  if (!w.edit && !ASK({ title: 'End your workout?', text: 'Your ticked sets, effort and notes will be saved.', ok: 'End workout', cancel: 'Keep going', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' }, ACTIONS['wk-end'], this, arguments)) return;
   var date = w.date, old = logOf(date).lift || {};
   var secs = w.edit ? (old.sec || (old.min || 0) * 60) : Math.min(4 * 3600, Math.round((Date.now() - w.start) / 1000));
   var vol = 0; Object.keys(ex).forEach(function (n) { vol += setsVolume(ex[n].s); });
@@ -219,7 +219,7 @@ VIEWS.wksummary = function () {
 /* ---------- start a fresh plan ---------- */
 var KEEP_SCHEDULE = ['runDays', 'liftDays', 'crossDays', 'avail', 'longDay', 'doubles', 'injuryProne', 'hrTrainer', 'weightKg', 'runWalk'];
 ACTIONS['reset-plan'] = function () {
-  if (!confirm('Start a fresh plan? Your runs, lifts, races, readings and shoes are kept. The schedule is rebuilt from scratch and you choose a training style again.')) return;
+  if (!ASK({ title: 'Start a fresh plan?', text: 'Your runs, lifts, races, readings and shoes are kept. The schedule is rebuilt from scratch and you choose a training style again.', ok: 'Start fresh', danger: true }, ACTIONS['reset-plan'], this, arguments)) return;
   var old = st().profile || {}, keep = {};
   KEEP_SCHEDULE.forEach(function (k) { if (old[k] != null) keep[k] = old[k]; });
   var ks = function (o) { return Object.keys(o || {}); };

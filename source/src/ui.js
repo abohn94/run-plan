@@ -1268,9 +1268,9 @@ var ACTIONS = {
   'coach-act': function (a) { coachAct(a); },
   syncnow: function (a, b) { b.disabled = true; renderSyncChip('busy'); Store.syncNow().then(function () { toast('Sync started — new data in 1–3 minutes'); pollGarmin(0); }, function (e) { toast(e.message); renderSyncChip(); b.disabled = false; }); },
   pull: function () { Store.pull(); },
-  disconnect: function () { if (confirm('Disconnect this device? Your data stays in GitHub.')) { Store.disconnect(); render(); } },
+  disconnect: function () { askUI({ title: 'Disconnect this device?', text: 'Your data stays in GitHub. You can reconnect any time.', ok: 'Disconnect', danger: true }).then(function (ok) { if (ok) { Store.disconnect(); render(); } }); },
   export: function (a) { exportData(a.kind); },
-  'reset-plan': function () { if (confirm('Re-run setup? Your logs are kept.')) { App.wiz = null; Store.edit('profile', null, function (s) { s.profile = null; }); go('#/setup'); } },
+  'reset-plan': function () { askUI({ title: 'Re-run setup?', text: 'Your logs are kept.', ok: 'Re-run setup' }).then(function (ok) { if (ok) { App.wiz = null; Store.edit('profile', null, function (s) { s.profile = null; }); go('#/setup'); } }); },
   'wiz-back': function () { var z = App.wiz; if (z.step <= (Store.state.profile ? 1 : 0)) { if (Store.state.profile) { App.wiz = null; go('#/you'); } return; } z.step--; render(); window.scrollTo(0, 0); },
   'wiz-next': function () { App.wiz.step = Math.min(WIZ_STEPS.length - 1, App.wiz.step + 1); render(); window.scrollTo(0, 0); },
   'wiz-finish': function () {
@@ -1412,7 +1412,7 @@ function isoFrom(s) { var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s.trim()); 
 function importFile(kind, text) {
   var msg = $('#impMsg');
   try {
-    if (kind === 'backup') { var s = JSON.parse(text); if (!s || typeof s !== 'object' || !('logs' in s)) throw new Error('Not a Personal Run backup.'); if (confirm('Replace everything with this backup?')) { Store.replaceAll(s); toast('Backup restored'); } return; }
+    if (kind === 'backup') { var s = JSON.parse(text); if (!s || typeof s !== 'object' || !('logs' in s)) throw new Error('Not a Personal Run backup.'); askUI({ title: 'Replace everything with this backup?', text: 'Your current plan, logs and settings are overwritten by the file.', ok: 'Restore backup', danger: true }).then(function (ok) { if (ok) { Store.replaceAll(s); toast('Backup restored'); } }); return; }
     if (kind === 'garmin') { var g = JSON.parse(text); Store.setGarminLocal(g); toast('Garmin data loaded'); return; }
     var rows = parseCSV(text), head = rows.shift().map(function (h) { return h.trim().toLowerCase(); }), col = function (n) { return head.indexOf(n); };
     var n = 0, touches = [], adds = [];

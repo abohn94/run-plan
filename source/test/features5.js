@@ -65,12 +65,12 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   const n = await pg.evaluate(() => window.__APP.wk.secs.length); await pg.click('.secdots button >> nth=' + (n - 1)); await pg.waitForTimeout(300);
   log('last section:', await pg.innerText('.sectitle'), '|', await kinds(), '| end button:', !!(await pg.$('[data-act=wk-end]')));
   await shot('d6-finishers');
-  pg.once('dialog', d => d.accept()); await pg.click('[data-act=wk-end]'); await pg.waitForTimeout(800);
+  await pg.click('[data-act=wk-end]'); await pg.waitForTimeout(300); log('askd shown:', !!(await pg.$('.askd')), await pg.$eval('.askd h3', e => e.textContent).catch(() => '')); if (SHOTS) await pg.screenshot({ path: SHOTS + '/askd.png' }); await pg.click('.askd [data-a="1"]'); await pg.waitForTimeout(800);
   log('summary url:', pg.url().split('#')[1]); await shot('d7-summary', true);
   log('summary:', (await T()).split('\n').slice(0, 16).join(' | '));
   const saved = await pg.evaluate(d => window.Store.state.logs[d].lift, liftDay); log('saved:', JSON.stringify({ sec: saved.sec, vol: saved.vol, ex: Object.keys(saved.ex) }));
   // 4. fresh plan
-  await go('#/settings', 600); pg.once('dialog', d => d.accept()); await pg.click('text=Start a fresh plan >> nth=1').catch(async () => { await pg.click('[data-act=reset-plan]'); }); await pg.waitForTimeout(700);
+  await go('#/settings', 600); pg.once('dialog', d => { log('NATIVE DIALOG'); d.accept(); }); await pg.click('text=Start a fresh plan >> nth=1').catch(async () => { await pg.click('[data-act=reset-plan]'); }); await pg.waitForSelector('.askd', { timeout: 3000 }); await pg.click('.askd [data-a="1"]'); await pg.waitForTimeout(900);
   log('after reset:', pg.url().split('#')[1], '| profile:', await pg.evaluate(() => window.Store.state.profile), '| prev:', JSON.stringify(await pg.evaluate(() => window.Store.state.prefs.prevProfile)));
   await shot('d8-welcome');
   log('ERRORS', errs.length ? errs.slice(0, 6) : 'none');

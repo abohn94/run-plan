@@ -139,7 +139,7 @@ SAVE2.shoe = function () {
 };
 DEL2.shoe = function () {
   var id = sheetCtx.shoe.id;
-  if (!confirm('Delete these shoes? Runs stay in your history.')) return;
+  if (!ASK({ title: 'Delete these shoes?', text: 'Runs logged in them stay in your history.', ok: 'Delete', danger: true, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></svg>' }, DEL2.shoe, this, arguments)) return;
   Store.edit('shoes', id, function (S) { S.shoes = S.shoes.filter(function (x) { return x.id !== id; }); });
   closeSheet(); go('#/shoes'); toast('Deleted');
 };
@@ -288,7 +288,7 @@ ACTIONS['wk-rpe'] = function (a) { App.wk.rpe = App.wk.rpe === a.v ? null : a.v;
 ACTIONS['rest-add'] = function (a) { if (App.rest) { App.rest.end += a.s * 1000; tick(); } };
 ACTIONS['rest-stop'] = function () { App.rest = null; var b = $('#restBar'); if (b) b.hidden = true; };
 ACTIONS['wk-discard'] = function () {
-  if (!App.wk.edit && App.wk.touched && !confirm('Discard this workout?')) return;
+  if (!App.wk.edit && App.wk.touched && !ASK({ title: 'Discard this workout?', text: 'Sets you ticked off won\'t be saved.', ok: 'Discard', cancel: 'Keep going', danger: true, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></svg>' }, ACTIONS['wk-discard'], this, arguments)) return;
   var d = App.wk.date; App.wk = null; App.rest = null; LS.del('rp-wk'); go('#/day/' + d);
 };
 ACTIONS['wk-finish'] = function () {

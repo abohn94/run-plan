@@ -1103,6 +1103,19 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .dl-o mark { background: none; color: var(--green); font-weight: 800; }
 /* week strips size to the week: a plan's first week can run 8–10 days */
 .weekstrip, .pvmini, .shchips { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+/* app-styled confirm dialog */
+.askd { position: fixed; inset: 0; z-index: 95; background: rgba(0,0,0,.6); display: grid; place-items: center; padding: 20px max(16px, env(safe-area-inset-left, 0px)); animation: fadein .16s ease both; }
+.askd-card { width: 100%; max-width: 380px; background: var(--card); border-radius: 26px; padding: 22px 20px 18px; display: grid; gap: 8px; box-shadow: inset 0 0 0 1px var(--line), 0 20px 60px rgba(0,0,0,.45); animation: askin .2s cubic-bezier(.2, .8, .25, 1) both; text-align: center; }
+@keyframes askin { from { opacity: 0; transform: scale(.94) translateY(6px); } to { opacity: 1; transform: none; } }
+.askd-card h3 { font-size: 1.25rem; font-weight: 800; text-wrap: balance; }
+.askd-card p { margin: 0 0 4px; text-wrap: pretty; }
+.askd-ico { width: 48px; height: 48px; border-radius: 999px; margin: 0 auto 4px; display: grid; place-items: center; background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); }
+.askd-ico.bad { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }
+.askd-ico svg { width: 24px; height: 24px; }
+.askd-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.askd-btns .btn { width: 100%; padding: 0 12px; }
+.btn.dangerfill { background: var(--danger); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .askd, .askd-card { animation: none; } }
 
 </style>
 </head>
@@ -5328,9 +5341,9 @@ var ACTIONS = {
   'coach-act': function (a) { coachAct(a); },
   syncnow: function (a, b) { b.disabled = true; renderSyncChip('busy'); Store.syncNow().then(function () { toast('Sync started — new data in 1–3 minutes'); pollGarmin(0); }, function (e) { toast(e.message); renderSyncChip(); b.disabled = false; }); },
   pull: function () { Store.pull(); },
-  disconnect: function () { if (confirm('Disconnect this device? Your data stays in GitHub.')) { Store.disconnect(); render(); } },
+  disconnect: function () { askUI({ title: 'Disconnect this device?', text: 'Your data stays in GitHub. You can reconnect any time.', ok: 'Disconnect', danger: true }).then(function (ok) { if (ok) { Store.disconnect(); render(); } }); },
   export: function (a) { exportData(a.kind); },
-  'reset-plan': function () { if (confirm('Re-run setup? Your logs are kept.')) { App.wiz = null; Store.edit('profile', null, function (s) { s.profile = null; }); go('#/setup'); } },
+  'reset-plan': function () { askUI({ title: 'Re-run setup?', text: 'Your logs are kept.', ok: 'Re-run setup' }).then(function (ok) { if (ok) { App.wiz = null; Store.edit('profile', null, function (s) { s.profile = null; }); go('#/setup'); } }); },
   'wiz-back': function () { var z = App.wiz; if (z.step <= (Store.state.profile ? 1 : 0)) { if (Store.state.profile) { App.wiz = null; go('#/you'); } return; } z.step--; render(); window.scrollTo(0, 0); },
   'wiz-next': function () { App.wiz.step = Math.min(WIZ_STEPS.length - 1, App.wiz.step + 1); render(); window.scrollTo(0, 0); },
   'wiz-finish': function () {
@@ -5472,7 +5485,7 @@ function isoFrom(s) { var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s.trim()); 
 function importFile(kind, text) {
   var msg = $('#impMsg');
   try {
-    if (kind === 'backup') { var s = JSON.parse(text); if (!s || typeof s !== 'object' || !('logs' in s)) throw new Error('Not a Personal Run backup.'); if (confirm('Replace everything with this backup?')) { Store.replaceAll(s); toast('Backup restored'); } return; }
+    if (kind === 'backup') { var s = JSON.parse(text); if (!s || typeof s !== 'object' || !('logs' in s)) throw new Error('Not a Personal Run backup.'); askUI({ title: 'Replace everything with this backup?', text: 'Your current plan, logs and settings are overwritten by the file.', ok: 'Restore backup', danger: true }).then(function (ok) { if (ok) { Store.replaceAll(s); toast('Backup restored'); } }); return; }
     if (kind === 'garmin') { var g = JSON.parse(text); Store.setGarminLocal(g); toast('Garmin data loaded'); return; }
     var rows = parseCSV(text), head = rows.shift().map(function (h) { return h.trim().toLowerCase(); }), col = function (n) { return head.indexOf(n); };
     var n = 0, touches = [], adds = [];
@@ -5636,7 +5649,7 @@ SAVE2.shoe = function () {
 };
 DEL2.shoe = function () {
   var id = sheetCtx.shoe.id;
-  if (!confirm('Delete these shoes? Runs stay in your history.')) return;
+  if (!ASK({ title: 'Delete these shoes?', text: 'Runs logged in them stay in your history.', ok: 'Delete', danger: true, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></svg>' }, DEL2.shoe, this, arguments)) return;
   Store.edit('shoes', id, function (S) { S.shoes = S.shoes.filter(function (x) { return x.id !== id; }); });
   closeSheet(); go('#/shoes'); toast('Deleted');
 };
@@ -5785,7 +5798,7 @@ ACTIONS['wk-rpe'] = function (a) { App.wk.rpe = App.wk.rpe === a.v ? null : a.v;
 ACTIONS['rest-add'] = function (a) { if (App.rest) { App.rest.end += a.s * 1000; tick(); } };
 ACTIONS['rest-stop'] = function () { App.rest = null; var b = $('#restBar'); if (b) b.hidden = true; };
 ACTIONS['wk-discard'] = function () {
-  if (!App.wk.edit && App.wk.touched && !confirm('Discard this workout?')) return;
+  if (!App.wk.edit && App.wk.touched && !ASK({ title: 'Discard this workout?', text: 'Sets you ticked off won\'t be saved.', ok: 'Discard', cancel: 'Keep going', danger: true, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></svg>' }, ACTIONS['wk-discard'], this, arguments)) return;
   var d = App.wk.date; App.wk = null; App.rest = null; LS.del('rp-wk'); go('#/day/' + d);
 };
 ACTIONS['wk-finish'] = function () {
@@ -7444,7 +7457,7 @@ ACTIONS['wk-end'] = function () {
   var wuDone = w.ex.filter(function (x) { return x.kind === 'wu' && x.done; }).length;
   var timedDone = w.ex.filter(function (x) { return x.kind === 'timed' && x.sets.some(function (s) { return s.done; }); }).length;
   if (!any && !wuDone && !timedDone) { toast('Tick off at least one set before ending.'); return; }
-  if (!w.edit && !confirm('End your workout?')) return;
+  if (!w.edit && !ASK({ title: 'End your workout?', text: 'Your ticked sets, effort and notes will be saved.', ok: 'End workout', cancel: 'Keep going', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>' }, ACTIONS['wk-end'], this, arguments)) return;
   var date = w.date, old = logOf(date).lift || {};
   var secs = w.edit ? (old.sec || (old.min || 0) * 60) : Math.min(4 * 3600, Math.round((Date.now() - w.start) / 1000));
   var vol = 0; Object.keys(ex).forEach(function (n) { vol += setsVolume(ex[n].s); });
@@ -7476,7 +7489,7 @@ VIEWS.wksummary = function () {
 /* ---------- start a fresh plan ---------- */
 var KEEP_SCHEDULE = ['runDays', 'liftDays', 'crossDays', 'avail', 'longDay', 'doubles', 'injuryProne', 'hrTrainer', 'weightKg', 'runWalk'];
 ACTIONS['reset-plan'] = function () {
-  if (!confirm('Start a fresh plan? Your runs, lifts, races, readings and shoes are kept. The schedule is rebuilt from scratch and you choose a training style again.')) return;
+  if (!ASK({ title: 'Start a fresh plan?', text: 'Your runs, lifts, races, readings and shoes are kept. The schedule is rebuilt from scratch and you choose a training style again.', ok: 'Start fresh', danger: true }, ACTIONS['reset-plan'], this, arguments)) return;
   var old = st().profile || {}, keep = {};
   KEEP_SCHEDULE.forEach(function (k) { if (old[k] != null) keep[k] = old[k]; });
   var ks = function (o) { return Object.keys(o || {}); };
@@ -10039,6 +10052,34 @@ document.addEventListener('click', function (e) {
   inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
   dlHide(inp);
 });
+
+/* ---------- App-styled confirm dialog (replaces the browser's "site says" box) ---------- */
+/* askUI({ title, text, ok, cancel, danger }) -> Promise<boolean>
+   ASK(opts, fn, self, args): synchronous guard for actions. First call opens the dialog and returns false;
+   confirming re-runs fn with the same arguments, and that run gets true. */
+var ASKS = { pass: null };
+function askUI(o) {
+  return new Promise(function (resolve) {
+    var prev = document.querySelector('.askd'); if (prev) prev.remove();
+    var d = document.createElement('div');
+    d.className = 'askd';
+    d.innerHTML = '<div class="askd-card" role="alertdialog" aria-modal="true" aria-labelledby="askd-t">' + (o.icon ? '<div class="askd-ico ' + (o.danger ? 'bad' : '') + '">' + o.icon + '</div>' : '') +
+      '<h3 id="askd-t">' + esc(o.title) + '</h3>' + (o.text ? '<p class="small muted">' + esc(o.text) + '</p>' : '') +
+      '<div class="askd-btns"><button type="button" class="btn" data-a="0">' + esc(o.cancel || 'Cancel') + '</button><button type="button" class="btn ' + (o.danger ? 'dangerfill' : 'primary') + '" data-a="1">' + esc(o.ok || 'OK') + '</button></div></div>';
+    document.body.appendChild(d);
+    var prevFocus = document.activeElement;
+    var done = function (v) { d.remove(); document.removeEventListener('keydown', key, true); try { prevFocus && prevFocus.focus && prevFocus.focus({ preventScroll: true }); } catch (e) {} resolve(v); };
+    var key = function (e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); } else if (e.key === 'Tab') { e.preventDefault(); var b = d.querySelectorAll('button'); (document.activeElement === b[1] ? b[0] : b[1]).focus(); } };
+    document.addEventListener('keydown', key, true);
+    d.addEventListener('click', function (e) { if (e.target === d) return done(false); var b = e.target.closest('[data-a]'); if (b) done(b.dataset.a === '1'); });
+    setTimeout(function () { var b = d.querySelector('[data-a="1"]'); if (b) b.focus({ preventScroll: true }); }, 30);
+  });
+}
+function ASK(o, fn, self, args) {
+  if (ASKS.pass === fn) { ASKS.pass = null; return true; }
+  askUI(o).then(function (ok) { if (!ok) return; ASKS.pass = fn; try { fn.apply(self, args); } finally { ASKS.pass = null; } });
+  return false;
+}
 
 
 /* ---------------- Garmin polling ---------------- */
