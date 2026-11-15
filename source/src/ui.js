@@ -330,7 +330,7 @@ VIEWS.plan = function () {
   html += '<div class="stack">' + w.days.map(function (d2) {
     var items = d2.parts.map(function (x) { return x.type === 'rest' ? restRow(x, d2.date) : sessHTML(x, d2.date, w.zonesAdj, { struct: false }); }).join('');
     if (d2.dropped) items += '<div class="tiny muted">No free day this week for: ' + esc(d2.dropped.join(', ')) + '</div>';
-    if (typeof dayEventsHTML === 'function') items += dayEventsHTML(d2.date);
+    if (typeof dayEventsHTML === 'function') items = dayEventsHTML(d2.date) + items;   /* the work shift and events first: they shape the day */
     return '<div class="dayblock' + (d2.date === t ? ' today' : '') + '"><div class="d">' + d2.dow + '<b>' + E.pd(d2.date).getDate() + '</b></div><div class="items">' + items + '</div></div>';
   }).join('') + '</div>';
   if (typeof addWkBtn === 'function') html += addWkBtn(w);

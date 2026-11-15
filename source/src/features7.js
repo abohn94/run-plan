@@ -587,7 +587,7 @@ ACTIONS['cal-ignore'] = function () { calAckAll(true); };
 var _today7r = VIEWS.today;
 VIEWS.today = function () { var h = _today7r(), c = calReviewCard(); if (!c) return h; var i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c; };
 var _plan7r = VIEWS.plan;
-VIEWS.plan = function () { var h = _plan7r(), c = calReviewCard(); if (!c) return h; var i = h.indexOf('</a>', h.indexOf('class="racecard"')); return i > 0 ? h.slice(0, i + 4) + c + h.slice(i + 4) : c + h; };
+VIEWS.plan = function () { var h = _plan7r(), c = calReviewCard(); if (!c) return h; var i = h.indexOf('<section class="card season'); if (i < 0) i = h.indexOf('<section', h.lastIndexOf('class="racecard"')); return i > 0 ? h.slice(0, i) + c + h.slice(i) : c + h; };
 function fmtMin(m) { var h = Math.floor(m / 60), mm = m % 60; return (h % 12 || 12) + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); }
 /* free stretches of 45+ minutes between 5 AM and 9 PM */
 function freeWindows(date) {

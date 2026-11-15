@@ -151,3 +151,76 @@ VIEWS.guides = function () {
 };
 ACTIONS['tips-toggle'] = function (a) { Store.editMany([['prefs', 'tips'], ['seen', 'tips-offer']], function (S) { S.prefs = S.prefs || {}; S.seen = S.seen || {}; S.seen['tips-offer'] = 1; var t = Object.assign({}, S.prefs.tips || {}); delete t.off; t[a.k] = !t[a.k]; S.prefs.tips = t; }); };
 Object.assign(TABOF, { table: 'plan', planctl: 'plan', preview: 'plan', calreview: 'plan', report: 'today', builder: 'plan', guides: 'you' });
+
+/* ---------- Today, ordered by what matters right now ----------
+   1 the day's workout · 2 readiness and how it felt · 3 anything that needs a decision · 4 this week and the weather ·
+   5 tomorrow · 6 progress, fuel, coach notes. Every card stays; only the order changes. */
+function todayRank(el, txt) {
+  var c = ' ' + (el.className || '') + ' ', t = (txt || '').toUpperCase();
+  if (/ greet /.test(c) || /pagehead/.test(c)) return 0;
+  if (/ (herow|hero|venue|liftbub|restcard|crossbub) /.test(c) || /YOUR PLAN STARTS/.test(t)) return 10;
+  if (/ lv-/.test(c) || /MORNING READINESS|READINESS/.test(t.slice(0, 40))) return 20;
+  if (/HOW DID IT FEEL/.test(t.slice(0, 30))) return 22;
+  if (/ tipc /.test(c) && !/WANT A TIP|GOOD TO KNOW|NEW TO RUNNING/.test(t)) return 24;
+  if (/ btns /.test(c) && /ADD A WORKOUT/.test(t)) return 25;
+  if (/ (calrev|missed|postrace|rpt|awayc|banner|tipc|offer) /.test(c) || /A NEW WEEK STARTS|WEEKLY REPORT/.test(t.slice(0, 40))) return 30;
+  if (/ wkprog /.test(c)) return 38;
+  if (/^THIS WEEK/.test(t)) return 40;
+  if (/ cond /.test(c)) return 45;
+  if (/^TOMORROW/.test(t)) return 50;
+  if (/SLEEP/.test(t.slice(0, 30))) return 55;
+  if (/ progc /.test(c)) return 58;
+  if (/^FUEL|  fuel /.test(t) || / fuel /.test(c)) return 60;
+  if (/^COACH NOTES/.test(t)) return 70;
+  return 65;
+}
+var _today10b = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today10b();
+  try {
+    var tpl = document.createElement('template'); tpl.innerHTML = h;
+    var kids = [].slice.call(tpl.content.children), groups = [];
+    for (var i = 0; i < kids.length; i++) {
+      var el = kids[i], g = [el];
+      if (/(^| )sechead( |$)/.test(el.className || '') && kids[i + 1]) { g.push(kids[i + 1]); i++; }
+      groups.push({ els: g, rank: todayRank(g[g.length - 1], (el.textContent || '').trim()), i: groups.length });
+    }
+    groups.forEach(function (g) { if (/(^| )sechead( |$)/.test(g.els[0].className || '')) g.rank = todayRank(g.els[0], (g.els[0].textContent || '').trim()); });
+    groups.sort(function (a, b) { return a.rank - b.rank || a.i - b.i; });
+    var out = document.createElement('div'); groups.forEach(function (g) { g.els.forEach(function (e) { out.appendChild(e); }); });
+    return out.innerHTML;
+  } catch (e) { return h; }
+};
+
+/* ---------- You: grouped so each thing is where you'd look for it (nothing removed) ---------- */
+var YOU_GROUPS = [
+  ['Your plan', ['#/goals', '#/style', '#/planctl', '#/settings', '#/control', '#/preview', '#/zones']],
+  ['Workouts', ['#/workouts', '#/watch', '#/table']],
+  ['Fitness & gear', ['#/fitness', '#/shoes', '#/progress/strength']],
+  ['Library', ['#/guides', '#/strength', '#/cross', '#/shins', '#/warmup', '#/nutrition']],
+  ['Connections', ['#/sync', '#/calsync', '#/notify']],
+  ['App', ['#/shareapp', '#/data', '#/about']]
+];
+var _you10b = VIEWS.you;
+VIEWS.you = function () {
+  var h = _you10b();
+  try {
+    var tpl = document.createElement('template'); tpl.innerHTML = h;
+    var root = tpl.content, links = {}, firstMenu = null;
+    [].slice.call(root.querySelectorAll('.menu a')).forEach(function (a) { var href = a.getAttribute('href') || ''; var key = href.replace(/\/\d{4}-\d{2}-\d{2}$/, ''); links[key] = a; });
+    if (!links['#/table']) { var t = document.createElement('a'); t.setAttribute('href', '#/table'); t.innerHTML = 'Training log<span class="v">table & CSV</span><span class="chev">›</span>'; links['#/table'] = t; }
+    var used = {}, html = '';
+    /* keep the top block (title, tiles, dashboard links) as is */
+    var kids = [].slice.call(root.children), topEnd = kids.findIndex(function (e) { return /sechead/.test(e.className || ''); });
+    kids.slice(0, topEnd < 0 ? kids.length : topEnd).forEach(function (e) { html += e.outerHTML; });
+    YOU_GROUPS.forEach(function (g) {
+      var as = g[1].map(function (k) { var a = links[k]; if (a) used[k] = 1; return a ? a.outerHTML : ''; }).join('');
+      if (as) html += '<div class="sechead"><h2>' + g[0] + '</h2></div><div class="menu">' + as + '</div>';
+    });
+    var rest = Object.keys(links).filter(function (k) { return !used[k] && !/#\/(dash|glance)$/.test(k); });
+    if (rest.length) html += '<div class="sechead"><h2>More</h2></div><div class="menu">' + rest.map(function (k) { return links[k].outerHTML; }).join('') + '</div>';
+    /* anything after the menus (cards, notes) stays at the end */
+    kids.slice(topEnd < 0 ? kids.length : topEnd).forEach(function (e) { if (!/menu|sechead/.test(e.className || '')) html += e.outerHTML; });
+    return html;
+  } catch (e) { return h; }
+};
