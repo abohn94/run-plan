@@ -8,13 +8,6 @@ const state = JSON.parse(fs.readFileSync('user/state.json', 'utf8'));
 let garmin = null, extra = null;
 try { garmin = JSON.parse(fs.readFileSync('garmin/data.json', 'utf8')); } catch (e) { garmin = null; }
 try { extra = JSON.parse(fs.readFileSync('garmin/extra.json', 'utf8')); } catch (e) { extra = null; }
-/* work shifts from Google Calendar, with your own taps winning ("off" clears one) */
-try {
-  const cal = JSON.parse(fs.readFileSync('garmin/calendar.json', 'utf8')), all = Object.assign({}, cal.shifts || {}), mine = state.shifts || {};
-  Object.keys(mine).forEach((d) => { if (mine[d] === 'off') delete all[d]; else all[d] = mine[d]; });
-  state.shiftsAll = all;
-  state.shiftEnds = cal.ends || {};
-} catch (e) { /* no calendar connected */ }
 /* same merge as the app: Garmin's own threshold and load balance */
 if (garmin && extra) {
   garmin.fitness = garmin.fitness || {};
@@ -28,6 +21,13 @@ process.env.TZ = TZ;   /* the engine's idea of "today" follows your time zone, n
 const E = require(require('path').resolve(process.argv[2]));
 function localDate(d) { return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); }
 const date = process.argv[3] || localDate(new Date());
+/* work shifts from Google Calendar: only the ones you accepted in the app's schedule review (same rule as the app) */
+try {
+  const cal = JSON.parse(fs.readFileSync('garmin/calendar.json', 'utf8'));
+  if (E.calShifts) state.shiftsAll = E.calShifts(cal, state, date).applied;
+  else { const all = Object.assign({}, cal.shifts || {}), mine = state.shifts || {}; Object.keys(mine).forEach((d) => { if (mine[d] === 'off') delete all[d]; else all[d] = mine[d]; }); state.shiftsAll = all; }
+  state.shiftEnds = cal.ends || {};
+} catch (e) { /* no calendar connected */ }
 const out = { date: date, tz: TZ, on: !!(prefs.watch && prefs.watch.on), workouts: [] };
 if (!state.profile) { process.stdout.write(JSON.stringify(out)); process.exit(0); }
 

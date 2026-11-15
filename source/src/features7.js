@@ -118,10 +118,11 @@ function conditionsCard() {
   var runLater = runs.length && h0 > hNow;
   var pct = heatFor(t), win = E.winterCheck(w), best = bestHour(t), zz = zonesAt(t), base = _zonesAt7(t);
   /* the strip starts now and runs 7 hours ahead (into tomorrow late in the day) */
-  var hours = []; for (var k = 0; k < 7; k++) { var hh = hNow + k, dd = hh >= 24 ? E.addD(t, 1) : t, hr = hh % 24, x = wxAt(dd, hr); if (x) hours.push([hr, x, dd, k === 0]); }
+  var hours = []; for (var k = 0; k < 48; k++) { var hh = hNow + k, dd = E.addD(t, Math.floor(hh / 24)), hr = hh % 24, x = wxAt(dd, hr); if (x) hours.push([hr, x, dd, k === 0]); }
   var html = '<section class="card cond"><div class="spread"><div><div class="eyebrow">Now · ' + esc(loc().name || '') + ' · ' + clockOf(new Date().getHours() * 60 + new Date().getMinutes()) + '</div><h3 style="margin-top:2px">' + Math.round(wNow.temp) + '°F' + (Math.abs(wNow.feels - wNow.temp) >= 4 ? ' <span class="muted" style="font-weight:600">feels ' + Math.round(wNow.feels) + '°</span>' : '') + '</h3><div class="small muted" style="margin-top:2px">' + esc(wxInfo(wNow.code, isNight(t, hNow, wNow)).label) + (wNow.wind >= 10 ? ' · wind ' + Math.round(wNow.wind) + ' mph' : '') + '</div></div>' + wxIcon(t, hNow, wNow, 'wxbig') + '</div>';
   if (runLater) html += '<p class="small" style="margin-top:8px">At your run time (' + hrLabel(h0) + '): <b>' + Math.round(w.temp) + '°F</b>, ' + esc(wxInfo(w.code, isNight(t, h0, w)).label.toLowerCase()) + (Math.abs(w.feels - w.temp) >= 4 ? ', feels ' + Math.round(w.feels) + '°' : '') + '.</p>';
-  html += '<div class="hrs">' + hours.map(function (p) { return '<button class="hrc' + (p[3] ? ' now' : '') + (p[2] === t && p[0] === h0 ? ' on' : '') + (p[2] === t && best && best.h === p[0] ? ' best' : '') + '" data-act="run-hour" data-arg="' + jattr({ h: p[0] }) + '"><span>' + hrLabel(p[0]) + '</span>' + wxIcon(t, p[0], p[1], 'wxsm') + '<b>' + Math.round(p[1].temp) + '°</b><em>' + (p[1].pop >= 30 ? p[1].pop + '%' : 'dew ' + Math.round(p[1].dew)) + '</em></button>'; }).join('') + '</div>';
+  html += '<div class="hrs" id="hrStrip">' + hours.map(function (p) { var newDay = p[0] === 0 && !p[3], lbl = p[3] ? 'Now' : newDay ? fmtD(p[2], { weekday: 'short' }) : hrLabel(p[0]), today = p[2] === t;
+    return '<button class="hrc' + (p[3] ? ' now' : '') + (newDay ? ' nd' : '') + (today && p[0] === h0 ? ' on' : '') + (today && best && best.h === p[0] ? ' best' : '') + '"' + (today ? ' data-act="run-hour" data-arg="' + jattr({ h: p[0] }) + '"' : ' tabindex="-1"') + ' title="' + esc(fmtD(p[2], { weekday: 'short' }) + ' ' + hrLabel(p[0])) + '"><span>' + lbl + '</span>' + wxIcon(p[2], p[0], p[1], 'wxsm') + '<b>' + Math.round(p[1].temp) + '°</b><em>' + (p[1].pop >= 30 ? p[1].pop + '%' : 'dew ' + Math.round(p[1].dew)) + '</em></button>'; }).join('') + '</div><div class="tiny muted hrhint">Swipe for the next 48 hours ›</div>';
   var notes = [];
   if (pct) notes.push('<b>Paces ' + Math.round(pct * 100) + '% slower</b> for the humidity (dew point ' + Math.round(w.dew) + '°F)' + (base && base.E ? ': easy ' + pace(zz.E[0]) + '–' + pace(zz.E[1]) + ' instead of ' + pace(base.E[0]) + '–' + pace(base.E[1]) : '') + '. Same effort, same training.');
   else if (runs.length) notes.push('No pace adjustment needed: dew point ' + Math.round(w.dew) + '°F.');
@@ -496,17 +497,78 @@ setTimeout(loadCal, 1700);
 var _onchange7c = Store.onchange;
 Store.onchange = function (why) { _onchange7c(why); if (why === 'init' || why === 'pull' || why === 'garmin') setTimeout(loadCal, 600); };
 /* your own taps win over the calendar; "off" clears a calendar shift */
-function allShifts() {
-  var out = Object.assign({}, (App.cal && App.cal.shifts) || {}), mine = st().shifts || {};
-  Object.keys(mine).forEach(function (d) { if (mine[d] === 'off') delete out[d]; else out[d] = mine[d]; });
-  return out;
-}
+/* calendar shifts go through a review before they reshape the plan (unless you turn on automatic) */
+function calShifts() { return E.calShifts(App.cal, st(), App.today || E.today()); }
+function allShifts() { return calShifts().applied; }
+function setHidden(o, k, v) { try { Object.defineProperty(o, k, { value: v, configurable: true, enumerable: false, writable: true }); } catch (e) { /* no state yet */ } }
+function daySum(d) { if (!d) return ''; return d.parts.filter(function (p) { return p.type !== 'rest'; }).map(function (p) { return p.title + (E.isRun(p) && p.mi ? ' · ' + mi(p.mi) + ' mi' : ''); }).join(' + ') || (d.parts[0] && d.parts[0].title === 'Work day' ? 'Work day (no training)' : 'Rest'); }
 var _recompute7c = recompute;
 recompute = function () {
-  try { Object.defineProperty(Store.state, 'shiftsAll', { value: allShifts(), configurable: true, enumerable: false, writable: true }); } catch (e) { /* no state yet */ }
-  try { Object.defineProperty(Store.state, 'shiftEnds', { value: (App.cal && App.cal.ends) || {}, configurable: true, enumerable: false, writable: true }); } catch (e) { /* no state yet */ }
+  var S = Store.state; App.calReview = null;
+  if (!S || !S.profile) return _recompute7c();
+  App.today = E.today();
+  var cs = calShifts();
+  setHidden(S, 'shiftEnds', (App.cal && App.cal.ends) || {});
+  setHidden(S, 'shiftsAll', cs.applied);
   _recompute7c();
+  if (!cs.pending.length || !App.plan) return;
+  /* build the plan as it would be with the new shifts, and compare day by day */
+  try {
+    setHidden(S, 'shiftsAll', cs.proposed);
+    var P = E.generate(S); E.adapt(P, S, E.analyze(P, S, Store.garmin));
+    setHidden(S, 'shiftsAll', cs.applied);
+    var weeks = {}, rows = [];
+    cs.pending.forEach(function (x) { weeks[E.monday(x.date)] = 1; });
+    Object.keys(weeks).sort().forEach(function (m) {
+      for (var k = 0; k < 7; k++) {
+        var d = E.addD(m, k); if (d < App.today) continue;
+        var a = dayOf(d), wb = E.weekOf(P, d), b = wb ? wb.days[E.dow(d)] : null;
+        var sa = daySum(a), sb = daySum(b), shA = cs.applied[d] || '', shB = cs.proposed[d] || '';
+        if (sa !== sb || shA !== shB) rows.push({ date: d, week: m, before: sa, after: sb, shA: shA, shB: shB, note: b && b.parts[0] && b.parts[0].note || '' });
+      }
+    });
+    App.calReview = { pending: cs.pending, rows: rows };
+  } catch (e) { setHidden(S, 'shiftsAll', cs.applied); console.warn(e); }
 };
+var SHN = { day: 'Day shift', eve: 'Evening shift', night: 'Night shift', none: 'No shift' };
+function calReviewCard() {
+  var r = App.calReview; if (!r || !r.pending.length) return '';
+  var moved = r.rows.filter(function (x) { return x.before !== x.after; }).length;
+  return '<section class="card calrev"><div class="eyebrow">Work calendar</div><h3 style="margin-top:2px">' + plural(r.pending.length, 'shift change') + ' to review</h3>' +
+    '<p class="small muted" style="margin-top:4px">' + esc(r.pending.slice(0, 3).map(function (x) { return fmtD(x.date, { weekday: 'short', month: 'short', day: 'numeric' }) + ': ' + (x.to === 'none' ? 'shift removed' : SHN[x.to].toLowerCase()); }).join(' · ')) + (r.pending.length > 3 ? ' · and ' + (r.pending.length - 3) + ' more' : '') + '. ' + (moved ? plural(moved, 'day') + ' of training would change.' : 'Your training stays the same.') + '</p>' +
+    '<div class="btns" style="margin-top:10px"><a class="btn sm primary" href="#/calreview">Review changes</a><button class="btn sm" data-act="cal-accept">Accept all</button></div></section>';
+}
+TITLES.calreview = 'Schedule review';
+VIEWS.calreview = function () {
+  var r = App.calReview;
+  var html = '<div class="pagehead"><h1>Schedule review</h1><p>Your work calendar changed. Here is how your training would move to fit it. Nothing changes until you accept.</p></div>';
+  if (!r || !r.pending.length) return html + '<section class="card"><p class="small">All caught up: your plan matches your calendar.</p><div class="btns"><a class="btn sm" href="#/plan">Back to plan</a></div></section>';
+  html += '<section class="card stack"><h3>Shift changes</h3><div class="revsh">' + r.pending.map(function (x) { return '<div><span>' + fmtD(x.date, { weekday: 'short', month: 'short', day: 'numeric' }) + '</span><b class="shk ' + x.to + '">' + (x.from === 'none' ? '' : esc(SHN[x.from]) + ' → ') + esc(SHN[x.to]) + (x.from === 'none' && x.to !== 'none' ? ' added' : '') + '</b></div>'; }).join('') + '</div></section>';
+  var byW = {}; r.rows.forEach(function (x) { (byW[x.week] = byW[x.week] || []).push(x); });
+  Object.keys(byW).sort().forEach(function (m) {
+    html += '<div class="sechead"><h2 style="font-size:1.05rem">Week of ' + fmtD(m, { month: 'short', day: 'numeric' }) + '</h2></div><section class="card revdays">' + byW[m].map(function (x) {
+      var same = x.before === x.after;
+      return '<div class="revday' + (same ? ' same' : '') + '"><div class="rd">' + fmtD(x.date, { weekday: 'short' }) + '<small>' + fmtD(x.date, { month: 'numeric', day: 'numeric' }) + '</small>' + (x.shB ? '<i class="shk ' + x.shB + '">' + (x.shB === 'day' ? 'Day' : x.shB === 'eve' ? 'Eve' : 'Night') + '</i>' : '') + '</div><div class="rc">' +
+        (same ? '<span class="small">' + esc(x.after) + '</span><span class="tiny muted">No change to training</span>' : '<span class="was small">' + esc(x.before) + '</span><span class="now small">' + esc(x.after) + '</span>' + (x.note ? '<span class="tiny muted">' + esc(x.note.split('. ')[0].replace(/\.$/, '')) + '.</span>' : '')) + '</div></div>';
+    }).join('') + '</section>';
+  });
+  html += '<section class="card stack"><div class="btns"><button class="btn primary" data-act="cal-accept">Accept changes</button><button class="btn" data-act="cal-ignore">Keep my plan as is</button></div><p class="tiny muted">Keeping your plan still shows the shifts on your calendar but doesn\'t move any training for them. You can switch on automatic changes in You → Google Calendar.</p></section>';
+  return html;
+};
+function calAckAll(ignore) {
+  var r = App.calReview; if (!r) return;
+  var list = r.pending.slice();
+  Store.edit('calAck', null, function (S) { S.calAck = S.calAck || {}; var cut = E.addD(App.today, -14); Object.keys(S.calAck).forEach(function (d) { if (d < cut) delete S.calAck[d]; }); list.forEach(function (x) { S.calAck[x.date] = ignore && x.to !== 'none' ? 'x:' + x.to : x.to; }); });
+  if (!ignore && list.some(function (x) { return x.date <= E.addD(App.today, 1); }) && typeof watchSoon === 'function' && watchOn()) watchSoon();
+  toast(ignore ? 'Kept your plan as it was' : 'Plan updated for your shifts');
+  if (App.view === 'calreview') go('#/plan');
+}
+ACTIONS['cal-accept'] = function () { calAckAll(false); };
+ACTIONS['cal-ignore'] = function () { calAckAll(true); };
+var _today7r = VIEWS.today;
+VIEWS.today = function () { var h = _today7r(), c = calReviewCard(); if (!c) return h; var i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c; };
+var _plan7r = VIEWS.plan;
+VIEWS.plan = function () { var h = _plan7r(), c = calReviewCard(); if (!c) return h; var i = h.indexOf('</a>', h.indexOf('class="racecard"')); return i > 0 ? h.slice(0, i + 4) + c + h.slice(i + 4) : c + h; };
 function fmtMin(m) { var h = Math.floor(m / 60), mm = m % 60; return (h % 12 || 12) + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); }
 /* free stretches of 45+ minutes between 5 AM and 9 PM */
 function freeWindows(date) {
@@ -550,10 +612,11 @@ VIEWS.preview = function () {
 TITLES.calsync = 'Google Calendar';
 VIEWS.calsync = function () {
   var c = App.cal, p = (st().prefs || {}).cal || {}, gh = Store.mode === 'github';
-  var nextShifts = c ? Object.keys(allShifts()).filter(function (d) { return d >= App.today && d <= E.addD(App.today, 13); }).sort() : [];
+  var PS = c ? calShifts().proposed : {};
+  var nextShifts = c ? Object.keys(PS).filter(function (d) { return d >= App.today && d <= E.addD(App.today, 13); }).sort() : [];
   var html = '<div class="pagehead"><h1>Google Calendar</h1><p>Your work shifts, trips and busy times shape the plan: key runs land on days off, wake-up times follow your shifts, and runs are suggested in your free windows.</p></div>';
   html += '<section class="card stack"><div class="spread"><h3>Status</h3><span class="pill ' + (c ? 'good' : '') + '">' + (c ? 'Connected' : 'Not connected') + '</span></div>' +
-    (c ? '<p class="small">' + plural(c.calendars || 1, 'calendar') + ' · ' + (nextShifts.length ? plural(nextShifts.length, 'shift') + ' in the next 2 weeks: ' + nextShifts.map(function (d) { return fmtD(d, { weekday: 'short', month: 'numeric', day: 'numeric' }) + (allShifts()[d] === 'night' ? ' ☾' : allShifts()[d] === 'eve' ? ' (evening)' : ''); }).join(', ') : 'no work shifts found in the next 2 weeks (check the keywords below)') + '</p><p class="tiny muted">Checked every hour with your Garmin sync. Last change ' + new Date(c.updated).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '.</p>' : '<p class="small muted">' + (gh ? 'Follow the steps below; the first read happens at the next hourly sync, or tap Sync now.' : 'Connect your data repository first (You → Garmin & sync).') + '</p>') +
+    (c ? '<p class="small">' + plural(c.calendars || 1, 'calendar') + ' · ' + (nextShifts.length ? plural(nextShifts.length, 'shift') + ' in the next 2 weeks: ' + nextShifts.map(function (d) { return fmtD(d, { weekday: 'short', month: 'numeric', day: 'numeric' }) + (PS[d] === 'night' ? ' ☾' : PS[d] === 'eve' ? ' (evening)' : ''); }).join(', ') : 'no work shifts found in the next 2 weeks (check the keywords below)') + '</p>' + (App.calReview ? '<div class="banner info small" style="margin-top:8px">' + plural(App.calReview.pending.length, 'shift change') + ' waiting for review. <a href="#/calreview">Review</a></div>' : '') + '<p class="tiny muted">Checked every hour with your Garmin sync. Last change ' + new Date(c.updated).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '.</p>' : '<p class="small muted">' + (gh ? 'Follow the steps below; the first read happens at the next hourly sync, or tap Sync now.' : 'Connect your data repository first (You → Garmin & sync).') + '</p>') +
     (gh ? '<div class="btns"><button class="btn sm" data-act="syncnow">Sync now</button></div>' : '') + '</section>';
   html += '<div class="sechead"><h2>One-time setup</h2></div><section class="card stack">' +
     '<div class="step"><span>1</span><div><b>Copy your calendar\'s private address</b><p class="small muted">On a computer, open Google Calendar → ⚙ Settings → under "Settings for my calendars" pick the calendar with your shifts → <b>Integrate calendar</b> → copy <b>Secret address in iCal format</b>. (The phone app doesn\'t show it.) Repeat for a second calendar if your shifts and personal events are separate.</p></div></div>' +
@@ -564,6 +627,7 @@ VIEWS.calsync = function () {
     '<label class="f">Work shift words<input class="i" id="calW" value="' + v('work', ['work', 'shift', 'cvicu', 'icu', 'hospital', 'on call', 'charge']) + '"></label>' +
     '<label class="f">Time-off words (all-day events)<input class="i" id="calV" value="' + v('vacation', ['vacation', 'pto', 'holiday', 'day off', 'time off']) + '"></label>' +
     '<label class="f">Travel words<input class="i" id="calT" value="' + v('travel', ['flight', 'travel', 'trip', 'airport', 'hotel', 'conference']) + '"></label>' +
+    '<label class="check"><input type="checkbox" id="calAuto"' + ((st().prefs || {}).calAuto ? ' checked' : '') + '> Apply calendar changes automatically (skip the schedule review)</label>' +
     '<label class="check"><input type="checkbox" id="calWk"' + ((st().prefs || {}).weekendDayOff !== false ? ' checked' : '') + '> No training on weekends when I work a day shift (evening-shift weekends are fine)</label>' +
     '<label class="f">Commute to work (minutes)<input class="i" id="calC" type="number" inputmode="numeric" value="' + esc((st().prefs || {}).commute || 40) + '"></label>' +
     '<p class="tiny muted">A work event 5+ hours long counts as a shift: starting before 11 AM is a day shift, 11 AM to 7 PM an evening shift, and after 7 PM (or running past 3 AM) a night shift. You can still tap any day in the week preview to change it.</p><div class="btns"><button class="btn primary sm" data-act="cal-save">Save</button></div></section>';
@@ -572,7 +636,7 @@ VIEWS.calsync = function () {
 ACTIONS['cal-save'] = function () {
   var sp = function (id) { return $(id).value.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean); };
   var cal = { work: sp('#calW'), vacation: sp('#calV'), travel: sp('#calT') }, com = +$('#calC').value || 40;
-  var wk = $('#calWk').checked; Store.edit('prefs', 'cal', function (S) { S.prefs = S.prefs || {}; S.prefs.cal = cal; S.prefs.commute = com; S.prefs.weekendDayOff = wk; });
+  var wk = $('#calWk').checked; Store.edit('prefs', 'cal', function (S) { S.prefs = S.prefs || {}; S.prefs.cal = cal; S.prefs.commute = com; S.prefs.weekendDayOff = wk; S.prefs.calAuto = $('#calAuto').checked; });
   toast('Saved. Applies at the next sync');
 };
 var _you7c = VIEWS.you;

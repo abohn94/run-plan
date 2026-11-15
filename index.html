@@ -333,10 +333,10 @@ table.t td:first-child, table.t th { white-space: nowrap; }
 .actrow.done .sh b::after { content: ' ✓'; color: var(--green); }
 .calgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
 .calgrid em { font-style: normal; text-align: center; font-size: .66rem; font-weight: 800; color: var(--muted); padding-bottom: 4px; }
-.calgrid > a, .calgrid > span { display: grid; justify-items: center; gap: 3px; padding: 6px 0 4px; border-radius: 12px; text-decoration: none; color: var(--ink); min-height: 54px; }
+.calgrid > a, .calgrid > span { display: grid; justify-items: center; align-items: center; grid-template-rows: 20px 12px 12px; gap: 2px; padding: 6px 0 4px; border-radius: 12px; text-decoration: none; color: var(--ink); height: 62px; box-sizing: border-box; overflow: hidden; }
 .calgrid > a:hover { background: var(--card2); }
 .calgrid b { font-size: .9rem; font-weight: 800; }
-.calgrid small { font-size: .62rem; color: var(--green); font-weight: 800; min-height: .8em; }
+.calgrid small { font-size: .62rem; color: var(--green); font-weight: 800; line-height: 12px; }
 .calgrid .dots { display: flex; gap: 2px; min-height: 7px; }
 .calgrid .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
 .calgrid .dots i.dn { box-shadow: 0 0 0 1.5px var(--card), 0 0 0 3px var(--c); }
@@ -720,7 +720,11 @@ code { font-size: .85em; background: var(--card2); border-radius: 6px; padding: 
 .tiles .tile b small { font-size: .6em; color: var(--muted); font-weight: 700; }
 .cond, .sleepc { position: relative; }
 .wxic { font-size: 1.7rem; line-height: 1; }
-.hrs { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 12px; }
+.hrs { display: flex; gap: 4px; margin-top: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.hrs::-webkit-scrollbar { display: none; }
+.hrs .hrc { flex: 0 0 calc((100% - 24px) / 7); scroll-snap-align: start; }
+.hrs .hrc.nd { box-shadow: inset 2px 0 0 var(--line2, #3a3a44); } .hrs .hrc.nd span { color: var(--ink); }
+.hrhint { text-align: right; margin-top: 4px; }
 .hrs .hrc { border: 0; background: var(--card2); color: var(--ink); border-radius: 12px; padding: 6px 2px; display: grid; justify-items: center; gap: 0; min-width: 0; }
 .hrs .hrc span { font-size: .66rem; font-weight: 800; color: var(--muted); }
 .hrs .hrc b { font-size: .95rem; font-weight: 800; }
@@ -805,6 +809,36 @@ body.printband .band { display: block; }
 .hrs .hrc.on .moonp { fill: #5b6280; } .hrs .hrc.on .cl1 { fill: #9a9eab; }
 .hrs .hrc.now { box-shadow: inset 0 0 0 1.5px var(--blue); }
 .hrs .hrc.now span { color: var(--blue); }
+
+/* calendar header: same size every month, nothing shifts */
+.calhead { display: grid; gap: 10px; }
+.calhead h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
+.calhead h1 .muted { font-weight: 700; }
+.calnav { display: grid; grid-template-columns: 44px 1fr 44px; gap: 8px; align-items: center; }
+.calnav .btn { justify-self: center; min-width: 120px; text-align: center; }
+.calnav .btn.off { opacity: .35; pointer-events: none; }
+
+/* schedule review */
+.calrev { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--blue) 55%, transparent); }
+.revsh { display: grid; gap: 6px; }
+.revsh > div { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; }
+.revsh span { color: var(--muted); white-space: nowrap; }
+.revsh b { text-align: right; font-weight: 700; }
+.revdays { display: grid; gap: 0; padding-top: 6px; padding-bottom: 6px; }
+.revday { display: grid; grid-template-columns: 56px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line, #26262e); }
+.revday:first-child { border-top: 0; }
+.revday .rd { font-weight: 800; display: grid; justify-items: start; gap: 2px; }
+.revday .rd small { color: var(--muted); font-weight: 600; font-size: .72rem; }
+.revday .rc { display: grid; gap: 3px; min-width: 0; }
+.revday .was { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--red) 70%, transparent); }
+.revday .now { font-weight: 700; }
+.revday .now::before { content: '→ '; color: var(--green); }
+.revday.same { opacity: .7; }
+.shk { font-style: normal; font-size: .66rem; font-weight: 800; padding: 1px 7px; border-radius: 99px; background: var(--card2); color: var(--muted); }
+.shk.day { background: color-mix(in srgb, var(--gold) 22%, transparent); color: var(--gold); }
+.shk.eve { background: color-mix(in srgb, var(--violet) 22%, transparent); color: var(--violet); }
+.shk.night { background: color-mix(in srgb, var(--blue) 22%, transparent); color: var(--blue); }
+b.shk { font-size: .8rem; padding: 2px 9px; }
 
 </style>
 </head>
@@ -3190,7 +3224,7 @@ function applyDaylight(w, st, zz) {
       var mins = Math.round((p.mi || 3) * 10);
       if (kind === 'day') {
         var start = (ends[d.date] || 930) + commute;
-        if (start + mins > sun.set - 20) return Object.assign({}, p, { treadmill: true, changed: true, dark: true, note: 'Treadmill after work: it’s dark by ' + clockMin(sun.set) + '. Set a 1% incline. ' + (p.note || '') });
+        if (start + 30 + mins > sun.set - 20) return Object.assign({}, p, { treadmill: true, changed: true, dark: true, note: 'Treadmill after work: it’s dark by ' + clockMin(sun.set) + '. Set a 1% incline. ' + (p.note || '') });
         return Object.assign({}, p, { note: 'After work, finish by sunset (' + clockMin(sun.set) + '). ' + (p.note || '') });
       }
       if (kind === 'eve' || kind === 'night') return p;
@@ -3213,6 +3247,27 @@ var api = {
   weekOf: weekOf, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,
   loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
+};
+/* Calendar shifts go through a review: st.calAck holds what you accepted per date ("day" / "eve" / "night",
+   "none" for no shift, or "x:<type>" for a shift you chose not to plan around). With prefs.calAuto the
+   calendar applies straight away. calShifts(cal, st, today) -> { applied, proposed, pending: [{date, from, to}] } */
+api.calShifts = function (cal, st, today) {
+  var c = (cal && cal.shifts) || {}, ack = st.calAck || {}, mine = st.shifts || {}, auto = !!(st.prefs || {}).calAuto;
+  var applied = {}, proposed = {}, pending = [], dates = {};
+  Object.keys(c).concat(Object.keys(ack)).forEach(function (d) { dates[d] = 1; });
+  Object.keys(dates).sort().forEach(function (d) {
+    var now = c[d] || 'none', a = ack[d];
+    if (now !== 'none') proposed[d] = now;
+    var use;
+    if (auto || d < today) use = now;
+    else if (a == null) use = 'none';
+    else use = /^x:/.test(a) ? 'none' : a;
+    if (use !== 'none') applied[d] = use;
+    var seen = a === now || a === 'x:' + now || (a == null && now === 'none');
+    if (!auto && d >= today && !seen && !mine[d]) pending.push({ date: d, from: a == null || /^x:/.test(a) ? 'none' : a, to: now });
+  });
+  [applied, proposed].forEach(function (o) { Object.keys(mine).forEach(function (d) { if (mine[d] === 'off') delete o[d]; else o[d] = mine[d]; }); });
+  return { applied: applied, proposed: proposed, pending: pending };
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 root.ENGINE = api;
@@ -5422,12 +5477,12 @@ setInterval(tick, 1000);
 /* ---------- calendar ---------- */
 VIEWS.calendar = function () {
   var t = App.today, mk = /^\d{4}-\d{2}$/.test(App.args[0] || '') ? App.args[0] : monthKey(t);
-  var first = mk + '-01', start = E.monday(first), last = E.addD(addMonths(mk, 1) + '-01', -1), end = E.addD(E.monday(last), 6);
+  var first = mk + '-01', start = E.monday(first), last = E.addD(addMonths(mk, 1) + '-01', -1), end = E.addD(start, 41); /* always six rows so the page never jumps between months */
   var all = activities(), byD = {};
   all.forEach(function (a) { if (a.date >= start && a.date <= end) (byD[a.date] = byD[a.date] || []).push(a); });
   var inM = all.filter(function (a) { return a.date >= first && a.date <= last; });
   var runs = inM.filter(function (a) { return a.kind === 'run'; });
-  var html = '<div class="pagehead spread"><h1>' + monthLabel(mk, { month: 'long' }) + ' <span class="muted" style="font-weight:700">' + mk.slice(0, 4) + '</span></h1><div class="row"><a class="iconbtn" href="#/calendar/' + addMonths(mk, -1) + '" aria-label="Previous month">‹</a>' + (mk !== monthKey(t) ? '<a class="btn sm ghost" href="#/calendar">Today</a>' : '') + '<a class="iconbtn" href="#/calendar/' + addMonths(mk, 1) + '" aria-label="Next month">›</a></div></div>';
+  var html = '<div class="pagehead calhead"><h1>' + monthLabel(mk, { month: 'long' }) + ' <span class="muted">' + mk.slice(0, 4) + '</span></h1><div class="calnav"><a class="iconbtn" href="#/calendar/' + addMonths(mk, -1) + '" aria-label="Previous month">‹</a><a class="btn sm ghost' + (mk === monthKey(t) ? ' off' : '') + '" href="#/calendar"' + (mk === monthKey(t) ? ' aria-disabled="true" tabindex="-1"' : '') + '>This month</a><a class="iconbtn" href="#/calendar/' + addMonths(mk, 1) + '" aria-label="Next month">›</a></div></div>';
   html += '<div class="grid4"><div class="metric"><span>Runs</span><b>' + runs.length + '</b></div><div class="metric"><span>Miles</span><b>' + mi(sumMi(runs)) + '</b></div><div class="metric"><span>Time</span><b style="font-size:1rem">' + hms(runs.reduce(function (s, a) { return s + (a.sec || 0); }, 0)) + '</b></div><div class="metric"><span>Gym</span><b>' + inM.filter(function (a) { return a.kind === 'lift'; }).length + '</b></div></div>';
   var cells = '';
   for (var d = start; d <= end; d = E.addD(d, 1)) {
@@ -5440,7 +5495,7 @@ VIEWS.calendar = function () {
   }
   html += '<section class="card"><div class="calgrid">' + E.DOW.map(function (x) { return '<em>' + x.charAt(0) + '</em>'; }).join('') + cells + '</div><p class="tiny muted" style="margin-top:8px">Dots are planned sessions (ringed when done). Numbers are miles run.</p></section>';
   /* week by week */
-  for (var w0 = start; w0 <= end; w0 = E.addD(w0, 7)) {
+  for (var w0 = start; w0 <= last; w0 = E.addD(w0, 7)) {
     var w1 = E.addD(w0, 6), wr = all.filter(function (a) { return a.date >= w0 && a.date <= w1 && a.kind === 'run'; });
     var pw = App.plan ? E.weekOf(App.plan, w0) : null;
     html += '<div class="sechead"><h2 style="font-size:1.05rem">' + fmtD(w0, { month: 'short', day: 'numeric' }) + ' – ' + fmtD(w1, { month: 'short', day: 'numeric' }) + '</h2><span class="small muted">' + mi(sumMi(wr)) + (pw ? ' of ' + mi(pw.tot.mi) : '') + ' mi' + (pw ? ' · <a href="#/editweek/' + pw.n + '">Edit</a>' : '') + '</span></div><section class="card calweek">';
@@ -6296,7 +6351,13 @@ VIEWS.plan = function () {
   if (upcoming().length < 2) return h;
   var i = h.indexOf('class="racecard"'); if (i < 0) return h;
   var j = h.indexOf('</a>', i); if (j < 0) return h;
-  return h.slice(0, j + 4) + countdownStrip(true) + h.slice(j + 4);
+  /* every upcoming race gets the same full-size card, in date order */
+  var more = upcoming().slice(1).map(function (ev) {
+    var d = E.distOf(ev), g = E.parseClock(ev.goal), days = E.diffD(App.today, ev.date);
+    return '<a class="racecard" href="#/goals"><span class="eyebrow" style="color:var(--ink);opacity:.8">' + esc(ev.name || d.label) + ' · ' + E.fmtDate(ev.date, { month: 'short', day: 'numeric', year: 'numeric' }) + '</span><span class="cd">' + days + ' <span style="font-size:1rem;letter-spacing:0">day' + (days === 1 ? '' : 's') + ' to go</span></span>' +
+      '<span class="small muted">' + (g > 0 ? 'Goal ' + E.clock(g) + ' · ' + pace(g / d.mi) + '/mi' : esc(d.label)) + (App.an && d.mi ? ' · predicted today ' + E.clock(E.predict(App.an.vNow, d.mi)) : '') + '</span></a>';
+  }).join('');
+  return h.slice(0, j + 4) + more + h.slice(j + 4);
 };
 
 /* ---------- desktop dashboard: the deep dive ---------- */
@@ -7805,10 +7866,11 @@ function conditionsCard() {
   var runLater = runs.length && h0 > hNow;
   var pct = heatFor(t), win = E.winterCheck(w), best = bestHour(t), zz = zonesAt(t), base = _zonesAt7(t);
   /* the strip starts now and runs 7 hours ahead (into tomorrow late in the day) */
-  var hours = []; for (var k = 0; k < 7; k++) { var hh = hNow + k, dd = hh >= 24 ? E.addD(t, 1) : t, hr = hh % 24, x = wxAt(dd, hr); if (x) hours.push([hr, x, dd, k === 0]); }
+  var hours = []; for (var k = 0; k < 48; k++) { var hh = hNow + k, dd = E.addD(t, Math.floor(hh / 24)), hr = hh % 24, x = wxAt(dd, hr); if (x) hours.push([hr, x, dd, k === 0]); }
   var html = '<section class="card cond"><div class="spread"><div><div class="eyebrow">Now · ' + esc(loc().name || '') + ' · ' + clockOf(new Date().getHours() * 60 + new Date().getMinutes()) + '</div><h3 style="margin-top:2px">' + Math.round(wNow.temp) + '°F' + (Math.abs(wNow.feels - wNow.temp) >= 4 ? ' <span class="muted" style="font-weight:600">feels ' + Math.round(wNow.feels) + '°</span>' : '') + '</h3><div class="small muted" style="margin-top:2px">' + esc(wxInfo(wNow.code, isNight(t, hNow, wNow)).label) + (wNow.wind >= 10 ? ' · wind ' + Math.round(wNow.wind) + ' mph' : '') + '</div></div>' + wxIcon(t, hNow, wNow, 'wxbig') + '</div>';
   if (runLater) html += '<p class="small" style="margin-top:8px">At your run time (' + hrLabel(h0) + '): <b>' + Math.round(w.temp) + '°F</b>, ' + esc(wxInfo(w.code, isNight(t, h0, w)).label.toLowerCase()) + (Math.abs(w.feels - w.temp) >= 4 ? ', feels ' + Math.round(w.feels) + '°' : '') + '.</p>';
-  html += '<div class="hrs">' + hours.map(function (p) { return '<button class="hrc' + (p[3] ? ' now' : '') + (p[2] === t && p[0] === h0 ? ' on' : '') + (p[2] === t && best && best.h === p[0] ? ' best' : '') + '" data-act="run-hour" data-arg="' + jattr({ h: p[0] }) + '"><span>' + hrLabel(p[0]) + '</span>' + wxIcon(t, p[0], p[1], 'wxsm') + '<b>' + Math.round(p[1].temp) + '°</b><em>' + (p[1].pop >= 30 ? p[1].pop + '%' : 'dew ' + Math.round(p[1].dew)) + '</em></button>'; }).join('') + '</div>';
+  html += '<div class="hrs" id="hrStrip">' + hours.map(function (p) { var newDay = p[0] === 0 && !p[3], lbl = p[3] ? 'Now' : newDay ? fmtD(p[2], { weekday: 'short' }) : hrLabel(p[0]), today = p[2] === t;
+    return '<button class="hrc' + (p[3] ? ' now' : '') + (newDay ? ' nd' : '') + (today && p[0] === h0 ? ' on' : '') + (today && best && best.h === p[0] ? ' best' : '') + '"' + (today ? ' data-act="run-hour" data-arg="' + jattr({ h: p[0] }) + '"' : ' tabindex="-1"') + ' title="' + esc(fmtD(p[2], { weekday: 'short' }) + ' ' + hrLabel(p[0])) + '"><span>' + lbl + '</span>' + wxIcon(p[2], p[0], p[1], 'wxsm') + '<b>' + Math.round(p[1].temp) + '°</b><em>' + (p[1].pop >= 30 ? p[1].pop + '%' : 'dew ' + Math.round(p[1].dew)) + '</em></button>'; }).join('') + '</div><div class="tiny muted hrhint">Swipe for the next 48 hours ›</div>';
   var notes = [];
   if (pct) notes.push('<b>Paces ' + Math.round(pct * 100) + '% slower</b> for the humidity (dew point ' + Math.round(w.dew) + '°F)' + (base && base.E ? ': easy ' + pace(zz.E[0]) + '–' + pace(zz.E[1]) + ' instead of ' + pace(base.E[0]) + '–' + pace(base.E[1]) : '') + '. Same effort, same training.');
   else if (runs.length) notes.push('No pace adjustment needed: dew point ' + Math.round(w.dew) + '°F.');
@@ -8183,17 +8245,78 @@ setTimeout(loadCal, 1700);
 var _onchange7c = Store.onchange;
 Store.onchange = function (why) { _onchange7c(why); if (why === 'init' || why === 'pull' || why === 'garmin') setTimeout(loadCal, 600); };
 /* your own taps win over the calendar; "off" clears a calendar shift */
-function allShifts() {
-  var out = Object.assign({}, (App.cal && App.cal.shifts) || {}), mine = st().shifts || {};
-  Object.keys(mine).forEach(function (d) { if (mine[d] === 'off') delete out[d]; else out[d] = mine[d]; });
-  return out;
-}
+/* calendar shifts go through a review before they reshape the plan (unless you turn on automatic) */
+function calShifts() { return E.calShifts(App.cal, st(), App.today || E.today()); }
+function allShifts() { return calShifts().applied; }
+function setHidden(o, k, v) { try { Object.defineProperty(o, k, { value: v, configurable: true, enumerable: false, writable: true }); } catch (e) { /* no state yet */ } }
+function daySum(d) { if (!d) return ''; return d.parts.filter(function (p) { return p.type !== 'rest'; }).map(function (p) { return p.title + (E.isRun(p) && p.mi ? ' · ' + mi(p.mi) + ' mi' : ''); }).join(' + ') || (d.parts[0] && d.parts[0].title === 'Work day' ? 'Work day (no training)' : 'Rest'); }
 var _recompute7c = recompute;
 recompute = function () {
-  try { Object.defineProperty(Store.state, 'shiftsAll', { value: allShifts(), configurable: true, enumerable: false, writable: true }); } catch (e) { /* no state yet */ }
-  try { Object.defineProperty(Store.state, 'shiftEnds', { value: (App.cal && App.cal.ends) || {}, configurable: true, enumerable: false, writable: true }); } catch (e) { /* no state yet */ }
+  var S = Store.state; App.calReview = null;
+  if (!S || !S.profile) return _recompute7c();
+  App.today = E.today();
+  var cs = calShifts();
+  setHidden(S, 'shiftEnds', (App.cal && App.cal.ends) || {});
+  setHidden(S, 'shiftsAll', cs.applied);
   _recompute7c();
+  if (!cs.pending.length || !App.plan) return;
+  /* build the plan as it would be with the new shifts, and compare day by day */
+  try {
+    setHidden(S, 'shiftsAll', cs.proposed);
+    var P = E.generate(S); E.adapt(P, S, E.analyze(P, S, Store.garmin));
+    setHidden(S, 'shiftsAll', cs.applied);
+    var weeks = {}, rows = [];
+    cs.pending.forEach(function (x) { weeks[E.monday(x.date)] = 1; });
+    Object.keys(weeks).sort().forEach(function (m) {
+      for (var k = 0; k < 7; k++) {
+        var d = E.addD(m, k); if (d < App.today) continue;
+        var a = dayOf(d), wb = E.weekOf(P, d), b = wb ? wb.days[E.dow(d)] : null;
+        var sa = daySum(a), sb = daySum(b), shA = cs.applied[d] || '', shB = cs.proposed[d] || '';
+        if (sa !== sb || shA !== shB) rows.push({ date: d, week: m, before: sa, after: sb, shA: shA, shB: shB, note: b && b.parts[0] && b.parts[0].note || '' });
+      }
+    });
+    App.calReview = { pending: cs.pending, rows: rows };
+  } catch (e) { setHidden(S, 'shiftsAll', cs.applied); console.warn(e); }
 };
+var SHN = { day: 'Day shift', eve: 'Evening shift', night: 'Night shift', none: 'No shift' };
+function calReviewCard() {
+  var r = App.calReview; if (!r || !r.pending.length) return '';
+  var moved = r.rows.filter(function (x) { return x.before !== x.after; }).length;
+  return '<section class="card calrev"><div class="eyebrow">Work calendar</div><h3 style="margin-top:2px">' + plural(r.pending.length, 'shift change') + ' to review</h3>' +
+    '<p class="small muted" style="margin-top:4px">' + esc(r.pending.slice(0, 3).map(function (x) { return fmtD(x.date, { weekday: 'short', month: 'short', day: 'numeric' }) + ': ' + (x.to === 'none' ? 'shift removed' : SHN[x.to].toLowerCase()); }).join(' · ')) + (r.pending.length > 3 ? ' · and ' + (r.pending.length - 3) + ' more' : '') + '. ' + (moved ? plural(moved, 'day') + ' of training would change.' : 'Your training stays the same.') + '</p>' +
+    '<div class="btns" style="margin-top:10px"><a class="btn sm primary" href="#/calreview">Review changes</a><button class="btn sm" data-act="cal-accept">Accept all</button></div></section>';
+}
+TITLES.calreview = 'Schedule review';
+VIEWS.calreview = function () {
+  var r = App.calReview;
+  var html = '<div class="pagehead"><h1>Schedule review</h1><p>Your work calendar changed. Here is how your training would move to fit it. Nothing changes until you accept.</p></div>';
+  if (!r || !r.pending.length) return html + '<section class="card"><p class="small">All caught up: your plan matches your calendar.</p><div class="btns"><a class="btn sm" href="#/plan">Back to plan</a></div></section>';
+  html += '<section class="card stack"><h3>Shift changes</h3><div class="revsh">' + r.pending.map(function (x) { return '<div><span>' + fmtD(x.date, { weekday: 'short', month: 'short', day: 'numeric' }) + '</span><b class="shk ' + x.to + '">' + (x.from === 'none' ? '' : esc(SHN[x.from]) + ' → ') + esc(SHN[x.to]) + (x.from === 'none' && x.to !== 'none' ? ' added' : '') + '</b></div>'; }).join('') + '</div></section>';
+  var byW = {}; r.rows.forEach(function (x) { (byW[x.week] = byW[x.week] || []).push(x); });
+  Object.keys(byW).sort().forEach(function (m) {
+    html += '<div class="sechead"><h2 style="font-size:1.05rem">Week of ' + fmtD(m, { month: 'short', day: 'numeric' }) + '</h2></div><section class="card revdays">' + byW[m].map(function (x) {
+      var same = x.before === x.after;
+      return '<div class="revday' + (same ? ' same' : '') + '"><div class="rd">' + fmtD(x.date, { weekday: 'short' }) + '<small>' + fmtD(x.date, { month: 'numeric', day: 'numeric' }) + '</small>' + (x.shB ? '<i class="shk ' + x.shB + '">' + (x.shB === 'day' ? 'Day' : x.shB === 'eve' ? 'Eve' : 'Night') + '</i>' : '') + '</div><div class="rc">' +
+        (same ? '<span class="small">' + esc(x.after) + '</span><span class="tiny muted">No change to training</span>' : '<span class="was small">' + esc(x.before) + '</span><span class="now small">' + esc(x.after) + '</span>' + (x.note ? '<span class="tiny muted">' + esc(x.note.split('. ')[0].replace(/\.$/, '')) + '.</span>' : '')) + '</div></div>';
+    }).join('') + '</section>';
+  });
+  html += '<section class="card stack"><div class="btns"><button class="btn primary" data-act="cal-accept">Accept changes</button><button class="btn" data-act="cal-ignore">Keep my plan as is</button></div><p class="tiny muted">Keeping your plan still shows the shifts on your calendar but doesn\'t move any training for them. You can switch on automatic changes in You → Google Calendar.</p></section>';
+  return html;
+};
+function calAckAll(ignore) {
+  var r = App.calReview; if (!r) return;
+  var list = r.pending.slice();
+  Store.edit('calAck', null, function (S) { S.calAck = S.calAck || {}; var cut = E.addD(App.today, -14); Object.keys(S.calAck).forEach(function (d) { if (d < cut) delete S.calAck[d]; }); list.forEach(function (x) { S.calAck[x.date] = ignore && x.to !== 'none' ? 'x:' + x.to : x.to; }); });
+  if (!ignore && list.some(function (x) { return x.date <= E.addD(App.today, 1); }) && typeof watchSoon === 'function' && watchOn()) watchSoon();
+  toast(ignore ? 'Kept your plan as it was' : 'Plan updated for your shifts');
+  if (App.view === 'calreview') go('#/plan');
+}
+ACTIONS['cal-accept'] = function () { calAckAll(false); };
+ACTIONS['cal-ignore'] = function () { calAckAll(true); };
+var _today7r = VIEWS.today;
+VIEWS.today = function () { var h = _today7r(), c = calReviewCard(); if (!c) return h; var i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c; };
+var _plan7r = VIEWS.plan;
+VIEWS.plan = function () { var h = _plan7r(), c = calReviewCard(); if (!c) return h; var i = h.indexOf('</a>', h.indexOf('class="racecard"')); return i > 0 ? h.slice(0, i + 4) + c + h.slice(i + 4) : c + h; };
 function fmtMin(m) { var h = Math.floor(m / 60), mm = m % 60; return (h % 12 || 12) + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); }
 /* free stretches of 45+ minutes between 5 AM and 9 PM */
 function freeWindows(date) {
@@ -8237,10 +8360,11 @@ VIEWS.preview = function () {
 TITLES.calsync = 'Google Calendar';
 VIEWS.calsync = function () {
   var c = App.cal, p = (st().prefs || {}).cal || {}, gh = Store.mode === 'github';
-  var nextShifts = c ? Object.keys(allShifts()).filter(function (d) { return d >= App.today && d <= E.addD(App.today, 13); }).sort() : [];
+  var PS = c ? calShifts().proposed : {};
+  var nextShifts = c ? Object.keys(PS).filter(function (d) { return d >= App.today && d <= E.addD(App.today, 13); }).sort() : [];
   var html = '<div class="pagehead"><h1>Google Calendar</h1><p>Your work shifts, trips and busy times shape the plan: key runs land on days off, wake-up times follow your shifts, and runs are suggested in your free windows.</p></div>';
   html += '<section class="card stack"><div class="spread"><h3>Status</h3><span class="pill ' + (c ? 'good' : '') + '">' + (c ? 'Connected' : 'Not connected') + '</span></div>' +
-    (c ? '<p class="small">' + plural(c.calendars || 1, 'calendar') + ' · ' + (nextShifts.length ? plural(nextShifts.length, 'shift') + ' in the next 2 weeks: ' + nextShifts.map(function (d) { return fmtD(d, { weekday: 'short', month: 'numeric', day: 'numeric' }) + (allShifts()[d] === 'night' ? ' ☾' : allShifts()[d] === 'eve' ? ' (evening)' : ''); }).join(', ') : 'no work shifts found in the next 2 weeks (check the keywords below)') + '</p><p class="tiny muted">Checked every hour with your Garmin sync. Last change ' + new Date(c.updated).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '.</p>' : '<p class="small muted">' + (gh ? 'Follow the steps below; the first read happens at the next hourly sync, or tap Sync now.' : 'Connect your data repository first (You → Garmin & sync).') + '</p>') +
+    (c ? '<p class="small">' + plural(c.calendars || 1, 'calendar') + ' · ' + (nextShifts.length ? plural(nextShifts.length, 'shift') + ' in the next 2 weeks: ' + nextShifts.map(function (d) { return fmtD(d, { weekday: 'short', month: 'numeric', day: 'numeric' }) + (PS[d] === 'night' ? ' ☾' : PS[d] === 'eve' ? ' (evening)' : ''); }).join(', ') : 'no work shifts found in the next 2 weeks (check the keywords below)') + '</p>' + (App.calReview ? '<div class="banner info small" style="margin-top:8px">' + plural(App.calReview.pending.length, 'shift change') + ' waiting for review. <a href="#/calreview">Review</a></div>' : '') + '<p class="tiny muted">Checked every hour with your Garmin sync. Last change ' + new Date(c.updated).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + '.</p>' : '<p class="small muted">' + (gh ? 'Follow the steps below; the first read happens at the next hourly sync, or tap Sync now.' : 'Connect your data repository first (You → Garmin & sync).') + '</p>') +
     (gh ? '<div class="btns"><button class="btn sm" data-act="syncnow">Sync now</button></div>' : '') + '</section>';
   html += '<div class="sechead"><h2>One-time setup</h2></div><section class="card stack">' +
     '<div class="step"><span>1</span><div><b>Copy your calendar\'s private address</b><p class="small muted">On a computer, open Google Calendar → ⚙ Settings → under "Settings for my calendars" pick the calendar with your shifts → <b>Integrate calendar</b> → copy <b>Secret address in iCal format</b>. (The phone app doesn\'t show it.) Repeat for a second calendar if your shifts and personal events are separate.</p></div></div>' +
@@ -8251,6 +8375,7 @@ VIEWS.calsync = function () {
     '<label class="f">Work shift words<input class="i" id="calW" value="' + v('work', ['work', 'shift', 'cvicu', 'icu', 'hospital', 'on call', 'charge']) + '"></label>' +
     '<label class="f">Time-off words (all-day events)<input class="i" id="calV" value="' + v('vacation', ['vacation', 'pto', 'holiday', 'day off', 'time off']) + '"></label>' +
     '<label class="f">Travel words<input class="i" id="calT" value="' + v('travel', ['flight', 'travel', 'trip', 'airport', 'hotel', 'conference']) + '"></label>' +
+    '<label class="check"><input type="checkbox" id="calAuto"' + ((st().prefs || {}).calAuto ? ' checked' : '') + '> Apply calendar changes automatically (skip the schedule review)</label>' +
     '<label class="check"><input type="checkbox" id="calWk"' + ((st().prefs || {}).weekendDayOff !== false ? ' checked' : '') + '> No training on weekends when I work a day shift (evening-shift weekends are fine)</label>' +
     '<label class="f">Commute to work (minutes)<input class="i" id="calC" type="number" inputmode="numeric" value="' + esc((st().prefs || {}).commute || 40) + '"></label>' +
     '<p class="tiny muted">A work event 5+ hours long counts as a shift: starting before 11 AM is a day shift, 11 AM to 7 PM an evening shift, and after 7 PM (or running past 3 AM) a night shift. You can still tap any day in the week preview to change it.</p><div class="btns"><button class="btn primary sm" data-act="cal-save">Save</button></div></section>';
@@ -8259,7 +8384,7 @@ VIEWS.calsync = function () {
 ACTIONS['cal-save'] = function () {
   var sp = function (id) { return $(id).value.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean); };
   var cal = { work: sp('#calW'), vacation: sp('#calV'), travel: sp('#calT') }, com = +$('#calC').value || 40;
-  var wk = $('#calWk').checked; Store.edit('prefs', 'cal', function (S) { S.prefs = S.prefs || {}; S.prefs.cal = cal; S.prefs.commute = com; S.prefs.weekendDayOff = wk; });
+  var wk = $('#calWk').checked; Store.edit('prefs', 'cal', function (S) { S.prefs = S.prefs || {}; S.prefs.cal = cal; S.prefs.commute = com; S.prefs.weekendDayOff = wk; S.prefs.calAuto = $('#calAuto').checked; });
   toast('Saved. Applies at the next sync');
 };
 var _you7c = VIEWS.you;

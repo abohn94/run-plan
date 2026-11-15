@@ -2075,7 +2075,7 @@ function applyDaylight(w, st, zz) {
       var mins = Math.round((p.mi || 3) * 10);
       if (kind === 'day') {
         var start = (ends[d.date] || 930) + commute;
-        if (start + mins > sun.set - 20) return Object.assign({}, p, { treadmill: true, changed: true, dark: true, note: 'Treadmill after work: it’s dark by ' + clockMin(sun.set) + '. Set a 1% incline. ' + (p.note || '') });
+        if (start + 30 + mins > sun.set - 20) return Object.assign({}, p, { treadmill: true, changed: true, dark: true, note: 'Treadmill after work: it’s dark by ' + clockMin(sun.set) + '. Set a 1% incline. ' + (p.note || '') });
         return Object.assign({}, p, { note: 'After work, finish by sunset (' + clockMin(sun.set) + '). ' + (p.note || '') });
       }
       if (kind === 'eve' || kind === 'night') return p;
@@ -2098,6 +2098,27 @@ var api = {
   weekOf: weekOf, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,
   loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
+};
+/* Calendar shifts go through a review: st.calAck holds what you accepted per date ("day" / "eve" / "night",
+   "none" for no shift, or "x:<type>" for a shift you chose not to plan around). With prefs.calAuto the
+   calendar applies straight away. calShifts(cal, st, today) -> { applied, proposed, pending: [{date, from, to}] } */
+api.calShifts = function (cal, st, today) {
+  var c = (cal && cal.shifts) || {}, ack = st.calAck || {}, mine = st.shifts || {}, auto = !!(st.prefs || {}).calAuto;
+  var applied = {}, proposed = {}, pending = [], dates = {};
+  Object.keys(c).concat(Object.keys(ack)).forEach(function (d) { dates[d] = 1; });
+  Object.keys(dates).sort().forEach(function (d) {
+    var now = c[d] || 'none', a = ack[d];
+    if (now !== 'none') proposed[d] = now;
+    var use;
+    if (auto || d < today) use = now;
+    else if (a == null) use = 'none';
+    else use = /^x:/.test(a) ? 'none' : a;
+    if (use !== 'none') applied[d] = use;
+    var seen = a === now || a === 'x:' + now || (a == null && now === 'none');
+    if (!auto && d >= today && !seen && !mine[d]) pending.push({ date: d, from: a == null || /^x:/.test(a) ? 'none' : a, to: now });
+  });
+  [applied, proposed].forEach(function (o) { Object.keys(mine).forEach(function (d) { if (mine[d] === 'off') delete o[d]; else o[d] = mine[d]; }); });
+  return { applied: applied, proposed: proposed, pending: pending };
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 root.ENGINE = api;

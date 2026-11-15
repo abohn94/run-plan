@@ -126,7 +126,13 @@ VIEWS.plan = function () {
   if (upcoming().length < 2) return h;
   var i = h.indexOf('class="racecard"'); if (i < 0) return h;
   var j = h.indexOf('</a>', i); if (j < 0) return h;
-  return h.slice(0, j + 4) + countdownStrip(true) + h.slice(j + 4);
+  /* every upcoming race gets the same full-size card, in date order */
+  var more = upcoming().slice(1).map(function (ev) {
+    var d = E.distOf(ev), g = E.parseClock(ev.goal), days = E.diffD(App.today, ev.date);
+    return '<a class="racecard" href="#/goals"><span class="eyebrow" style="color:var(--ink);opacity:.8">' + esc(ev.name || d.label) + ' · ' + E.fmtDate(ev.date, { month: 'short', day: 'numeric', year: 'numeric' }) + '</span><span class="cd">' + days + ' <span style="font-size:1rem;letter-spacing:0">day' + (days === 1 ? '' : 's') + ' to go</span></span>' +
+      '<span class="small muted">' + (g > 0 ? 'Goal ' + E.clock(g) + ' · ' + pace(g / d.mi) + '/mi' : esc(d.label)) + (App.an && d.mi ? ' · predicted today ' + E.clock(E.predict(App.an.vNow, d.mi)) : '') + '</span></a>';
+  }).join('');
+  return h.slice(0, j + 4) + more + h.slice(j + 4);
 };
 
 /* ---------- desktop dashboard: the deep dive ---------- */

@@ -367,12 +367,12 @@ setInterval(tick, 1000);
 /* ---------- calendar ---------- */
 VIEWS.calendar = function () {
   var t = App.today, mk = /^\d{4}-\d{2}$/.test(App.args[0] || '') ? App.args[0] : monthKey(t);
-  var first = mk + '-01', start = E.monday(first), last = E.addD(addMonths(mk, 1) + '-01', -1), end = E.addD(E.monday(last), 6);
+  var first = mk + '-01', start = E.monday(first), last = E.addD(addMonths(mk, 1) + '-01', -1), end = E.addD(start, 41); /* always six rows so the page never jumps between months */
   var all = activities(), byD = {};
   all.forEach(function (a) { if (a.date >= start && a.date <= end) (byD[a.date] = byD[a.date] || []).push(a); });
   var inM = all.filter(function (a) { return a.date >= first && a.date <= last; });
   var runs = inM.filter(function (a) { return a.kind === 'run'; });
-  var html = '<div class="pagehead spread"><h1>' + monthLabel(mk, { month: 'long' }) + ' <span class="muted" style="font-weight:700">' + mk.slice(0, 4) + '</span></h1><div class="row"><a class="iconbtn" href="#/calendar/' + addMonths(mk, -1) + '" aria-label="Previous month">‹</a>' + (mk !== monthKey(t) ? '<a class="btn sm ghost" href="#/calendar">Today</a>' : '') + '<a class="iconbtn" href="#/calendar/' + addMonths(mk, 1) + '" aria-label="Next month">›</a></div></div>';
+  var html = '<div class="pagehead calhead"><h1>' + monthLabel(mk, { month: 'long' }) + ' <span class="muted">' + mk.slice(0, 4) + '</span></h1><div class="calnav"><a class="iconbtn" href="#/calendar/' + addMonths(mk, -1) + '" aria-label="Previous month">‹</a><a class="btn sm ghost' + (mk === monthKey(t) ? ' off' : '') + '" href="#/calendar"' + (mk === monthKey(t) ? ' aria-disabled="true" tabindex="-1"' : '') + '>This month</a><a class="iconbtn" href="#/calendar/' + addMonths(mk, 1) + '" aria-label="Next month">›</a></div></div>';
   html += '<div class="grid4"><div class="metric"><span>Runs</span><b>' + runs.length + '</b></div><div class="metric"><span>Miles</span><b>' + mi(sumMi(runs)) + '</b></div><div class="metric"><span>Time</span><b style="font-size:1rem">' + hms(runs.reduce(function (s, a) { return s + (a.sec || 0); }, 0)) + '</b></div><div class="metric"><span>Gym</span><b>' + inM.filter(function (a) { return a.kind === 'lift'; }).length + '</b></div></div>';
   var cells = '';
   for (var d = start; d <= end; d = E.addD(d, 1)) {
@@ -385,7 +385,7 @@ VIEWS.calendar = function () {
   }
   html += '<section class="card"><div class="calgrid">' + E.DOW.map(function (x) { return '<em>' + x.charAt(0) + '</em>'; }).join('') + cells + '</div><p class="tiny muted" style="margin-top:8px">Dots are planned sessions (ringed when done). Numbers are miles run.</p></section>';
   /* week by week */
-  for (var w0 = start; w0 <= end; w0 = E.addD(w0, 7)) {
+  for (var w0 = start; w0 <= last; w0 = E.addD(w0, 7)) {
     var w1 = E.addD(w0, 6), wr = all.filter(function (a) { return a.date >= w0 && a.date <= w1 && a.kind === 'run'; });
     var pw = App.plan ? E.weekOf(App.plan, w0) : null;
     html += '<div class="sechead"><h2 style="font-size:1.05rem">' + fmtD(w0, { month: 'short', day: 'numeric' }) + ' – ' + fmtD(w1, { month: 'short', day: 'numeric' }) + '</h2><span class="small muted">' + mi(sumMi(wr)) + (pw ? ' of ' + mi(pw.tot.mi) : '') + ' mi' + (pw ? ' · <a href="#/editweek/' + pw.n + '">Edit</a>' : '') + '</span></div><section class="card calweek">';
