@@ -551,11 +551,11 @@ VIEWS.progress = function () {
     var ws = p.weeks.slice(Math.max(0, cur - 12), Math.min(p.weeks.length, cur + 4));
     html += '<section class="card"><h3>Weekly miles</h3><p class="small muted">Planned against what you ran.</p>' + barChart(ws.map(function (w) { return { label: w.n, a: w.tot.mi, b: weekActual(w), cur: w.n === cur }; })) + '<div class="legend" style="margin-top:6px"><span><i class="dot" style="background:var(--line2)"></i>Planned</span><span><i class="dot" style="background:var(--green)"></i>Logged</span></div></section>';
     /* race predictions */
-    html += '<section class="card"><div class="spread"><h3>Race predictions</h3><a class="btn sm" href="#/zones">Paces</a></div><div class="scroll"><table class="t" style="margin-top:6px"><thead><tr><th>Distance</th><th class="num">Predicted</th><th class="num">Pace /mi</th><th class="num">Your goal</th></tr></thead><tbody>' +
-      [['5K', 3.10686, '5k'], ['10K', 6.21371, '10k'], ['Half marathon', 13.1094, 'half'], ['Marathon', 26.2188, 'full']].map(function (x) {
+    html += '<section class="card"><div class="spread"><h3>Race predictions</h3><a class="btn sm" href="#/zones">Paces</a></div><div class="scroll"><table class="t fit" style="margin-top:6px"><thead><tr><th>Race</th><th class="num">Predicted</th><th class="num">Pace</th><th class="num">Goal</th></tr></thead><tbody>' +
+      [['5K', 3.10686, '5k'], ['10K', 6.21371, '10k'], ['Half', 13.1094, 'half'], ['Marathon', 26.2188, 'full']].map(function (x) {
         var pr = E.predict(App.an.vNow, x[1]);
         var ev = (Store.state.events || []).filter(function (e) { return e.dist === x[2] && e.goal && e.date >= t; })[0];
-        return '<tr><td>' + x[0] + '</td><td class="num">' + E.clock(pr) + '</td><td class="num">' + pace(pr / x[1]) + '</td><td class="num">' + (ev ? esc(ev.goal) : '–') + '</td></tr>';
+        return '<tr><td>' + x[0] + '</td><td class="num">' + E.clock(pr) + '</td><td class="num">' + pace(pr / x[1]) + '</td><td class="num">' + (ev ? esc(String(ev.goal).replace(/^0:/, '')) : '–') + '</td></tr>';
       }).join('') + '</tbody></table></div><p class="tiny muted" style="margin-top:8px">From your current fitness. It updates after races, time trials, threshold tests and VO2max readings.</p></section>';
     /* plan weeks table */
     var rows = p.weeks.slice(Math.max(0, cur - 8), cur).reverse();

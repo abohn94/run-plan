@@ -124,7 +124,12 @@ function progressCard(compact) {
   }).join('') + '</div>' + (compact ? '<a class="tiny" href="#/progress">See all progress ›</a>' : '') + '</section>';
 }
 var _progress8 = VIEWS.progress;
-VIEWS.progress = function () { var h = _progress8(), c = progressCard(false); if (!c) return h; var i = h.indexOf('</div>', h.indexOf('class="pagehead"')); return i > 0 ? h.slice(0, i + 6) + c + h.slice(i + 6) : c + h; };
+VIEWS.progress = function () {
+  var h = _progress8(), tab = App.args[0] || 'overview'; if (tab !== 'overview') return h;
+  var c = progressCard(false); if (!c) return h;
+  var t = h.indexOf('class="tabs"'), i = t > 0 ? h.indexOf('</div>', t) : -1;   /* below the tab strip, at the top of Overview */
+  return i > 0 ? h.slice(0, i + 6) + c + h.slice(i + 6) : h + c;
+};
 
 /* ---------- weekly coach report ---------- */
 TITLES.report = 'Weekly report';

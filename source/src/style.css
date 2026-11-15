@@ -932,3 +932,16 @@ details.gdet[open] > summary::after { transform: rotate(90deg); }
 details.gdet[open] > summary { margin-bottom: 8px; }
 details.gdet .tiny { display: inline-block; margin-top: 10px; }
 .tipc .tiny { display: inline-block; margin-top: 6px; }
+table.t.fit th, table.t.fit td { padding-left: 4px; padding-right: 4px; }
+/* narrow-screen fit: tables shrink before they clip, tab strips fit without hidden tabs */
+.scroll table.t th { white-space: normal; line-height: 1.2; }
+.scroll table.t th, .scroll table.t td { padding-left: 4px; padding-right: 4px; }
+@media (max-width: 430px) { .scroll table.t { font-size: .8rem; } .scroll table.t th { font-size: .6rem; letter-spacing: .04em; } }
+@media (max-width: 380px) { .scroll table.t { font-size: .74rem; } }
+.tabs { flex-wrap: wrap; overflow: visible; }
+.tabs button { flex: 1 1 auto; padding: 8px 10px; }
+@media (max-width: 430px) {
+  .tabs:has(> :nth-child(5):last-child) { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .tabs:has(> :nth-child(5):last-child) > * { grid-column: span 2; }
+  .tabs:has(> :nth-child(5):last-child) > :nth-child(n+4) { grid-column: span 3; }
+}

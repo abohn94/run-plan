@@ -953,6 +953,19 @@ details.gdet[open] > summary::after { transform: rotate(90deg); }
 details.gdet[open] > summary { margin-bottom: 8px; }
 details.gdet .tiny { display: inline-block; margin-top: 10px; }
 .tipc .tiny { display: inline-block; margin-top: 6px; }
+table.t.fit th, table.t.fit td { padding-left: 4px; padding-right: 4px; }
+/* narrow-screen fit: tables shrink before they clip, tab strips fit without hidden tabs */
+.scroll table.t th { white-space: normal; line-height: 1.2; }
+.scroll table.t th, .scroll table.t td { padding-left: 4px; padding-right: 4px; }
+@media (max-width: 430px) { .scroll table.t { font-size: .8rem; } .scroll table.t th { font-size: .6rem; letter-spacing: .04em; } }
+@media (max-width: 380px) { .scroll table.t { font-size: .74rem; } }
+.tabs { flex-wrap: wrap; overflow: visible; }
+.tabs button { flex: 1 1 auto; padding: 8px 10px; }
+@media (max-width: 430px) {
+  .tabs:has(> :nth-child(5):last-child) { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .tabs:has(> :nth-child(5):last-child) > * { grid-column: span 2; }
+  .tabs:has(> :nth-child(5):last-child) > :nth-child(n+4) { grid-column: span 3; }
+}
 
 </style>
 </head>
@@ -4419,11 +4432,11 @@ VIEWS.progress = function () {
     var ws = p.weeks.slice(Math.max(0, cur - 12), Math.min(p.weeks.length, cur + 4));
     html += '<section class="card"><h3>Weekly miles</h3><p class="small muted">Planned against what you ran.</p>' + barChart(ws.map(function (w) { return { label: w.n, a: w.tot.mi, b: weekActual(w), cur: w.n === cur }; })) + '<div class="legend" style="margin-top:6px"><span><i class="dot" style="background:var(--line2)"></i>Planned</span><span><i class="dot" style="background:var(--green)"></i>Logged</span></div></section>';
     /* race predictions */
-    html += '<section class="card"><div class="spread"><h3>Race predictions</h3><a class="btn sm" href="#/zones">Paces</a></div><div class="scroll"><table class="t" style="margin-top:6px"><thead><tr><th>Distance</th><th class="num">Predicted</th><th class="num">Pace /mi</th><th class="num">Your goal</th></tr></thead><tbody>' +
-      [['5K', 3.10686, '5k'], ['10K', 6.21371, '10k'], ['Half marathon', 13.1094, 'half'], ['Marathon', 26.2188, 'full']].map(function (x) {
+    html += '<section class="card"><div class="spread"><h3>Race predictions</h3><a class="btn sm" href="#/zones">Paces</a></div><div class="scroll"><table class="t fit" style="margin-top:6px"><thead><tr><th>Race</th><th class="num">Predicted</th><th class="num">Pace</th><th class="num">Goal</th></tr></thead><tbody>' +
+      [['5K', 3.10686, '5k'], ['10K', 6.21371, '10k'], ['Half', 13.1094, 'half'], ['Marathon', 26.2188, 'full']].map(function (x) {
         var pr = E.predict(App.an.vNow, x[1]);
         var ev = (Store.state.events || []).filter(function (e) { return e.dist === x[2] && e.goal && e.date >= t; })[0];
-        return '<tr><td>' + x[0] + '</td><td class="num">' + E.clock(pr) + '</td><td class="num">' + pace(pr / x[1]) + '</td><td class="num">' + (ev ? esc(ev.goal) : '–') + '</td></tr>';
+        return '<tr><td>' + x[0] + '</td><td class="num">' + E.clock(pr) + '</td><td class="num">' + pace(pr / x[1]) + '</td><td class="num">' + (ev ? esc(String(ev.goal).replace(/^0:/, '')) : '–') + '</td></tr>';
       }).join('') + '</tbody></table></div><p class="tiny muted" style="margin-top:8px">From your current fitness. It updates after races, time trials, threshold tests and VO2max readings.</p></section>';
     /* plan weeks table */
     var rows = p.weeks.slice(Math.max(0, cur - 8), cur).reverse();
@@ -8894,7 +8907,12 @@ function progressCard(compact) {
   }).join('') + '</div>' + (compact ? '<a class="tiny" href="#/progress">See all progress ›</a>' : '') + '</section>';
 }
 var _progress8 = VIEWS.progress;
-VIEWS.progress = function () { var h = _progress8(), c = progressCard(false); if (!c) return h; var i = h.indexOf('</div>', h.indexOf('class="pagehead"')); return i > 0 ? h.slice(0, i + 6) + c + h.slice(i + 6) : c + h; };
+VIEWS.progress = function () {
+  var h = _progress8(), tab = App.args[0] || 'overview'; if (tab !== 'overview') return h;
+  var c = progressCard(false); if (!c) return h;
+  var t = h.indexOf('class="tabs"'), i = t > 0 ? h.indexOf('</div>', t) : -1;   /* below the tab strip, at the top of Overview */
+  return i > 0 ? h.slice(0, i + 6) + c + h.slice(i + 6) : h + c;
+};
 
 /* ---------- weekly coach report ---------- */
 TITLES.report = 'Weekly report';
