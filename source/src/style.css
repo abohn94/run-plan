@@ -163,13 +163,16 @@ main { max-width: 640px; margin: 0 auto; padding: 6px 16px calc(104px + var(--sa
 .weekstrip .dots i.dn { box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px var(--c); }
 
 /* plan */
-.season { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(3px, 1fr); gap: 2px; align-items: end; height: 96px; }
+.season { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(3px, 1fr); gap: 2px; align-items: end; height: 120px; }
 .season button { border: 0; padding: 0; background: none; height: 100%; display: flex; align-items: flex-end; position: relative; }
-.season button i { display: block; width: 100%; border-radius: 3px 3px 0 0; background: var(--line2); }
-.season button.cut i { background: var(--line); }
-.season button.race i { background: var(--violet); }
-.season button.past i { background: var(--dim); }
-.season button.cur i { background: var(--ink); }
+.season button i { display: block; width: 100%; border-radius: 3px 3px 0 0; background: color-mix(in srgb, var(--pc, var(--line2)) 55%, var(--card)); }
+.season button.cut i { background: color-mix(in srgb, var(--pc, var(--line2)) 35%, var(--card)); }
+.season button.past i { background: color-mix(in srgb, var(--pc, var(--line2)) 30%, var(--card)); }
+.season button.cur i { background: var(--ink); box-shadow: 0 0 0 1.5px var(--ink); }
+.season button .rflag { position: absolute; left: 50%; transform: translateX(-50%); font-size: .85rem; line-height: 1; pointer-events: none; }
+.phlegend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 10px; font-size: .74rem; color: var(--muted); font-weight: 700; }
+.phlegend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.phraces { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; font-size: .74rem; font-weight: 700; }
 .season button b { position: absolute; left: 15%; right: 15%; bottom: 0; background: var(--green); border-radius: 2px 2px 0 0; }
 .phasebar { display: grid; grid-auto-flow: column; gap: 2px; margin-top: 6px; }
 .phasebar span { font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); border-top: 2px solid var(--line2); padding-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; }
@@ -745,10 +748,6 @@ body.printband .band { display: block; }
   body.printband .band .bh { grid-column: 1 / -1; font-weight: 800; border-bottom: 1px solid #000; margin-bottom: 3px; }
   body.printband, body.printband #main { background: #fff !important; }
 }
-.season .sbar { position: relative; display: flex; height: 14px; border-radius: 7px; overflow: visible; margin: 18px 0 8px; gap: 2px; }
-.season .sbar i { display: block; height: 100%; border-radius: 4px; opacity: .85; }
-.season .sbar .now { position: absolute; top: -5px; bottom: -5px; width: 3px; border-radius: 2px; background: var(--ink); transform: translateX(-50%); }
-.season .sbar .flag { position: absolute; top: -20px; font-size: .9rem; transform: translateX(-50%); }
 .slegend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .74rem; color: var(--muted); font-weight: 700; }
 .slegend i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 .predcmp, .recov { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); gap: 6px; }
@@ -776,3 +775,4 @@ body.printband .band { display: block; }
 .vbtn { border: 0; background: var(--card2); color: var(--muted); border-radius: 999px; padding: 7px 13px; font-size: .82rem; font-weight: 800; min-height: 36px; }
 .vbtn[aria-pressed="true"] { background: var(--ink); color: var(--inv); }
 .vsun { margin-left: auto; font-size: .72rem; color: var(--dim); font-weight: 700; }
+.phasebar i { display: block; height: 6px; border-radius: 3px; }

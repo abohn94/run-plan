@@ -322,8 +322,7 @@ function seasonCard() {
   return '<section class="card season"><div class="spread"><h3>Your season</h3><span class="tiny muted">' + N + ' weeks</span></div><div class="sbar">' + segs.map(function (s) { return '<i style="flex:' + s.n + ';background:' + (PH_COLOR[s.k] || 'var(--gray)') + '" title="' + esc(s.name) + '"></i>'; }).join('') + (cur ? '<span class="now" style="left:' + ((cur - 0.5) / N * 100).toFixed(1) + '%"></span>' : '') + flags + '</div>' +
     '<div class="slegend">' + segs.filter(function (s, i, a) { return a.findIndex(function (x) { return x.name === s.name; }) === i; }).map(function (s) { return '<span><i style="background:' + (PH_COLOR[s.k] || 'var(--gray)') + '"></i>' + esc(s.name) + '</span>'; }).join('') + '</div></section>';
 }
-var _plan7 = VIEWS.plan;
-VIEWS.plan = function () { var h = _plan7(); if (!App.plan) return h; var i = h.indexOf('</div>', h.indexOf('class="pagehead"')); return i > 0 ? h.slice(0, i + 6) + seasonCard() + h.slice(i + 6) : seasonCard() + h; };
+/* (the season chart lives on the Plan page itself; see ui.js) */
 
 /* ---------- fitness page: Garmin metrics, shin load, recovery profile, durability ---------- */
 function gTile(label, val, sub, cls) { return '<div class="tile ' + (cls || '') + '"><span>' + label + '</span><b>' + val + '</b><em>' + (sub || '&nbsp;') + '</em></div>'; }

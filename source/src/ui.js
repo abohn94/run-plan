@@ -297,18 +297,22 @@ VIEWS.plan = function () {
     html += '<a class="racecard" href="#/goals"><span class="eyebrow" style="color:var(--ink);opacity:.8">' + esc(ev.name || d.label) + ' · ' + E.fmtDate(ev.date, { month: 'short', day: 'numeric', year: 'numeric' }) + '</span><span class="cd">' + E.diffD(t, ev.date) + ' <span style="font-size:1rem;letter-spacing:0">days to go</span></span>' +
       '<span class="small muted">' + (g > 0 ? 'Goal ' + E.clock(g) + ' · ' + pace(g / d.mi) + '/mi' : esc(d.label)) + (App.an ? ' · predicted today ' + E.clock(E.predict(App.an.vNow, d.mi)) : '') + '</span></a>';
   }
-  /* season overview */
+  /* season overview: one bar per week, colored by training block, flags on race weeks */
+  var PHC = { base: 'var(--green)', thr: 'var(--gold)', spec: 'var(--amber)', taper: 'var(--violet)', race: 'var(--red)', recov: 'var(--slate)', maint: 'var(--gray)', build: 'var(--blue)', peak: 'var(--red)' };
   var max = Math.max.apply(null, p.weeks.map(function (x) { return x.tot.mi; })) || 1;
   var bars = p.weeks.map(function (x) {
-    var act = weekActual(x);
-    var race = x.days.some(function (dd) { return dd.parts.some(function (q) { return q.type === 'race'; }); });
-    return '<button title="Week ' + x.n + ': ' + mi(x.tot.mi) + ' mi" aria-label="Week ' + x.n + '" data-act="nav" data-arg="' + jattr({ to: '#/plan/' + x.n, replace: true }) + '" class="' + (x.cut ? 'cut ' : '') + (race ? 'race ' : '') + (x.n < cur ? 'past ' : '') + (x.n === sel ? 'cur' : '') + '"><i style="height:' + Math.max(4, x.tot.mi / max * 100) + '%"></i>' + (act > 0 ? '<b style="height:' + Math.min(100, act / max * 100) + '%"></b>' : '') + '</button>';
+    var act = weekActual(x), col = PHC[x.phase.key] || 'var(--gray)';
+    var race = x.days.filter(function (dd) { return dd.parts.some(function (q) { return q.type === 'race'; }); })[0];
+    return '<button title="Week ' + x.n + ' · ' + esc(x.phase.name) + ': ' + mi(x.tot.mi) + ' mi" aria-label="Week ' + x.n + '" data-act="nav" data-arg="' + jattr({ to: '#/plan/' + x.n, replace: true }) + '" class="' + (x.cut ? 'cut ' : '') + (race ? 'race ' : '') + (x.n < cur ? 'past ' : '') + (x.n === sel ? 'cur' : '') + '" style="--pc:' + col + '">' + (race ? '<span class="rflag" aria-hidden="true" style="bottom:calc(' + Math.max(4, x.tot.mi / max * 100) + '% + 3px)">🏁</span>' : '') + '<i style="height:' + Math.max(4, x.tot.mi / max * 100) + '%"></i>' + (act > 0 ? '<b style="height:' + Math.min(100, act / max * 100) + '%"></b>' : '') + '</button>';
   }).join('');
-  var groups = [], lastKey = null;
-  p.weeks.forEach(function (x) { var k = x.phase.key + x.phase.block; if (k !== lastKey) { groups.push({ name: x.phase.name, n: 1 }); lastKey = k; } else groups[groups.length - 1].n++; });
-  html += '<section class="card"><div class="spread"><h3>Your season</h3><span class="tiny muted">' + esc(p.method.name) + ' · ' + p.weeks.length + ' weeks</span></div><div class="season" style="margin-top:10px">' + bars + '</div>' +
-    '<div class="phasebar" style="grid-template-columns:' + groups.map(function (g2) { return g2.n + 'fr'; }).join(' ') + '">' + groups.map(function (g2) { return '<span title="' + esc(g2.name) + '">' + esc(g2.n >= 5 ? g2.name : g2.name.slice(0, 3)) + '</span>'; }).join('') + '</div>' +
-    '<p class="tiny muted" style="margin-top:8px">Tap a bar to jump to that week. Green shows miles you have logged.</p></section>';
+  var groups = [], lastKey = null, seenPh = {}, phLeg = [];
+  p.weeks.forEach(function (x) { var k = x.phase.key + x.phase.block; if (k !== lastKey) { groups.push({ key: x.phase.key, name: x.phase.name, n: 1 }); lastKey = k; } else groups[groups.length - 1].n++; if (!seenPh[x.phase.name]) { seenPh[x.phase.name] = 1; phLeg.push([x.phase.key, x.phase.name]); } });
+  var races = (Store.state.events || []).filter(function (e) { return e.date >= p.start && e.date <= p.weeks[p.weeks.length - 1].end; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+  html += '<section class="card"><div class="spread"><h3>Your season</h3><span class="tiny muted">' + esc(p.method.name) + ' · ' + p.weeks.length + ' weeks</span></div><div class="season" style="margin-top:22px">' + bars + '</div>' +
+    '<div class="phasebar" style="grid-template-columns:' + groups.map(function (g2) { return g2.n + 'fr'; }).join(' ') + '">' + groups.map(function (g2) { return '<i title="' + esc(g2.name) + '" style="background:' + (PHC[g2.key] || 'var(--gray)') + '"></i>'; }).join('') + '</div>' +
+    '<div class="phlegend">' + phLeg.map(function (l) { return '<span><i style="background:' + (PHC[l[0]] || 'var(--gray)') + '"></i>' + esc(l[1]) + '</span>'; }).join('') + '</div>' +
+    (races.length ? '<div class="phraces">' + races.map(function (e) { return '<span>🏁 ' + esc(e.name || E.distOf(e).label) + ' · ' + E.fmtDate(e.date, { month: 'short', day: 'numeric' }) + '</span>'; }).join('') + '</div>' : '') +
+    '<p class="tiny muted" style="margin-top:8px">One bar per week, colored by training block; the bright bar is the week shown below, and green shows miles you have logged. Tap a bar to jump to that week.</p></section>';
   /* week pager */
   var act2 = weekActual(w), pct = w.tot.mi ? Math.min(100, Math.round(act2 / w.tot.mi * 100)) : 0;
   var mod = w.mod;
@@ -380,7 +384,7 @@ function partDetail(x, date, w, zz, l, idx) {
     if (x.note) body += '<p class="small muted">' + esc(x.note) + '</p>';
     if (x.type === 'race' && x.goal) body += racePlanHTML(x);
     body += logBlock(date, x, l, 'run');
-    body += '<div class="btns"><button class="btn sm" data-act="fit" data-arg="' + jattr({ date: date, idx: idx }) + '">Download for Garmin (.fit)</button><a class="btn sm ghost" href="#/warmup">Warm-up</a></div>';
+    body += '<div class="btns"><a class="btn sm ghost" href="#/warmup">Warm-up</a></div>';
   } else if (x.type === 'strength') {
     var adv = date === App.today && App.rd ? E.liftAdvice(Object.assign({ _date: date }, x), App.rd, w) : null;
     var lp = adv ? adv.lp : x.lp;
