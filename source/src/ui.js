@@ -335,7 +335,7 @@ VIEWS.plan = function () {
   }).join('') + '</div>';
   if (typeof addWkBtn === 'function') html += addWkBtn(w);
   html += legend();
-  html += '<div class="btns"><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'weekstatus', week: w.n }) + '">Week status' + (mod && mod.phase === 'status' ? ': ' + E.STATUS[mod.kind].label : '') + '</button><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'life' }) + '">Something came up</button><a class="btn sm" href="#/planctl">Plan settings</a></div>';
+  html += '<div class="btns"><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'weekstatus', week: w.n }) + '">Week status' + (mod && mod.phase === 'status' ? ': ' + E.STATUS[mod.kind].label : '') + '</button><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'life' }) + '">Something came up</button><a class="btn sm" href="#/planctl">Plan settings</a><a class="btn sm" href="#/table">Training log</a></div>';
   return html;
 };
 function weekActual(w) {

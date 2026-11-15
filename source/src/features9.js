@@ -146,3 +146,106 @@ ACTIONS['ctl-apply'] = function () {
 ACTIONS['ctl-reset'] = function () { App.ctl = {}; var y = window.scrollY; render(); window.scrollTo(0, y); };
 var _you9b = VIEWS.you;
 VIEWS.you = function () { var h = _you9b(), c = (st().profile || {}).ctl, link = '<a href="#/planctl">Plan settings<span class="v">' + (c && Object.keys(c).length ? 'customised' : 'peak, long run, mix') + '</span><span class="chev">›</span></a>', i = h.indexOf('<a href="#/workouts"'); return i < 0 ? h : h.slice(0, i) + link + h.slice(i); };
+
+/* ---------- spreadsheet view: every week × day, planned vs run, with totals; CSV export ---------- */
+TITLES.table = 'Training log';
+function dayRun(d) { var l = logOf(d.date), r = l.run && !l.run.skip ? +l.run.mi || 0 : 0, x = l.xrun && !l.xrun.skip ? +l.xrun.mi || 0 : 0; return r + x; }
+function dayPlanMi(d) { return d.parts.reduce(function (a, p) { return a + (E.isRun(p) ? p.mi || 0 : 0); }, 0); }
+VIEWS.table = function () {
+  var p = App.plan; if (!p) return setupNeeded();
+  var cur = App.week ? App.week.n : 1, from = Math.max(1, +App.args[0] || cur - 3), to = Math.min(p.weeks.length, from + 11);
+  var dows = E.DOW.map(function (x) { return x.charAt(0); });
+  var html = '<div class="pagehead"><h1>Training log</h1><p>Your whole plan as a table: planned miles in each cell, what you ran underneath. Tap a day to open it.</p></div>';
+  html += '<div class="spread" style="margin-bottom:8px"><a class="btn sm' + (from <= 1 ? ' off' : '') + '" href="#/table/' + Math.max(1, from - 12) + '">‹ Earlier</a><span class="small muted">Weeks ' + from + '–' + to + ' of ' + p.weeks.length + '</span><a class="btn sm' + (to >= p.weeks.length ? ' off' : '') + '" href="#/table/' + Math.min(p.weeks.length, from + 12) + '">Later ›</a></div>';
+  html += '<section class="card sheetc"><table class="wsheet"><thead><tr><th>Wk</th>' + dows.map(function (x) { return '<th>' + x + '</th>'; }).join('') + '<th>Total</th></tr></thead><tbody>';
+  for (var n = from; n <= to; n++) {
+    var w = p.weeks[n - 1], tp = 0, ta = 0;
+    html += '<tr class="' + (n === cur ? 'cur ' : '') + (w.cut ? 'cut' : '') + '"><th><a href="#/plan/' + n + '">' + n + '</a><small>' + E.fmtDate(w.start, { month: 'numeric', day: 'numeric' }) + '</small></th>';
+    w.days.forEach(function (d) {
+      var pm = dayPlanMi(d), am = dayRun(d), lift = d.parts.some(function (x) { return x.type === 'strength'; }), key = d.parts.some(function (x) { return x.type === 'speed' || x.type === 'long' || x.type === 'race'; });
+      tp += pm; ta += am;
+      var past = d.date < App.today, cls = (d.date === App.today ? 'td ' : '') + (key ? 'key ' : '') + (past && pm && !am ? 'miss ' : '') + (am ? 'ran ' : '');
+      html += '<td class="' + cls + '"><a href="#/day/' + d.date + '"><b>' + (pm ? mi(pm) : lift ? 'G' : '·') + '</b>' + (am ? '<small>' + mi(am) + '</small>' : '') + '</a></td>';
+    });
+    html += '<td class="tot"><b>' + mi(tp) + '</b>' + (ta ? '<small>' + mi(ta) + '</small>' : '') + '</td></tr>';
+  }
+  html += '</tbody></table><p class="tiny muted" style="margin-top:8px">Bold: planned miles · <span style="color:var(--green)">green: ran</span> · amber outline: key session · G: gym only · faded: missed.</p></section>';
+  html += '<section class="card stack"><h3>Export</h3><p class="small muted">Everything in a spreadsheet file: each day\'s planned sessions, what you ran, time, heart rate, effort and notes.</p><div class="btns"><button class="btn sm primary" data-act="csv-export">Download CSV</button></div></section>';
+  return html;
+};
+function csvCell9(v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+ACTIONS['csv-export'] = function () {
+  var p = App.plan; if (!p) return;
+  var rows = [['date', 'week', 'phase', 'day', 'planned sessions', 'planned run miles', 'ran miles', 'run time', 'avg HR', 'effort (1-10)', 'feel (1-5)', 'pain', 'lift', 'notes']];
+  p.weeks.forEach(function (w) { w.days.forEach(function (d) {
+    var l = logOf(d.date), r = l.run && !l.run.skip ? l.run : null;
+    rows.push([d.date, w.n, w.phase.name, d.dow, d.parts.filter(function (x) { return x.type !== 'rest'; }).map(function (x) { return x.title + (E.isRun(x) ? ' ' + mi(x.mi) + ' mi' : ''); }).join(' + ') || 'Rest', mi(dayPlanMi(d)), r ? mi(dayRun(d)) : '', r && r.sec ? E.clock(r.sec) : '', r && r.hr || '', r && r.rpe || '', r && r.feel || '', r && r.pain || '', l.lift ? (l.lift.key || 'yes') : '', (r && r.note) || '']);
+  }); });
+  download('run-plan-' + App.today + '.csv', rows.map(function (r) { return r.map(csvCell).join(','); }).join('\n'), 'text/csv');
+  toast('CSV downloaded');
+};
+var _data9 = VIEWS.data;
+VIEWS.data = function () { return '<section class="card stack"><h3>Training log</h3><p class="small muted">Your whole plan as a spreadsheet, and a CSV download.</p><div class="btns"><a class="btn sm" href="#/table">Open training log</a><button class="btn sm" data-act="csv-export">Download CSV</button></div></section>' + _data9(); };
+
+/* ---------- Progress → Performance: point to the deep-dive analysis ---------- */
+var _progress9 = VIEWS.progress;
+VIEWS.progress = function () {
+  var h = _progress9(); if ((App.args[0] || 'overview') !== 'performance') return h;
+  var lf = App.an && App.an.loadFocus, x = GX(), ratio = x.status && x.status.acwr;
+  var rows = [['Training load', ratio ? 'Load ratio ' + ratio + (ratio > 1.3 ? ': ramping fast' : ratio < 0.8 ? ': lighter than usual' : ': in the safe range') : 'Short-term against long-term load'], ['Aerobic efficiency', 'Distance per heartbeat on easy runs: rising means fitter'], ['Long-run durability', 'How much your heart rate drifts late in long runs'], ['Goal odds', 'Your chance of each goal, from predictions and recent training']];
+  var c = '<a class="card anlink" href="#/dash"><div class="spread"><div><div class="eyebrow">Analysis</div><h3 style="margin-top:2px">Training dashboard</h3></div><span class="chev">›</span></div><div class="anrows">' + rows.map(function (r) { return '<div><b>' + r[0] + '</b><span>' + esc(r[1]) + '</span></div>'; }).join('') + '</div></a>';
+  var t = h.indexOf('class="tabs"'), i = t > 0 ? h.indexOf('</div>', t) : -1;
+  return i > 0 ? h.slice(0, i + 6) + c + h.slice(i + 6) : h + c;
+};
+
+/* ---------- smart-training score: rewards the choices that make training work (rest, easy kept easy, key sessions) ---------- */
+function smartScore(w) {
+  if (!w) return null;
+  var logs = st().logs || {}, zz = w.zonesAdj || {}, hrMax = App.an && App.an.hrMax, checks = [];
+  w.days.forEach(function (d) {
+    if (d.date >= App.today) return;
+    var l = logs[d.date] || {}, r = l.run && !l.run.skip ? l.run : null, real = d.parts.filter(function (p) { return p.type !== 'rest'; });
+    if (!real.length) checks.push({ ok: !r || (+r.mi || 0) < 1.5, why: 'Rest day ' + (r && +r.mi >= 1.5 ? 'used for a run' : 'respected') + ' (' + d.dow + ')' });
+    d.parts.forEach(function (p) {
+      if ((p.type === 'easy' || p.type === 'recovery') && r && r.sec && +r.mi > 0) {
+        var pc = r.sec / r.mi, ok = zz.E ? pc >= zz.E[0] - 10 : true; if (r.hr && hrMax) ok = ok && r.hr / hrMax <= 0.82;
+        checks.push({ ok: ok, why: 'Easy run ' + (ok ? 'kept easy' : 'ran too hard') + ' (' + d.dow + ')' });
+      }
+      if (p.type === 'speed' || p.type === 'long') checks.push({ ok: partDone(d.date, p), why: p.title + ' ' + (partDone(d.date, p) ? 'done' : 'missed') + ' (' + d.dow + ')' });
+    });
+  });
+  var ran = 0; w.days.forEach(function (d) { if (d.date < App.today) ran += dayRun(d); });
+  var planned = 0; w.days.forEach(function (d) { if (d.date < App.today) planned += dayPlanMi(d); });
+  if (planned >= 3) checks.push({ ok: ran <= planned * 1.15 + 0.5, why: ran > planned * 1.15 + 0.5 ? 'Ran ' + mi(ran - planned) + ' mi more than planned' : 'Mileage within plan' });
+  if (!checks.length) return null;
+  var ok = checks.filter(function (c) { return c.ok; }).length;
+  return { pct: Math.round(ok / checks.length * 100), ok: ok, n: checks.length, checks: checks };
+}
+function smartHTML(s, full) {
+  if (!s) return '';
+  var col = s.pct >= 80 ? 'var(--green)' : s.pct >= 60 ? 'var(--gold)' : 'var(--amber)';
+  return '<div class="smart"><div class="sm-ring" style="--p:' + s.pct + ';--c:' + col + '"><b>' + s.pct + '</b></div><div><b>Smart training</b><span class="small muted">' + s.ok + ' of ' + s.n + ' good choices this week' + (s.pct >= 80 ? '. Rest and easy days are training too.' : '') + '</span></div></div>' +
+    (full ? '<ul class="smchecks">' + s.checks.map(function (c) { return '<li class="' + (c.ok ? 'ok' : 'no') + '">' + esc(c.why) + '</li>'; }).join('') + '</ul>' : '');
+}
+var _reportHTML9 = reportHTML;
+reportHTML = function (r, full) { return _reportHTML9(r, full) + smartHTML(smartScore(r.w), full) + (full ? '<div class="btns" style="margin-top:12px"><button class="btn sm" data-act="share-week" data-arg="' + jattr({ w: r.w.start }) + '">Share this week</button></div>' : ''); };
+
+/* ---------- share card: a picture of the week for a friend, partner or club ---------- */
+ACTIONS['share-week'] = function (a) {
+  var w = App.plan && E.weekOf(App.plan, a.w); if (!w) return;
+  var r = weekReport(w), s = smartScore(w), cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1350;
+  var g = cv.getContext('2d'), F = function (sz, wt) { return (wt || 800) + ' ' + sz + 'px system-ui, -apple-system, Segoe UI, sans-serif'; };
+  var grd = g.createLinearGradient(0, 0, 1080, 1350); grd.addColorStop(0, '#2a2140'); grd.addColorStop(1, '#0b0b0f'); g.fillStyle = grd; g.fillRect(0, 0, 1080, 1350);
+  g.fillStyle = '#9a9aa8'; g.font = F(34, 800); g.fillText(('WEEK ' + w.n + ' · ' + w.phase.name).toUpperCase(), 80, 140);
+  g.fillStyle = '#fff'; g.font = F(92, 800); g.fillText(E.fmtDate(w.start, { month: 'short', day: 'numeric' }) + ' – ' + E.fmtDate(w.end, { month: 'short', day: 'numeric' }), 80, 250);
+  var tiles = [[mi(r.doneMi) + ' mi', 'of ' + mi(r.plannedMi) + ' planned'], [r.doneRuns + ' / ' + r.plannedRuns, 'runs'], [s ? s.pct + '%' : '–', 'smart training']];
+  tiles.forEach(function (t, i) { var y = 360 + i * 230; g.fillStyle = 'rgba(255,255,255,.07)'; if (g.roundRect) { g.beginPath(); g.roundRect(80, y, 920, 200, 36); g.fill(); } else g.fillRect(80, y, 920, 200); g.fillStyle = i === 2 ? '#34d399' : '#fff'; g.font = F(96, 800); g.fillText(t[0], 130, y + 120); g.fillStyle = '#9a9aa8'; g.font = F(38, 700); g.fillText(t[1], 130, y + 172); });
+  var ev = (st().events || []).filter(function (e) { return e.date > App.today; }).sort(function (x, y) { return x.date < y.date ? -1 : 1; })[0];
+  g.fillStyle = '#fff'; g.font = F(44, 700); if (ev) g.fillText(E.diffD(App.today, ev.date) + ' days to ' + (ev.name || E.distOf(ev).label), 80, 1140);
+  g.fillStyle = '#6b6b78'; g.font = F(32, 700); g.fillText('Run Plan', 80, 1270);
+  cv.toBlob(function (blob) {
+    var file = new File([blob], 'week-' + w.n + '.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: 'My training week' }).catch(function () {});
+    else download('week-' + w.n + '.png', blob);
+  }, 'image/png');
+};

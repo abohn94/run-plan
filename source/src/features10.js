@@ -150,3 +150,4 @@ VIEWS.guides = function () {
   return h + '<section class="card stack" style="margin-top:12px"><h3>Tips on Today</h3><div class="segs">' + tg('form', 'Daily form tip') + tg('strat', 'Workout and race tips') + '</div></section>';
 };
 ACTIONS['tips-toggle'] = function (a) { Store.editMany([['prefs', 'tips'], ['seen', 'tips-offer']], function (S) { S.prefs = S.prefs || {}; S.seen = S.seen || {}; S.seen['tips-offer'] = 1; var t = Object.assign({}, S.prefs.tips || {}); delete t.off; t[a.k] = !t[a.k]; S.prefs.tips = t; }); };
+Object.assign(TABOF, { table: 'plan', planctl: 'plan', preview: 'plan', calreview: 'plan', report: 'today', builder: 'plan', guides: 'you' });
