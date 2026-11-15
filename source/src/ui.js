@@ -325,6 +325,7 @@ VIEWS.plan = function () {
     (w.notes.length ? '<p class="small muted">' + w.notes.map(esc).join(' ') + '</p>' : '<p class="small muted">' + esc(w.phase.focus) + '</p>') +
     (mod ? '<div class="banner warn small"><b>' + esc(modTxt) + '.</b> ' + esc(mod.phase === 'compliance' ? 'Your last two weeks came in well under plan, so this week builds from what you actually ran instead of jumping back to the full plan. Hit these runs and next week grows again.' : mod.phase === 'status' ? E.STATUS[mod.kind].levels[mod.level].text : 'Miles are reduced while you rebuild. No catching up on missed runs.') + '</div>' : '') +
     (sel !== cur ? '<div class="btns"><a class="btn sm" href="#/plan/' + cur + '">Back to this week</a></div>' : '') + '</section>';
+  if (typeof advCard === 'function') html += advCard(w);
   /* the days */
   html += '<div class="stack">' + w.days.map(function (d2) {
     var items = d2.parts.map(function (x) { return x.type === 'rest' ? restRow(x, d2.date) : sessHTML(x, d2.date, w.zonesAdj, { struct: false }); }).join('');

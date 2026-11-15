@@ -124,30 +124,37 @@ function zones(v, goalPace) {
   z.ST = [z.T[1], z.T[1] + 20];   /* sub-threshold: just under threshold, about half-marathon to 30K effort */
   return z;
 }
-var ZONE_NAME = { REC: 'recovery', E: 'easy', S: 'steady', M: 'marathon pace', H: 'half marathon pace', T: 'threshold', ST: 'sub-threshold', I: 'interval', R: 'stride', G: 'goal pace', F: 'by feel' };
+var ZONE_NAME = { REC: 'recovery', E: 'easy', S: 'steady', M: 'marathon pace', H: 'half marathon pace', T: 'threshold', ST: 'sub-threshold', I: 'interval', R: 'repetition', G: 'goal pace', F: 'by feel' };
 
 /* ---------------- training styles ---------------- */
 var METHODS = {
   balanced: {
     key: 'balanced', name: 'Balanced threshold', short: 'Balanced',
-    inspired: 'VDOT-paced plans in the style of Jack Daniels',
+    inspired: 'Pyramidal training with paces from Jack Daniels\' VDOT tables',
     desc: 'Mostly easy running, one key workout a week that progresses from playful speed to lactate threshold to race pace, and a long run that grows steadily. Paces come from your fitness, not a guess.',
     suits: 'Most runners. Good when you also lift 2–3 days a week.',
     runs: [3, 5], quality: 1, peakMult: 1, longFrac: 1, longCapFull: 20, longCapHalf: 14, mlr: false, cross: 0, easyShare: 0.8
   },
   cumulative: {
-    key: 'cumulative', name: 'Cumulative fatigue', short: 'Cumulative',
-    inspired: 'High-frequency plans in the style of the Hansons method',
+    key: 'cumulative', name: 'Hansons-style cumulative fatigue', short: 'Hansons',
+    inspired: 'Modeled on the Hansons Marathon Method (not affiliated)',
     desc: 'Six shorter runs a week with two key workouts (speed or strength repeats, and a goal-pace tempo). Long runs stop around 16 miles because you start them already a little tired.',
     suits: 'Runners who can run most days and want race-specific work every week.',
     runs: [5, 6], quality: 2, peakMult: 1.15, longFrac: 0.85, longCapFull: 16, longCapHalf: 12, mlr: false, cross: 0, easyShare: 0.75
   },
   endurance: {
-    key: 'endurance', name: 'Endurance + threshold', short: 'Endurance',
-    inspired: 'Plans in the style of Pete Pfitzinger',
-    desc: 'Higher mileage with a midweek medium-long run, lactate-threshold tempos and long runs up to 20–22 miles. Demanding but very effective for the marathon.',
+    key: 'endurance', name: 'Pfitzinger-style endurance', short: 'Pfitzinger',
+    inspired: 'Modeled on Pete Pfitzinger\'s Advanced Marathoning approach (not affiliated)',
+    desc: 'Higher mileage built on general-aerobic runs, a midweek medium-long run, lactate-threshold tempos that lengthen through the block, VO2max intervals late in the build, and long runs up to 20–22 miles with marathon-pace segments. Demanding and very effective for the marathon.',
     suits: 'Experienced runners with time for 5–6 runs and 40+ miles a week.',
     runs: [5, 6], quality: 1, peakMult: 1.2, longFrac: 1.05, longCapFull: 21, longCapHalf: 15, mlr: true, cross: 0, easyShare: 0.8
+  },
+  daniels: {
+    key: 'daniels', name: 'Daniels 2Q', short: 'Daniels',
+    inspired: 'Modeled on Jack Daniels\' Running Formula 2Q approach (not affiliated)',
+    desc: 'Two quality days a week, everything else easy, with all paces from your VDOT. Builds through four phases: foundation and strides, repetitions and hills, intervals and threshold, then threshold and race pace. Long runs stay under about 25% of the week or 2.5 hours.',
+    suits: 'Runners who want structure and two real workouts a week, with 25+ miles a week.',
+    runs: [4, 6], quality: 2, peakMult: 1.05, longFrac: 0.92, longCapFull: 20, longCapHalf: 14, mlr: false, cross: 0, easyShare: 0.8
   },
   polarized: {
     key: 'polarized', name: '80/20 polarized', short: '80/20',
@@ -216,6 +223,7 @@ var METHOD_META = {
   polarized: { level: 2, focus: 'run', minMpw: 15, days: '4–6 runs', evidence: 'Controlled trials of 80/20 intensity balance show better gains than threshold-heavy training for recreational runners who usually run easy days too hard.' },
   lydiard: { level: 2, focus: 'run', minMpw: 15, days: '4–6 runs', evidence: 'Volume of easy running is the strongest training predictor of marathon time in large datasets; this style front-loads it.' },
   cumulative: { level: 2, focus: 'run', minMpw: 20, days: '6 runs', evidence: 'Frequent running spreads load across the week; long runs are capped so no single run is more than about 30% of weekly volume.' },
+  daniels: { level: 3, focus: 'run', minMpw: 25, days: '4–6 runs, 2 quality', evidence: 'VDOT pacing ties every workout to current fitness, so effort stays matched to the runner; the two-quality-day structure is one of the most widely used self-coached marathon schemes.' },
   endurance: { level: 3, focus: 'run', minMpw: 30, days: '5–6 runs', evidence: 'Higher mileage with threshold work and medium-long runs: the pattern most associated with faster marathon times in training-log research.' },
   norwegian: { level: 3, focus: 'run', minMpw: 25, days: '5–7 runs', evidence: 'Keeps about 20–25% of weekly running just under the second lactate threshold, where a lot of quality can be absorbed with little fatigue. Evidence is strong observationally (elite and amateur results) but controlled trials are still few.' },
   canova: { level: 3, focus: 'run', minMpw: 40, days: '5–7 runs', evidence: 'Race-pace specificity: the closer the session is to marathon pace and duration, the more directly it trains the demands of the race. Coaching-derived rather than trial-tested.' }
@@ -244,6 +252,9 @@ function suggestMethods(profile, events) {
   if (lifts >= 3) add('cumulative', -2);
   if (hasFull && runs >= 5 && lvl === 'exp') add('endurance', 4, 'Your experience can handle medium-long runs for the marathon.');
   if (mpw >= 30) add('endurance', 2); else add('endurance', -3);
+  if (runs >= 4 && lvl === 'exp') add('daniels', 3, 'Two real workouts a week with every pace from your fitness: a favorite of experienced self-coached runners.');
+  if (mpw >= 25) add('daniels', 1); else add('daniels', -3);
+  if (lifts >= 3) add('daniels', -2);
   if (p.hrTrainer) add('polarized', 4, 'You like training by heart rate, which fits 80/20.');
   if (runs >= 4 && lvl !== 'new') add('polarized', 1, 'Two varied workouts with strictly easy days between them.');
   if (goal === 'fitness') { add('polarized', 1); add('lowfreq', 1); }
@@ -297,6 +308,7 @@ function rep(n, work, z, rec, effort) { return S('rep', { n: n, work: work, z: z
 function warm(q) { return q >= 7 ? 1.5 : 1; }
 var SESS = {
   fartlek: function (n, on, off, effort) { return { key: 'fartlek', title: 'Fartlek', purpose: 'Playful speed that teaches you to change gears without the stress of a track session.', steps: function (q) { return [wu(warm(q)), rep(n, { min: on }, 'F', { min: off }, effort || 'brisk, effort 5–6 of 10'), cd(0)]; } }; },
+  reps: function (n, m) { return { key: 'reps', title: 'Repetitions', purpose: 'Short, fast and fully recovered (R pace, about mile race effort): improves speed and running economy without much fatigue.', steps: function (q) { return [wu(warm(q)), rep(n, { m: m }, 'R', { m: m, walk: false }, 'R pace: fast, relaxed form; full jog recovery'), cd(0)]; } }; },
   hills: function (n, sec) { return { key: 'hills', title: 'Hill repeats', purpose: 'Strength and running power with less impact than flat speed. Great for shins when the hill is gentle.', steps: function (q) { return [wu(warm(q)), rep(n, { sec: sec }, 'F', { sec: 90, walk: false }, 'uphill, effort 7 of 10, jog back down'), cd(0)]; } }; },
   strides: function (n) { return { key: 'strides', title: 'Easy + strides', purpose: 'Keeps your legs quick on a light week without adding fatigue.', steps: function (q) { return [run(Math.max(1, q - 0.4), 'E'), rep(n || 6, { sec: 20 }, 'R', { sec: 40, walk: true }, 'fast but relaxed')]; } }; },
   steady: function (min) { return { key: 'steady', title: 'Steady run', purpose: 'Comfortably brisk aerobic running. Builds the engine with little recovery cost.', steps: function (q) { return [wu(1), runMin(min, 'S'), cd(0)]; } }; },
@@ -348,6 +360,22 @@ function qualityFor(ctx) {
     if (ph === 'base') return slot === 1 ? [SESS.hills(8, 45), SESS.fartlek(8, 1, 1), SESS.hills(10, 45)][i % 3] : [SESS.fastCont(4), SESS.fastCont(5), SESS.progression(20), SESS.fastCont(6), SESS.fastCont(7), SESS.fastCont(8)][Math.min(i, 5)];
     if (ph === 'thr') return slot === 1 ? [SESS.intervals(5, 1000, 400), SESS.intervalsMi(4, 2), SESS.intervals(6, 1000, 400)][i % 3] : [SESS.fastCont(8), SESS.tempoMi(4), SESS.fastCont(9), SESS.cruise(3, 2, 90), SESS.fastCont(10), SESS.tempoMi(5)][Math.min(i, 5)];
     if (ph === 'spec' && d === 'full') return slot === 1 ? [SESS.tempoMi(4), SESS.intervalsMi(4, 2), SESS.cruise(3, 2, 90)][i % 3] : [SESS.mpFloat(3, 2), SESS.mpFloat(4, 2), SESS.mpFloat(3, 3), SESS.mpFloat(4, 3), SESS.goal(1, 10, 0, 'M'), SESS.mpFloat(5, 3), SESS.goal(1, 12, 0, 'M'), SESS.mpFloat(4, 3)][Math.min(i, 7)];
+  }
+  /* Daniels 2Q: phase II repetitions and hills, phase III intervals + threshold, phase IV threshold + race pace */
+  if (meth.key === 'daniels' && !ctx.tt) {
+    if (ph === 'base') return slot === 1 ? [SESS.hills(8, 45), SESS.strides(8)][i % 2] : [SESS.strides(8), SESS.reps(8, 200), SESS.hills(8, 45), SESS.reps(10, 200), SESS.reps(6, 400), SESS.reps(8, 300)][Math.min(i, 5)];
+    if (ph === 'thr') return slot === 1 ? [SESS.intervals(5, 1000, 400), SESS.intervals(6, 800, 400), SESS.intervalsMi(4, 3), SESS.intervals(5, 1200, 400)][i % 4] : [SESS.cruise(4, 1, 60), SESS.tempoMi(3), SESS.cruise(5, 1, 60), SESS.tempoMi(4), SESS.cruise(3, 2, 120), SESS.tempoMi(5)][Math.min(i, 5)];
+    if (ph === 'spec') {
+      if (d === 'full') return slot === 1 ? [SESS.cruise(4, 1.5, 60), SESS.tempoMi(5), SESS.cruise(3, 2, 120), SESS.tempoMi(6)][i % 4] : [SESS.goal(2, 3, 3, 'M'), SESS.mpPlusT(5), SESS.goal(1, 8, 0, 'M'), SESS.goal(2, 4, 3, 'M'), SESS.mpPlusT(7), SESS.goal(1, 10, 0, 'M')][Math.min(i, 5)];
+      if (d === 'half') return slot === 1 ? [SESS.intervals(5, 1000, 400), SESS.intervalsMi(4, 3)][i % 2] : [SESS.cruise(4, 1.5, 60), SESS.goal(2, 3, 3), SESS.tempoMi(5), SESS.goal(3, 2, 2)][Math.min(i, 3)];
+      return slot === 1 ? SESS.reps(8, 400) : [SESS.intervals(5, 1000, 400), SESS.cruise(4, 1, 60), SESS.intervals(6, 800, 400)][i % 3];
+    }
+  }
+  /* Pfitzinger: lactate-threshold tempos that lengthen, VO2max late in the build */
+  if (meth.key === 'endurance' && !ctx.tt) {
+    if (ph === 'base') return slot === 1 ? SESS.strides(10) : [SESS.strides(10), SESS.tempoMi(4), SESS.strides(10), SESS.tempoMi(4), SESS.tempoMi(5)][Math.min(i, 4)];
+    if (ph === 'thr') return slot === 1 ? [SESS.intervals(5, 1000, 400), SESS.intervals(6, 1000, 400)][i % 2] : [SESS.tempoMi(4), SESS.tempoMi(5), SESS.tempoMi(5), SESS.tempoMi(6), SESS.tempoMi(6), SESS.tempoMi(7)][Math.min(i, 5)];
+    if (ph === 'spec') return slot === 1 ? SESS.tempoMi(5) : [SESS.intervals(5, 1200, 400), SESS.tempoMi(6), SESS.intervals(6, 1200, 400), SESS.tempoMi(7), SESS.intervals(5, 1000, 400)][Math.min(i, 4)];
   }
   if (meth.key === 'lydiard' && !ctx.tt) {
     if (ph === 'base') return [SESS.strides(6), SESS.steady(15), SESS.strides(8), SESS.steady(20), SESS.progression(20), SESS.steadyMi(4), SESS.strides(8), SESS.steady(25), SESS.progression(25), SESS.steadyMi(5)][i % 10];
@@ -971,21 +999,45 @@ function adapt(plan, st, analysis) {
   var comp = compliance(plan, st);
   plan.compliance = comp;
   var arr = st.arr || {};
+  /* You stay in charge: in advisory mode (prefs.advisory) the app's own automatic adjustments become suggestions until
+     you apply them for that week (st.advOk[weekStart]); locked days and weeks (st.locks 'd:date' / 'w:weekStart') never
+     change automatically. Your own changes (moves, swaps, added workouts, accepted shifts) always apply. */
+  var adv = !!(st.prefs || {}).advisory, advOk = st.advOk || {}, locks = st.locks || {};
+  var daySum = function (d) { return d.parts.filter(function (p) { return p.type !== 'rest'; }).map(function (p) { return p.title + (isRun(p) && p.mi ? ' · ' + half(p.mi) + ' mi' : ''); }).join(' + ') || 'Rest'; };
+  /* what you would actually do that day; notes alone don't count as a change */
+  var sig = function (d) { return JSON.stringify(d.parts.map(function (p) { return [p.type, p.title, p.mi || 0, p.min || 0, !!p.treadmill, p.key || '', p.steps || null]; })); };
+  var guarded = function (w, label, fn) {
+    if (!adv && !Object.keys(locks).length) return fn();
+    var before = JSON.stringify(w.days); fn();
+    if (JSON.stringify(w.days) === before) return;
+    var b = JSON.parse(before), weekOk = !adv || advOk[w.start];
+    w.days.forEach(function (d, i) {
+      if (sig(d) === sig(b[i])) return;
+      var locked = locks['d:' + d.date] || locks['w:' + w.start];
+      if (locked || !weekOk) {
+        if (!locked && d.date >= today()) (w.advice = w.advice || []).push({ date: d.date, label: label, before: daySum(b[i]), after: daySum(d) });
+        w.days[i] = b[i];
+      }
+    });
+  };
   plan.weeks.forEach(function (w) {
+    w.advice = [];
+    w.locked = !!locks['w:' + w.start];
     var mod = mult[w.start] || null;
     if (comp && comp.cap && w.start === comp.cap.week && (!mod || mod.m > comp.cap.m)) mod = { m: comp.cap.m, phase: 'compliance', capMi: comp.cap.mi, longCap: comp.cap.long };
     w.mod = mod;
     var zz = zonesFor(plan, w, analysis);
     w.zonesAdj = zz;
     w.base = w.tot.mi;
-    w.days.forEach(function (d) {
+    var applyMod = function () { w.days.forEach(function (d) {
       d.parts = d.parts.map(function (p) {
         if (!mod || mod.m >= 1) return p;
         if (p.type === 'strength') return modLift(p, mod);
         if (p.type === 'cross' || p.type === 'rest') return p;
         return modRun(p, mod, zz);
       });
-    });
+    }); };
+    if (mod && mod.phase === 'compliance') guarded(w, 'Matched to what you have been running', applyMod); else applyMod();
     /* manual moves: {fromDate: toDate} for the run on that day */
     Object.keys(moves).forEach(function (from) {
       var to = moves[from];
@@ -1024,7 +1076,7 @@ function adapt(plan, st, analysis) {
     var mix = st.liftmix || {};
     w.days.forEach(function (d) { d.parts = d.parts.map(function (p) { if (p.type !== 'strength') return p; var k = mix[p.akey || partKey(p.moved || d.date, p)]; if (!k || !LIFT[k] || k === p.key) return p; return Object.assign({}, p, { mix: k, title: 'Combined: ' + LIFT[p.key].name.replace(/ Day$| & Core$/, '') + ' + ' + LIFT[k].name.replace(/ Day$| & Core$/, ''), changed: true, note: 'Combined session: covers the main lifts from the session you removed this week.' }); }); });
     /* long run never longer than the cap from the consistency check */
-    if (mod && mod.phase === 'compliance' && mod.longCap) w.days.forEach(function (d) { d.parts = d.parts.map(function (p) { if (p.type === 'long' && p.mi > mod.longCap) { var q = scaleRun(p, mod.longCap / p.mi, zz); q.changed = true; q.from = p.title; q.note = 'Capped to ' + mod.longCap + ' mi: build back to longer runs gradually.'; return q; } return p; }); });
+    if (mod && mod.phase === 'compliance' && mod.longCap) guarded(w, 'Long run capped to match recent running', function () { w.days.forEach(function (d) { d.parts = d.parts.map(function (p) { if (p.type === 'long' && p.mi > mod.longCap) { var q = scaleRun(p, mod.longCap / p.mi, zz); q.changed = true; q.from = p.title; q.note = 'Capped to ' + mod.longCap + ' mi: build back to longer runs gradually.'; return q; } return p; }); }); });
     /* unavailable days: move runs to free days in the same week, most important first */
     var blocked = w.days.filter(function (d) { return unavailable[d.date]; });
     if (blocked.length) {
@@ -1087,9 +1139,9 @@ function adapt(plan, st, analysis) {
     });
     /* training balance from Garmin load focus: small, safe nudges to future sessions this week and next */
     var lf = analysis && analysis.loadFocus;
-    if (lf && lf.nudge && !(mod && mod.m < 1)) applyLoadFocus(w, lf, zz);
+    if (lf && lf.nudge && !(mod && mod.m < 1)) guarded(w, 'Garmin training balance', function () { applyLoadFocus(w, lf, zz); });
     /* daylight: no running in the dark if you'd rather not */
-    applyDaylight(w, st, zz);
+    guarded(w, 'Daylight', function () { applyDaylight(w, st, zz); });
     /* your own choice per run: indoors (treadmill) or outdoors */
     var ven = st.venue || {};
     if (Object.keys(ven).length) w.days.forEach(function (d) { d.parts = d.parts.map(function (p) {
@@ -1101,7 +1153,7 @@ function adapt(plan, st, analysis) {
     }); });
     /* personal shin-load ceiling: trims easy and long runs in this week and next when the plan asks for more */
     var sh = analysis && analysis.shin;
-    if (sh && st.profile && st.profile.injuryProne && (st.prefs || {}).shinCap !== false && w.end >= today() && w.start <= addD(today(), 7) && w.phase.key !== 'race' && w.phase.key !== 'taper') capWeek(w, sh.ceiling, zz);
+    if (sh && st.profile && st.profile.injuryProne && (st.prefs || {}).shinCap !== false && w.end >= today() && w.start <= addD(today(), 7) && w.phase.key !== 'race' && w.phase.key !== 'taper') guarded(w, 'Shin-load ceiling', function () { capWeek(w, sh.ceiling, zz); });
     /* never show two rest cards on one day, and drop rest cards next to real sessions */
     w.days.forEach(function (d) {
       var real = d.parts.filter(function (p) { return p.type !== 'rest'; });

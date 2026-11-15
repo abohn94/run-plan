@@ -838,3 +838,33 @@ b.shk { font-size: .8rem; padding: 2px 9px; }
 .bbspark { display: flex; align-items: flex-end; gap: 2px; height: 34px; margin-top: 4px; }
 .bbspark i { flex: 1 1 0; min-width: 0; border-radius: 2px 2px 0 0; background: var(--blue); }
 .bbspark i.hi { background: var(--green); } .bbspark i.mid { background: var(--blue); } .bbspark i.lo { background: var(--amber); }
+/* features8 */
+.toggle { width: 50px; height: 30px; border-radius: 99px; border: 0; background: var(--card2); position: relative; flex: 0 0 auto; padding: 0; }
+.toggle i { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
+.toggle.on { background: var(--green); } .toggle.on i { transform: translateX(20px); background: #fff; }
+.card.tight { padding-top: 12px; padding-bottom: 12px; }
+.lockrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: .86rem; }
+.advc .lockrow { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.advc .lockrow, .card > .lockrow + .lockrow { }
+.advlist { display: grid; gap: 8px; margin-top: 10px; }
+.advlist > div { display: grid; grid-template-columns: 40px 1fr; gap: 10px; }
+.advlist .d { font-weight: 800; font-size: .85rem; }
+.advlist .c { display: grid; gap: 2px; min-width: 0; }
+.advlist em { font-style: normal; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.advlist .was { color: var(--muted); text-decoration: line-through; }
+.advlist .now { font-weight: 700; } .advlist .now::before { content: '→ '; color: var(--green); }
+.advc { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--amber) 55%, transparent); }
+.painrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.painrow span { margin-right: 4px; }
+.painrow button { border: 0; background: var(--card2); color: var(--ink); border-radius: 99px; padding: 6px 12px; font: inherit; font-size: .8rem; font-weight: 700; }
+.painrow button[aria-pressed="true"] { background: var(--ink); color: var(--inv); }
+.pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 8px; margin-top: 8px; }
+.pf { background: var(--card2); border-radius: 14px; padding: 10px 12px; display: grid; gap: 1px; min-width: 0; }
+.pf span { font-size: .66rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.pf b { font-size: 1.15rem; font-weight: 800; } .pf.good b { color: var(--green); }
+.pf em { font-style: normal; font-size: .74rem; color: var(--muted); }
+.pf small { font-size: .7rem; color: var(--dim); margin-top: 4px; line-height: 1.35; }
+.progc .tiny { display: inline-block; margin-top: 8px; }
+.rpt .rprow, .card .rprow { display: flex; justify-content: space-between; margin-top: 6px; font-size: .9rem; }
+.rpt .tiny { display: inline-block; margin-top: 8px; }
+.postrace { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--violet) 55%, transparent); }
