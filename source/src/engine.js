@@ -1083,6 +1083,15 @@ function adapt(plan, st, analysis) {
     if (lf && lf.nudge && !(mod && mod.m < 1)) applyLoadFocus(w, lf, zz);
     /* daylight: no running in the dark if you'd rather not */
     applyDaylight(w, st, zz);
+    /* your own choice per run: indoors (treadmill) or outdoors */
+    var ven = st.venue || {};
+    if (Object.keys(ven).length) w.days.forEach(function (d) { d.parts = d.parts.map(function (p) {
+      if (!isRun(p) || p.type === 'race') return p;
+      var v = ven[p.akey || partKey(p.moved || d.date, p)]; if (!v) return p;
+      if (v === 'in') return Object.assign({}, p, { treadmill: true, venue: 'in', dark: false, note: 'Indoors on the treadmill, by your choice. Set a 1% incline so the effort matches the road.' });
+      var sun = (st.prefs || {}).loc ? sunTimes(d.date, st.prefs.loc.lat, st.prefs.loc.lon) : null;
+      return Object.assign({}, p, { treadmill: false, venue: 'out', dark: false, title: p.title.replace(/^Treadmill /, '').replace(/^run$/, 'Easy run'), note: 'Outdoors, by your choice.' + (sun ? ' Daylight ' + clockMin(sun.rise) + '–' + clockMin(sun.set) + '.' : '') });
+    }); });
     /* personal shin-load ceiling: trims easy and long runs in this week and next when the plan asks for more */
     var sh = analysis && analysis.shin;
     if (sh && st.profile && st.profile.injuryProne && (st.prefs || {}).shinCap !== false && w.end >= today() && w.start <= addD(today(), 7) && w.phase.key !== 'race' && w.phase.key !== 'taper') capWeek(w, sh.ceiling, zz);

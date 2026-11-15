@@ -793,6 +793,10 @@ body.printband .band { display: block; }
 .awayc { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--blue) 45%, transparent); }
 .shc.eve { background: color-mix(in srgb, var(--amber) 24%, var(--card2)); }
 .locpick { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--card2); border-radius: 12px; padding: 8px 8px 8px 12px; margin-top: 6px; }
+.venue { display: flex; align-items: center; gap: 6px; margin: 8px 0 2px; flex-wrap: wrap; }
+.vbtn { border: 0; background: var(--card2); color: var(--muted); border-radius: 999px; padding: 7px 13px; font-size: .82rem; font-weight: 800; min-height: 36px; }
+.vbtn[aria-pressed="true"] { background: var(--ink); color: var(--inv); }
+.vsun { margin-left: auto; font-size: .72rem; color: var(--dim); font-weight: 700; }
 
 </style>
 </head>
@@ -2083,6 +2087,15 @@ function adapt(plan, st, analysis) {
     if (lf && lf.nudge && !(mod && mod.m < 1)) applyLoadFocus(w, lf, zz);
     /* daylight: no running in the dark if you'd rather not */
     applyDaylight(w, st, zz);
+    /* your own choice per run: indoors (treadmill) or outdoors */
+    var ven = st.venue || {};
+    if (Object.keys(ven).length) w.days.forEach(function (d) { d.parts = d.parts.map(function (p) {
+      if (!isRun(p) || p.type === 'race') return p;
+      var v = ven[p.akey || partKey(p.moved || d.date, p)]; if (!v) return p;
+      if (v === 'in') return Object.assign({}, p, { treadmill: true, venue: 'in', dark: false, note: 'Indoors on the treadmill, by your choice. Set a 1% incline so the effort matches the road.' });
+      var sun = (st.prefs || {}).loc ? sunTimes(d.date, st.prefs.loc.lat, st.prefs.loc.lon) : null;
+      return Object.assign({}, p, { treadmill: false, venue: 'out', dark: false, title: p.title.replace(/^Treadmill /, '').replace(/^run$/, 'Easy run'), note: 'Outdoors, by your choice.' + (sun ? ' Daylight ' + clockMin(sun.rise) + '–' + clockMin(sun.set) + '.' : '') });
+    }); });
     /* personal shin-load ceiling: trims easy and long runs in this week and next when the plan asks for more */
     var sh = analysis && analysis.shin;
     if (sh && st.profile && st.profile.injuryProne && (st.prefs || {}).shinCap !== false && w.end >= today() && w.start <= addD(today(), 7) && w.phase.key !== 'race' && w.phase.key !== 'taper') capWeek(w, sh.ceiling, zz);
@@ -3214,7 +3227,7 @@ var STATE_PATH = 'user/state.json', GARMIN_PATH = 'garmin/data.json', WORKFLOW =
 function b64enc(str) { return btoa(unescape(encodeURIComponent(str))); }
 function b64dec(b64) { return decodeURIComponent(escape(atob(String(b64).replace(/\s/g, '')))); }
 function emptyState() {
-  return { v: 1, profile: null, events: [], logs: {}, status: {}, life: [], overrides: {}, moves: {}, checkins: [], metrics: [], coach: [], seen: {}, shoes: [], gear: {}, orm: [], anotes: {}, prefs: {}, arr: {}, subs: {}, liftmix: {}, shifts: {}, updatedAt: null };
+  return { v: 1, profile: null, events: [], logs: {}, status: {}, life: [], overrides: {}, moves: {}, checkins: [], metrics: [], coach: [], seen: {}, shoes: [], gear: {}, orm: [], anotes: {}, prefs: {}, arr: {}, subs: {}, liftmix: {}, shifts: {}, venue: {}, updatedAt: null };
 }
 function normalize(s) {
   var e = emptyState();
@@ -8221,6 +8234,23 @@ VIEWS.settings = function () {
   var h = _settings7p();
   return h.replace('<section class="card stack"><h3>App</h3>', '<section class="card stack"><h3>Location & daylight</h3>' + placeBody(true).replace(/^<div class="card stack">/, '').replace(/<\/div>$/, '') + '</section><section class="card stack"><h3>App</h3>');
 };
+
+
+/* ---------- indoor / outdoor switch on every run ---------- */
+function venueKey(date, x) { return x.akey || E.partKey(x.moved || date, x); }
+function venueBar(x, date) {
+  if (!E.isRun(x) || x.type === 'race' || date < App.today) return '';
+  var tm = !!x.treadmill, L = loc(), sun = L && E.sunTimes(date, L.lat, L.lon);
+  return '<div class="venue" role="group" aria-label="Where you run"><button class="vbtn" data-act="venue" data-arg="' + jattr({ k: venueKey(date, x), v: 'out', date: date }) + '" aria-pressed="' + !tm + '">☀ Outdoors</button><button class="vbtn" data-act="venue" data-arg="' + jattr({ k: venueKey(date, x), v: 'in', date: date }) + '" aria-pressed="' + tm + '">🏃 Treadmill</button>' + (sun ? '<span class="vsun">' + E.clockMin(sun.rise).replace(' AM', 'a') + '–' + E.clockMin(sun.set).replace(' PM', 'p') + '</span>' : '') + '</div>';
+}
+ACTIONS.venue = function (a) {
+  Store.edit('venue', a.k, function (S) { S.venue = S.venue || {}; S.venue[a.k] = a.v; var cut = E.addD(App.today, -14); Object.keys(S.venue).forEach(function (k) { if (k.split('|')[0] < cut) delete S.venue[k]; }); });
+  toast(a.v === 'in' ? 'Moved to the treadmill' : 'Running outdoors');
+};
+var _hero7v = heroHTML;
+heroHTML = function (x, date, zz) { return _hero7v(x, date, zz) + venueBar(x, date); };
+var _partDetail7v = partDetail;
+partDetail = function (x, date, w, zz, l, idx) { var h = _partDetail7v(x, date, w, zz, l, idx), b = venueBar(x, date); if (!b) return h; var i = h.indexOf('</section>'); return i > 0 ? h.slice(0, i) + b + h.slice(i) : h + b; };
 
 
 /* ---------------- Garmin polling ---------------- */

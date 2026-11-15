@@ -559,3 +559,20 @@ VIEWS.settings = function () {
   var h = _settings7p();
   return h.replace('<section class="card stack"><h3>App</h3>', '<section class="card stack"><h3>Location & daylight</h3>' + placeBody(true).replace(/^<div class="card stack">/, '').replace(/<\/div>$/, '') + '</section><section class="card stack"><h3>App</h3>');
 };
+
+
+/* ---------- indoor / outdoor switch on every run ---------- */
+function venueKey(date, x) { return x.akey || E.partKey(x.moved || date, x); }
+function venueBar(x, date) {
+  if (!E.isRun(x) || x.type === 'race' || date < App.today) return '';
+  var tm = !!x.treadmill, L = loc(), sun = L && E.sunTimes(date, L.lat, L.lon);
+  return '<div class="venue" role="group" aria-label="Where you run"><button class="vbtn" data-act="venue" data-arg="' + jattr({ k: venueKey(date, x), v: 'out', date: date }) + '" aria-pressed="' + !tm + '">☀ Outdoors</button><button class="vbtn" data-act="venue" data-arg="' + jattr({ k: venueKey(date, x), v: 'in', date: date }) + '" aria-pressed="' + tm + '">🏃 Treadmill</button>' + (sun ? '<span class="vsun">' + E.clockMin(sun.rise).replace(' AM', 'a') + '–' + E.clockMin(sun.set).replace(' PM', 'p') + '</span>' : '') + '</div>';
+}
+ACTIONS.venue = function (a) {
+  Store.edit('venue', a.k, function (S) { S.venue = S.venue || {}; S.venue[a.k] = a.v; var cut = E.addD(App.today, -14); Object.keys(S.venue).forEach(function (k) { if (k.split('|')[0] < cut) delete S.venue[k]; }); });
+  toast(a.v === 'in' ? 'Moved to the treadmill' : 'Running outdoors');
+};
+var _hero7v = heroHTML;
+heroHTML = function (x, date, zz) { return _hero7v(x, date, zz) + venueBar(x, date); };
+var _partDetail7v = partDetail;
+partDetail = function (x, date, w, zz, l, idx) { var h = _partDetail7v(x, date, w, zz, l, idx), b = venueBar(x, date); if (!b) return h; var i = h.indexOf('</section>'); return i > 0 ? h.slice(0, i) + b + h.slice(i) : h + b; };
