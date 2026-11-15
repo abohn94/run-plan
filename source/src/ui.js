@@ -331,6 +331,7 @@ VIEWS.plan = function () {
     if (d2.dropped) items += '<div class="tiny muted">No free day this week for: ' + esc(d2.dropped.join(', ')) + '</div>';
     return '<div class="dayblock' + (d2.date === t ? ' today' : '') + '"><div class="d">' + d2.dow + '<b>' + E.pd(d2.date).getDate() + '</b></div><div class="items">' + items + '</div></div>';
   }).join('') + '</div>';
+  if (typeof addWkBtn === 'function') html += addWkBtn(w);
   html += legend();
   html += '<div class="btns"><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'weekstatus', week: w.n }) + '">Week status' + (mod && mod.phase === 'status' ? ': ' + E.STATUS[mod.kind].label : '') + '</button><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'life' }) + '">Something came up</button><button class="btn sm" data-act="garmin-week" data-arg="' + jattr({ week: w.n }) + '">Garmin workouts (.zip)</button></div>';
   return html;

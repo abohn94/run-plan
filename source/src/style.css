@@ -818,3 +818,16 @@ body.printband .band { display: block; }
 .shk.eve { background: color-mix(in srgb, var(--violet) 22%, transparent); color: var(--violet); }
 .shk.night { background: color-mix(in srgb, var(--blue) 22%, transparent); color: var(--blue); }
 b.shk { font-size: .8rem; padding: 2px 9px; }
+/* add a workout */
+.addwk h3 { font-size: 1rem; }
+.adddays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 10px; }
+.adddays button { border: 0; background: var(--card2); color: var(--ink); border-radius: 12px; padding: 6px 0; display: grid; justify-items: center; font: inherit; }
+.adddays button span { font-size: .62rem; font-weight: 800; color: var(--muted); }
+.adddays button b { font-size: .95rem; }
+.adddays button.on { background: var(--ink); } .adddays button.on span, .adddays button.on b { color: var(--inv); }
+.addopt { display: grid; grid-template-columns: 34px 1fr 24px; gap: 10px; align-items: center; width: 100%; border: 0; text-align: left; background: var(--card2); color: var(--ink); border-radius: 14px; padding: 10px 12px; font: inherit; }
+.addopt.sug { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--green) 60%, transparent); }
+.addopt .t { display: grid; min-width: 0; } .addopt .t b { font-size: .9rem; } .addopt .t small { color: var(--muted); font-size: .72rem; }
+.addopt .plus { font-size: 1.3rem; font-weight: 800; color: var(--green); text-align: center; }
+.addopt .tico svg { width: 22px; height: 22px; }
+.addmine { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: .88rem; background: var(--card2); border-radius: 12px; padding: 8px 12px; }

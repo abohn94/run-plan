@@ -697,3 +697,107 @@ partDetail = function (x, date, w, zz, l, idx) { var h = _partDetail7v(x, date, 
   }, 60 * 1000);
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { if (App.wx && Date.now() - App.wx.at > 30 * 60 * 1000) loadWx(true); else if (App.view === 'today' && $('#sheet').hidden) render(); lastH = new Date().getHours(); } });
 })();
+
+/* ---------- add your own workout to the week (suggests the ones your shifts or caps pushed out) ---------- */
+/* The plan as it would be without your work shifts and without anything you added: what was originally set for you */
+function basePlan() {
+  var S = Store.state, key = (S.updatedAt || '') + '|' + (App.cal && App.cal.updated || '') + '|' + App.today;
+  if (App._base && App._base.key === key) return App._base.plan;
+  var ex = S.extras, P = null;
+  try {
+    S.extras = {}; setHidden(S, 'shiftsAll', {});
+    P = E.generate(S); E.adapt(P, S, E.analyze(P, S, Store.garmin));
+  } catch (e) { console.warn(e); P = null; } finally {
+    if (ex === undefined) delete S.extras; else S.extras = ex;
+    setHidden(S, 'shiftsAll', calShifts().applied);
+  }
+  App._base = { key: key, plan: P }; return P;
+}
+function partId(p) { return p.type === 'strength' ? 'lift:' + (p.key || p.title) : p.type === 'cross' ? 'cross:' + p.title : E.isRun(p) ? 'run:' + p.type : p.type; }
+function cleanPart(p) { var q = JSON.parse(JSON.stringify(p)); ['moved', 'changed', 'shin', 'dark', 'daylight', 'added', 'userAdded', 'xi', 'from', 'venue', 'treadmill', 'akey'].forEach(function (k) { delete q[k]; }); q.note = (q.note || '').split('. ').filter(function (s) { return !/shift|sunset|Daylight|Treadmill|shin-load|Shortened|Swapped|Skipped/i.test(s); }).join('. '); return q; }
+/* sessions the original week had that this week no longer has (runs, lifts), from today on */
+function skippedIn(w) {
+  var B = basePlan(); if (!B || !w) return [];
+  var bw = E.weekOf(B, w.start); if (!bw) return [];
+  var have = {}; w.days.forEach(function (d) { d.parts.forEach(function (p) { if (p.type !== 'rest' && p.type !== 'race') { var k = partId(p); have[k] = (have[k] || 0) + 1; } }); });
+  var out = [];
+  bw.days.forEach(function (d) { d.parts.forEach(function (p) {
+    if (p.type === 'rest' || p.type === 'race') return;
+    var k = partId(p); if (have[k]) { have[k]--; return; }
+    out.push({ from: d.date, part: cleanPart(p) });
+  }); });
+  /* a run that was only shortened isn't "missing"; a speed session turned easy shows as the original */
+  return out;
+}
+function liftChoices() {
+  var seen = {}, out = [];
+  (App.plan ? App.plan.weeks : []).forEach(function (w) { if (w.end < App.today || out.length >= 4) return; w.days.forEach(function (d) { d.parts.forEach(function (p) { if (p.type === 'strength' && !seen[p.key || p.title]) { seen[p.key || p.title] = 1; out.push(cleanPart(p)); } }); }); });
+  return out.slice(0, 4);
+}
+function addWkBtn(w) {
+  if (!w || w.end < App.today) return '';
+  var sk = skippedIn(w);
+  return '<section class="card addwk"><div class="spread"><div><h3>Have more time this week?</h3><p class="small muted" style="margin-top:2px">' + (sk.length ? plural(sk.length, 'workout') + ' from your original plan didn\'t fit: ' + esc(sk.map(function (x) { return x.part.title; }).join(', ')) + '.' : 'Add a run or a lift on any day.') + '</p></div></div><div class="btns" style="margin-top:10px"><button class="btn sm primary" data-act="sheet" data-arg="' + jattr({ sheet: 'addwk', week: w.start }) + '">+ Add a workout</button></div></section>';
+}
+SHEETS.addwk = function (a) {
+  var w = App.plan && (E.weekOf(App.plan, a.week || App.today)); if (!w) return '';
+  var days = w.days.filter(function (d) { return d.date >= App.today; });
+  if (!days.length) return '';
+  var sel = a.date && days.some(function (d) { return d.date === a.date; }) ? a.date : days[0].date;
+  a.date = sel; a.week = w.start;
+  var sk = skippedIn(w), opts = [];
+  sk.forEach(function (x) { opts.push({ part: x.part, why: 'From your original plan (' + fmtD(x.from, { weekday: 'short' }) + ')', sug: true }); });
+  var Z = w.zonesAdj;
+  [2, 3, 4, 5].forEach(function (m) { if (!opts.some(function (o) { return o.sug && o.part.type === 'easy' && o.part.mi === m; })) opts.push({ part: { type: 'easy', role: 'easy', title: 'Easy run', mi: m, steps: [{ mi: m, z: 'E' }] }, why: 'Conversational effort', run: true }); });
+  liftChoices().forEach(function (p) { if (!opts.some(function (o) { return o.sug && partId(o.part) === partId(p); })) opts.push({ part: p, why: 'Strength' }); });
+  App._addOpts = opts;
+  var dayHas = function (d) { return d.parts.filter(function (p) { return p.type !== 'rest'; }).map(function (p) { return p.title; }).join(' + ') || (d.shift === 'day' ? 'Work day' : 'Rest'); };
+  var mine = ((st().extras || {})[sel] || []);
+  var row = function (o, i) { var p = o.part; return '<button class="addopt' + (o.sug ? ' sug' : '') + '" data-act="extra-add" data-arg="' + jattr({ i: i }) + '"><span class="tico">' + (TICON[p.type] || TICON.easy) + '</span><span class="t"><b>' + esc(p.title) + (E.isRun(p) && p.mi ? ' · ' + mi(p.mi) + ' mi' : p.min ? ' · ' + p.min + ' min' : '') + '</b><small>' + esc(o.why) + '</small></span><span class="plus">+</span></button>'; };
+  var sugs = opts.map(function (o, i) { return o.sug ? row(o, i) : ''; }).join(''), rest = opts.map(function (o, i) { return o.sug ? '' : row(o, i); }).join('');
+  return '<h3>Add a workout</h3><p class="small muted">Pick a day, then a session.' + (watchOn() ? ' Anything added for today goes to your watch within a couple of minutes.' : '') + '</p>' +
+    '<div class="adddays">' + days.map(function (d) { return '<button class="' + (d.date === sel ? 'on' : '') + '" data-act="extra-day" data-arg="' + jattr({ d: d.date }) + '"><span>' + (d.date === App.today ? 'Today' : d.dow) + '</span><b>' + E.pd(d.date).getDate() + '</b></button>'; }).join('') + '</div>' +
+    '<p class="tiny muted" style="margin:8px 0 4px">' + fmtD(sel, { weekday: 'long', month: 'short', day: 'numeric' }) + ': ' + esc(dayHas(w.days[E.dow(sel)])) + '</p>' +
+    (mine.length ? '<div class="stack tight">' + mine.map(function (p, i) { return '<div class="addmine"><span>Added: <b>' + esc(p.title) + (E.isRun(p) && p.mi ? ' · ' + mi(p.mi) + ' mi' : '') + '</b></span><button class="linkbtn" data-act="extra-del" data-arg="' + jattr({ d: sel, i: i }) + '">Remove</button></div>'; }).join('') + '</div>' : '') +
+    (sugs ? '<div class="eyebrow" style="margin-top:12px">Skipped this week</div><div class="stack tight">' + sugs + '</div>' : '') +
+    '<div class="eyebrow" style="margin-top:12px">Or add</div><div class="stack tight">' + rest + '</div><div class="btns"><button class="btn ghost" data-act="sheet-close">Done</button></div>';
+};
+function refreshAdd() { if (typeof sheetCtx === 'undefined' || !sheetCtx || sheetCtx.kind !== 'addwk') return; var h = SHEETS.addwk(sheetCtx.a); if (h) $('#sheetCard').innerHTML = '<div class="grabber"></div>' + h; }
+ACTIONS['extra-day'] = function (a) { sheetCtx.a.date = a.d; refreshAdd(); };
+ACTIONS['extra-add'] = function (a) {
+  var o = (App._addOpts || [])[a.i], d = sheetCtx && sheetCtx.a.date; if (!o || !d) return;
+  var p = JSON.parse(JSON.stringify(o.part));
+  if (p.steps && p.type === 'easy' && o.run) p.steps = undefined;   /* the engine builds easy-run steps from the miles */
+  Store.edit('extras', d, function (S) { S.extras = S.extras || {}; S.extras[d] = (S.extras[d] || []).concat([p]); });
+  toast(p.title + ' added to ' + (d === App.today ? 'today' : fmtD(d, { weekday: 'long' })) + (d === App.today && watchOn() ? ' · sending to your watch' : ''));
+  if (d === App.today && watchOn()) watchSoon();
+  setTimeout(refreshAdd, 30);
+};
+ACTIONS['extra-del'] = function (a) {
+  Store.edit('extras', a.d, function (S) { var l = (S.extras || {})[a.d] || []; l.splice(a.i, 1); if (l.length) S.extras[a.d] = l; else delete S.extras[a.d]; });
+  toast('Removed'); if (a.d === App.today && watchOn()) watchSoon(); setTimeout(refreshAdd, 30);
+};
+/* Today: the same button under today's plan */
+var _today7x = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today7x(); if (!App.plan || App.today < App.plan.start) return h;
+  var w = E.weekOf(App.plan, App.today); if (!w) return h;
+  var b = '<div class="btns" style="margin:-4px 0 4px"><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'addwk', week: w.start, date: App.today }) + '">+ Add a workout</button></div>';
+  var i = h.indexOf('<section class="card cond'); return i > 0 ? h.slice(0, i) + b + h.slice(i) : h + b;
+};
+/* Day view: added workouts can be removed there too */
+var _day7x = VIEWS.day;
+VIEWS.day = function () {
+  var h = _day7x(), date = App.args[0] || App.today, l = (st().extras || {})[date]; if (!l || !l.length || date < App.today) return h;
+  return h + '<section class="card stack"><h3>Added by you</h3>' + l.map(function (p, i) { return '<div class="addmine"><span>' + esc(p.title) + (E.isRun(p) && p.mi ? ' · ' + mi(p.mi) + ' mi' : '') + '</span><button class="linkbtn" data-act="extra-del" data-arg="' + jattr({ d: date, i: i }) + '">Remove</button></div>'; }).join('') + '</section>';
+};
+/* undo every accepted calendar change (back to the plan before the review) */
+ACTIONS['cal-undo'] = function () {
+  Store.edit('calAck', null, function (S) { S.calAck = {}; });
+  if (watchOn()) watchSoon(); toast('Back to your original plan. Your shift changes are waiting for review');
+};
+var _calsync7x = VIEWS.calsync;
+VIEWS.calsync = function () {
+  var h = _calsync7x(), n = Object.keys(st().calAck || {}).filter(function (d) { return d >= App.today; }).length; if (!n) return h;
+  return h + '<section class="card stack"><h3>Undo accepted changes</h3><p class="small muted">You have accepted ' + plural(n, 'calendar change') + '. Undo puts your plan back the way it was before the review; the changes come back as suggestions you can review again.</p><div class="btns"><button class="btn sm" data-act="cal-undo">Undo accepted changes</button></div></section>';
+};

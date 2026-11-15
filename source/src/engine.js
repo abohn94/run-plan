@@ -1078,6 +1078,13 @@ function adapt(plan, st, analysis) {
       add.forEach(function (p) { p.added = true; });
       d.parts = add.length ? add : d.parts;
     });
+    /* workouts you added yourself (st.extras: {date: [session]}), e.g. one your shifts had pushed out */
+    var ex = st.extras || {};
+    w.days.forEach(function (d) {
+      var list = ex[d.date]; if (!list || !list.length) return;
+      var add = list.map(function (q, i) { var p = JSON.parse(JSON.stringify(q)); if (isRun(p) && !(p.steps && p.steps.length)) p = Object.assign(easyPart(p.title || 'Easy run', p.mi || 3, p.type === 'recovery' ? 'recovery' : 'easy', zz, ''), { role: p.role || 'easy' }); p.added = true; p.userAdded = true; p.xi = i; p.changed = true; p.note = 'Added by you. ' + (p.note || ''); delete p.moved; delete p.shin; delete p.dark; delete p.daylight; return p; });
+      d.parts = d.parts.filter(function (p) { return p.type !== 'rest'; }).concat(add);
+    });
     /* training balance from Garmin load focus: small, safe nudges to future sessions this week and next */
     var lf = analysis && analysis.loadFocus;
     if (lf && lf.nudge && !(mod && mod.m < 1)) applyLoadFocus(w, lf, zz);
@@ -1876,8 +1883,9 @@ function shinLoad(st, garmin, plan, date) {
 /* cap a week's runs at the shin ceiling (scales easy and long runs, keeps the key workout) */
 function capWeek(w, ceiling, zz) {
   w.tot = totals(w.days);
-  var over = w.tot.mi - ceiling; if (over <= 0.5) return false;
-  var flex = []; w.days.forEach(function (d) { d.parts.forEach(function (p, i) { if (isRun(p) && (p.type === 'easy' || p.type === 'recovery' || p.type === 'long') && d.date > today()) flex.push({ d: d, i: i, p: p }); }); });
+  var mine = 0; w.days.forEach(function (d) { d.parts.forEach(function (p) { if (p.userAdded && isRun(p)) mine += p.mi || 0; }); });
+  var over = w.tot.mi - mine - ceiling; if (over <= 0.5) return false;   /* runs you add yourself don't squeeze the others */
+  var flex = []; w.days.forEach(function (d) { d.parts.forEach(function (p, i) { if (isRun(p) && !p.userAdded && (p.type === 'easy' || p.type === 'recovery' || p.type === 'long') && d.date > today()) flex.push({ d: d, i: i, p: p }); }); });
   var tot = flex.reduce(function (a, x) { return a + (x.p.mi || 0); }, 0); if (tot < 1) return false;
   var f = Math.max(0.6, (tot - over) / tot);
   flex.forEach(function (x) { var p = scaleRun(x.p, f, zz); p.mi = half(Math.max(1.5, (x.p.mi || 0) * f)); if (x.p.type !== 'long') p.steps = [run(p.mi, x.p.type === 'recovery' ? 'REC' : 'E')]; p.changed = true; p.shin = true; p.note = 'Shortened to stay under your shin-load ceiling of ' + ceiling + ' mi this week.'; x.d.parts[x.i] = p; });
