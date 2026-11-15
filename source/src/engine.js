@@ -1000,7 +1000,7 @@ function adapt(plan, st, analysis) {
     });
     /* work shifts: key sessions move to days off, the day after a night is easy */
     var shAll = st.shiftsAll || st.shifts;
-    if (shAll) applyShifts(w, shAll, zz);
+    if (shAll) applyShifts(w, shAll, zz, { weekendDayOff: (st.prefs || {}).weekendDayOff !== false });
     /* drag-and-drop arrangement: {origDate|role|kind: newDate} */
     var moved = [];
     w.days.forEach(function (d) {
@@ -1899,7 +1899,7 @@ function recoveryProfile(garmin) {
 }
 
 /* Shift-aware week: move key sessions off work days, ease the day after nights.  st.shifts = { 'YYYY-MM-DD': 'day'|'night' } */
-function applyShifts(w, shifts, zz) {
+function applyShifts(w, shifts, zz, opts) {
   if (!shifts) return;
   var on = function (d) { return shifts[d.date]; }, hard = function (p) { return p.type === 'speed' || p.type === 'long'; };
   var hardDay = function (d) { return d.parts.some(hard); };
@@ -1941,6 +1941,22 @@ function applyShifts(w, shifts, zz) {
     });
     d.parts = d.parts.map(function (p) { if (isRun(p) && !hard(p) && p.mi > 4 && on(d)) { var s = scaleRun(p, 0.75, zz); s.changed = true; s.note = 'Trimmed for your ' + on(d) + ' shift.'; s.steps = [run(s.mi, 'E')]; return s; } return p; });
     d.parts = d.parts.filter(function (p, i, a) { return p.type !== 'rest' || a.length === 1; });
+  });
+  /* weekends with a day shift are off: whatever is left there moves to a free weekday, or drops */
+  if (opts && opts.weekendDayOff) w.days.forEach(function (d) {
+    var wd = pd(d.date).getDay();
+    if (on(d) !== 'day' || (wd !== 0 && wd !== 6) || d.date < today()) return;
+    var left = d.parts.filter(function (p) { return p.type !== 'rest'; }), dropped = [];
+    left.forEach(function (p) {
+      var run = isRun(p), to = w.days.filter(function (x) {
+        if (x === d || x.date < today() || (on(x) && on(x) !== 'eve')) return false;
+        var xd = pd(x.date).getDay(); if ((xd === 0 || xd === 6) && on(x) === 'day') return false;
+        return run ? !x.parts.some(isRun) && !w.days.some(function (y) { return Math.abs(y.i - x.i) === 0 && y.parts.some(function (q) { return q.type === 'long'; }); }) : !x.parts.some(function (q) { return q.type === 'strength'; }) && !w.days.some(function (y) { return y.i === x.i + 1 && y.parts.some(function (q) { return q.type === 'long'; }); });
+      }).sort(function (a, b) { return Math.abs(a.i - d.i) - Math.abs(b.i - d.i); })[0];
+      if (to) { to.parts = to.parts.filter(function (q) { return q.type !== 'rest'; }); to.parts.push(Object.assign({}, p, { moved: p.moved || d.date, note: 'Moved off your weekend day shift.' + (p.note ? ' ' + p.note : '') })); }
+      else dropped.push(p.title);
+    });
+    d.parts = [restPart('Work day', 'Weekend day shift: no training today.' + (dropped.length ? ' Skipped this week: ' + dropped.join(', ') + '.' : ''))];
   });
   /* the day after a night shift: easy only */
   w.days.forEach(function (d) {

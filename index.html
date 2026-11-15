@@ -1999,7 +1999,7 @@ function adapt(plan, st, analysis) {
     });
     /* work shifts: key sessions move to days off, the day after a night is easy */
     var shAll = st.shiftsAll || st.shifts;
-    if (shAll) applyShifts(w, shAll, zz);
+    if (shAll) applyShifts(w, shAll, zz, { weekendDayOff: (st.prefs || {}).weekendDayOff !== false });
     /* drag-and-drop arrangement: {origDate|role|kind: newDate} */
     var moved = [];
     w.days.forEach(function (d) {
@@ -3001,7 +3001,7 @@ function recoveryProfile(garmin) {
 }
 
 /* Shift-aware week: move key sessions off work days, ease the day after nights.  st.shifts = { 'YYYY-MM-DD': 'day'|'night' } */
-function applyShifts(w, shifts, zz) {
+function applyShifts(w, shifts, zz, opts) {
   if (!shifts) return;
   var on = function (d) { return shifts[d.date]; }, hard = function (p) { return p.type === 'speed' || p.type === 'long'; };
   var hardDay = function (d) { return d.parts.some(hard); };
@@ -3043,6 +3043,22 @@ function applyShifts(w, shifts, zz) {
     });
     d.parts = d.parts.map(function (p) { if (isRun(p) && !hard(p) && p.mi > 4 && on(d)) { var s = scaleRun(p, 0.75, zz); s.changed = true; s.note = 'Trimmed for your ' + on(d) + ' shift.'; s.steps = [run(s.mi, 'E')]; return s; } return p; });
     d.parts = d.parts.filter(function (p, i, a) { return p.type !== 'rest' || a.length === 1; });
+  });
+  /* weekends with a day shift are off: whatever is left there moves to a free weekday, or drops */
+  if (opts && opts.weekendDayOff) w.days.forEach(function (d) {
+    var wd = pd(d.date).getDay();
+    if (on(d) !== 'day' || (wd !== 0 && wd !== 6) || d.date < today()) return;
+    var left = d.parts.filter(function (p) { return p.type !== 'rest'; }), dropped = [];
+    left.forEach(function (p) {
+      var run = isRun(p), to = w.days.filter(function (x) {
+        if (x === d || x.date < today() || (on(x) && on(x) !== 'eve')) return false;
+        var xd = pd(x.date).getDay(); if ((xd === 0 || xd === 6) && on(x) === 'day') return false;
+        return run ? !x.parts.some(isRun) && !w.days.some(function (y) { return Math.abs(y.i - x.i) === 0 && y.parts.some(function (q) { return q.type === 'long'; }); }) : !x.parts.some(function (q) { return q.type === 'strength'; }) && !w.days.some(function (y) { return y.i === x.i + 1 && y.parts.some(function (q) { return q.type === 'long'; }); });
+      }).sort(function (a, b) { return Math.abs(a.i - d.i) - Math.abs(b.i - d.i); })[0];
+      if (to) { to.parts = to.parts.filter(function (q) { return q.type !== 'rest'; }); to.parts.push(Object.assign({}, p, { moved: p.moved || d.date, note: 'Moved off your weekend day shift.' + (p.note ? ' ' + p.note : '') })); }
+      else dropped.push(p.title);
+    });
+    d.parts = [restPart('Work day', 'Weekend day shift: no training today.' + (dropped.length ? ' Skipped this week: ' + dropped.join(', ') + '.' : ''))];
   });
   /* the day after a night shift: easy only */
   w.days.forEach(function (d) {
@@ -8117,6 +8133,7 @@ VIEWS.calsync = function () {
     '<label class="f">Work shift words<input class="i" id="calW" value="' + v('work', ['work', 'shift', 'cvicu', 'icu', 'hospital', 'on call', 'charge']) + '"></label>' +
     '<label class="f">Time-off words (all-day events)<input class="i" id="calV" value="' + v('vacation', ['vacation', 'pto', 'holiday', 'day off', 'time off']) + '"></label>' +
     '<label class="f">Travel words<input class="i" id="calT" value="' + v('travel', ['flight', 'travel', 'trip', 'airport', 'hotel', 'conference']) + '"></label>' +
+    '<label class="check"><input type="checkbox" id="calWk"' + ((st().prefs || {}).weekendDayOff !== false ? ' checked' : '') + '> No training on weekends when I work a day shift (evening-shift weekends are fine)</label>' +
     '<label class="f">Commute to work (minutes)<input class="i" id="calC" type="number" inputmode="numeric" value="' + esc((st().prefs || {}).commute || 40) + '"></label>' +
     '<p class="tiny muted">A work event 5+ hours long counts as a shift: starting before 11 AM is a day shift, 11 AM to 7 PM an evening shift, and after 7 PM (or running past 3 AM) a night shift. You can still tap any day in the week preview to change it.</p><div class="btns"><button class="btn primary sm" data-act="cal-save">Save</button></div></section>';
   return html;
@@ -8124,7 +8141,7 @@ VIEWS.calsync = function () {
 ACTIONS['cal-save'] = function () {
   var sp = function (id) { return $(id).value.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean); };
   var cal = { work: sp('#calW'), vacation: sp('#calV'), travel: sp('#calT') }, com = +$('#calC').value || 40;
-  Store.edit('prefs', 'cal', function (S) { S.prefs = S.prefs || {}; S.prefs.cal = cal; S.prefs.commute = com; });
+  var wk = $('#calWk').checked; Store.edit('prefs', 'cal', function (S) { S.prefs = S.prefs || {}; S.prefs.cal = cal; S.prefs.commute = com; S.prefs.weekendDayOff = wk; });
   toast('Saved. Applies at the next sync');
 };
 var _you7c = VIEWS.you;

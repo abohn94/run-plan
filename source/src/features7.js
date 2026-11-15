@@ -515,6 +515,7 @@ VIEWS.calsync = function () {
     '<label class="f">Work shift words<input class="i" id="calW" value="' + v('work', ['work', 'shift', 'cvicu', 'icu', 'hospital', 'on call', 'charge']) + '"></label>' +
     '<label class="f">Time-off words (all-day events)<input class="i" id="calV" value="' + v('vacation', ['vacation', 'pto', 'holiday', 'day off', 'time off']) + '"></label>' +
     '<label class="f">Travel words<input class="i" id="calT" value="' + v('travel', ['flight', 'travel', 'trip', 'airport', 'hotel', 'conference']) + '"></label>' +
+    '<label class="check"><input type="checkbox" id="calWk"' + ((st().prefs || {}).weekendDayOff !== false ? ' checked' : '') + '> No training on weekends when I work a day shift (evening-shift weekends are fine)</label>' +
     '<label class="f">Commute to work (minutes)<input class="i" id="calC" type="number" inputmode="numeric" value="' + esc((st().prefs || {}).commute || 40) + '"></label>' +
     '<p class="tiny muted">A work event 5+ hours long counts as a shift: starting before 11 AM is a day shift, 11 AM to 7 PM an evening shift, and after 7 PM (or running past 3 AM) a night shift. You can still tap any day in the week preview to change it.</p><div class="btns"><button class="btn primary sm" data-act="cal-save">Save</button></div></section>';
   return html;
@@ -522,7 +523,7 @@ VIEWS.calsync = function () {
 ACTIONS['cal-save'] = function () {
   var sp = function (id) { return $(id).value.split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean); };
   var cal = { work: sp('#calW'), vacation: sp('#calV'), travel: sp('#calT') }, com = +$('#calC').value || 40;
-  Store.edit('prefs', 'cal', function (S) { S.prefs = S.prefs || {}; S.prefs.cal = cal; S.prefs.commute = com; });
+  var wk = $('#calWk').checked; Store.edit('prefs', 'cal', function (S) { S.prefs = S.prefs || {}; S.prefs.cal = cal; S.prefs.commute = com; S.prefs.weekendDayOff = wk; });
   toast('Saved. Applies at the next sync');
 };
 var _you7c = VIEWS.you;
