@@ -125,10 +125,113 @@ def probe():
             print(f"===== {name}: ERROR {str(e)[:200]}")
 
 
+def _last(arr, lo=0):
+    """Last [ms, value] pair with a real value from a Garmin values array ([ts, v] or [ts, 'MEASURED', v, ver])."""
+    for e in reversed(arr or []):
+        if not isinstance(e, (list, tuple)) or len(e) < 2:
+            continue
+        v = next((x for x in e[1:] if isinstance(x, (int, float)) and not isinstance(x, bool)), None)
+        if v is not None and v >= lo:
+            return e[0], v
+    return None, None
+
+
+def _hourly(arr, tz, lo=0):
+    out = {}
+    for e in arr or []:
+        if not isinstance(e, (list, tuple)) or len(e) < 2 or not isinstance(e[0], (int, float)):
+            continue
+        v = next((x for x in e[1:] if isinstance(x, (int, float)) and not isinstance(x, bool)), None)
+        if v is None or v < lo:
+            continue
+        out[str(dt.datetime.fromtimestamp(e[0] / 1000, tz).hour)] = v
+    return out
+
+
+def now():
+    """Live readings for the Today screen, refreshed through the day: Body Battery, stress, heart rate and
+    Garmin's Training Readiness as it changes. Saved under "now" in garmin/extra.json."""
+    from zoneinfo import ZoneInfo
+    tzname = "America/Chicago"
+    try:
+        with open("user/state.json") as f:
+            tzname = ((json.load(f).get("prefs") or {}).get("watch") or {}).get("tz") or tzname
+    except (OSError, ValueError):
+        pass
+    tz = ZoneInfo(tzname)
+    today = dt.datetime.now(tz).date()
+    t = iso(today)
+    g = login()
+    out, notes = {"date": t}, []
+    clock = lambda ms: dt.datetime.fromtimestamp(ms / 1000, tz).strftime("%H:%M") if ms else None
+    try:
+        r = g.get_training_readiness(t)
+        lst = r if isinstance(r, list) else [r] if isinstance(r, dict) else []
+        lst = [x for x in lst if isinstance(x, dict) and x.get("score") is not None]
+        if lst:
+            x = sorted(lst, key=lambda z: str(z.get("timestampLocal") or z.get("timestamp") or ""))[-1]
+            ts = str(x.get("timestampLocal") or "")
+            out["ready"] = {"score": num(x.get("score")), "level": x.get("level"), "feedback": x.get("feedbackShort"),
+                            "recoveryH": num(x.get("recoveryTime")), "at": ts[11:16] or None, "n": len(lst)}
+    except Exception as e:
+        notes.append(f"readiness: {str(e)[:100]}")
+    bb_arr = None
+    try:
+        s = g.get_stress_data(t) or {}
+        ms, v = _last(s.get("stressValuesArray"), 0)
+        if v is not None:
+            out["stress"] = {"v": v, "at": clock(ms), "avg": num(s.get("avgStressLevel")), "max": num(s.get("maxStressLevel"))}
+        bb_arr = s.get("bodyBatteryValuesArray")
+    except Exception as e:
+        notes.append(f"stress: {str(e)[:100]}")
+    try:
+        b = g.get_body_battery(t, t)
+        day = b[0] if isinstance(b, list) and b else b if isinstance(b, dict) else {}
+        arr = day.get("bodyBatteryValuesArray") or []
+        if bb_arr and len(bb_arr) > len(arr):   # the stress feed carries Body Battery every few minutes
+            arr = bb_arr
+        ms, v = _last(arr, 0)
+        if v is not None:
+            out["bb"] = {"v": v, "at": clock(ms), "charged": num(day.get("charged")), "drained": num(day.get("drained")), "hours": _hourly(arr, tz)}
+    except Exception as e:
+        notes.append(f"battery: {str(e)[:100]}")
+        ms, v = _last(bb_arr, 0)
+        if v is not None:
+            out["bb"] = {"v": v, "at": clock(ms), "hours": _hourly(bb_arr, tz)}
+    try:
+        h = g.get_heart_rates(t) or {}
+        ms, v = _last(h.get("heartRateValues"), 1)
+        out["hr"] = {"rest": num(h.get("restingHeartRate")), "v": v, "at": clock(ms)}
+    except Exception as e:
+        notes.append(f"heart: {str(e)[:100]}")
+    out["updated"] = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    out["notes"] = notes[:5]
+    try:
+        with open(OUT) as f:
+            ex = json.load(f)
+    except (OSError, ValueError):
+        ex = {}
+    ex["now"] = out
+    if out.get("ready"):   # keep the daily history current too
+        ex.setdefault("readiness", {}).setdefault(t, {}).update({k: out["ready"][k] for k in ("score", "level", "recoveryH") if out["ready"].get(k) is not None})
+    os.makedirs("garmin", exist_ok=True)
+    with open(OUT, "w") as f:
+        json.dump(ex, f, separators=(",", ":"), sort_keys=True)
+        f.write("\n")
+    try:
+        g.client.dump(TOKENS)
+    except Exception:
+        pass
+    print("now:", {k: v for k, v in out.items() if k not in ("bb",)}, "bb:", (out.get("bb") or {}).get("v"))
+    return 0
+
+
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "run"
     if mode == "probe":
         probe()
+    elif mode == "now":
+        sys.exit(now())
     else:
         import garmin_extra_parse
         sys.exit(garmin_extra_parse.run(login, calls, recent_activities))

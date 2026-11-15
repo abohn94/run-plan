@@ -831,3 +831,10 @@ b.shk { font-size: .8rem; padding: 2px 9px; }
 .addopt .plus { font-size: 1.3rem; font-weight: 800; color: var(--green); text-align: center; }
 .addopt .tico svg { width: 22px; height: 22px; }
 .addmine { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: .88rem; background: var(--card2); border-radius: 12px; padding: 8px 12px; }
+
+/* live readings */
+.livehd { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.livehd + .gready { border-top: 0; margin-top: 6px; padding-top: 0; }
+.bbspark { display: flex; align-items: flex-end; gap: 2px; height: 34px; margin-top: 4px; }
+.bbspark i { flex: 1 1 0; min-width: 0; border-radius: 2px 2px 0 0; background: var(--blue); }
+.bbspark i.hi { background: var(--green); } .bbspark i.mid { background: var(--blue); } .bbspark i.lo { background: var(--amber); }

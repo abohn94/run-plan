@@ -27,7 +27,7 @@ recompute = function () { mergeExtra(); _recompute7(); };
 var _onchange7 = Store.onchange;
 Store.onchange = function (why) { _onchange7(why); if (why === 'init' || why === 'pull' || why === 'garmin') setTimeout(loadExtra, 400); };
 setTimeout(loadExtra, 1500);
-setInterval(function () { if (document.visibilityState === 'visible') loadExtra(); }, 15 * 60 * 1000);
+setInterval(function () { if (document.visibilityState === 'visible') loadExtra(); }, 10 * 60 * 1000);
 /* with Garmin's threshold coming in automatically, the weekly "update your readings" prompt is only needed if the job stops */
 var _fpn7 = fitnessPromptNeeded;
 fitnessPromptNeeded = function () { var x = GX(); if (x.updated && (Date.now() - new Date(x.updated).getTime()) < 3 * 864e5 && x.lt && x.lt.pace) return null; return _fpn7(); };
@@ -157,15 +157,34 @@ ACTIONS['loc-pick'] = function (a) { closeSheet(); saveLoc(a); };
 
 /* ---------- Garmin readiness next to ours ---------- */
 var _readinessCard7 = readinessCard;
+function hhmm(s) { var m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? clockOf(+m[1] * 60 + +m[2]) : ''; }
+/* live readings (refreshed every hour by the sync): today's Body Battery, stress, heart rate, Garmin readiness */
+function liveNow(date) { var n = GX().now; return n && n.date === date && date === App.today ? n : null; }
+function bbSpark(hours) {
+  var hNow = new Date().getHours(), cells = '';
+  for (var h = 0; h <= Math.max(hNow, 0); h++) { var v = hours[String(h)]; cells += '<i title="' + hrLabel(h) + (v != null ? ': ' + v : '') + '" style="height:' + (v != null ? Math.max(6, v) : 0) + '%;' + (v == null ? 'opacity:0' : '') + '" class="' + (v >= 70 ? 'hi' : v >= 35 ? 'mid' : 'lo') + '"></i>'; }
+  return '<div class="bbspark" aria-hidden="true">' + cells + '</div>';
+}
 readinessCard = function (rd, rec, date) {
+  var live = liveNow(date);
+  if (live && live.bb && rd && rd.metrics) { rd = Object.assign({}, rd, { metrics: Object.assign({}, rd.metrics, { bb: { v: live.bb.v, low: null } }) }); }
   var h = _readinessCard7(rd, rec, date), x = GX(), r = x.readiness && x.readiness[date], v = x.hrv && x.hrv[date];
-  if (!r && !v) return h;
-  var row = '<div class="gready">' + (r ? '<div><span>Garmin readiness</span><b>' + r.score + '</b><em>' + esc(phraseText(r.level)) + (r.recoveryH ? ' · ' + r.recoveryH + ' h recovery' : '') + '</em></div>' : '') +
+  if (live && live.bb) { var pk = ((Store.garmin && Store.garmin.days || {})[date] || {}).bbHigh; h = h.replace('<em>peak</em>', '<em>now' + (pk ? ' · peak ' + pk : '') + '</em>'); }
+  h = h.replace('<div class="eyebrow">Readiness</div>', '<div class="eyebrow">Morning readiness</div>');
+  if (!r && !v && !live) return h;
+  var lr = live && live.ready, at = live && ((live.bb && live.bb.at) || (live.stress && live.stress.at) || (live.hr && live.hr.at));
+  var row = (live ? '<div class="livehd"><span class="eyebrow">Right now</span><span class="tiny muted">' + (at ? 'as of ' + hhmm(at) + ' (your last watch sync)' : '') + '</span></div>' : '') +
+    '<div class="gready">' + (lr || r ? '<div><span>Garmin readiness</span><b>' + (lr || r).score + '</b><em>' + esc(phraseText((lr || r).level)) + ((lr || r).recoveryH ? ' · ' + (lr || r).recoveryH + ' h recovery' : '') + (lr && lr.at ? ' · ' + hhmm(lr.at) : '') + '</em></div>' : '') +
+    (live && live.bb ? '<div><span>Body Battery</span><b class="' + (live.bb.v < 30 ? 'warn' : '') + '">' + live.bb.v + '</b><em>' + (live.bb.drained ? '−' + live.bb.drained + ' today' + (live.bb.charged ? ' · +' + live.bb.charged + ' overnight' : '') : 'now') + '</em></div>' : '') +
+    (live && live.stress ? '<div><span>Stress</span><b class="' + (live.stress.v >= 50 ? 'warn' : '') + '">' + live.stress.v + '</b><em>' + (live.stress.v < 26 ? 'rest' : live.stress.v < 51 ? 'low' : live.stress.v < 76 ? 'medium' : 'high') + (live.stress.avg != null ? ' · avg ' + live.stress.avg : '') + '</em></div>' : '') +
+    (live && live.hr && live.hr.v ? '<div><span>Heart rate</span><b>' + live.hr.v + '</b><em>bpm' + (live.hr.rest ? ' · resting ' + live.hr.rest : '') + '</em></div>' : '') +
     (v ? '<div><span>HRV status</span><b class="' + (v.status === 'BALANCED' ? 'ok' : 'warn') + '">' + esc(phraseText(v.status)) + '</b><em>' + v.last + ' ms · normal ' + v.lo + '–' + v.hi + '</em></div>' : '') +
     (x.status && x.status.acwr ? '<div><span>Load ratio</span><b>' + x.status.acwr + '</b><em>' + esc(phraseText(x.status.acwrStatus)) + '</em></div>' : '') + '</div>';
+  if (live && live.bb && live.bb.hours && Object.keys(live.bb.hours).length > 2) row += '<div class="tiny muted" style="margin-top:8px">Body Battery today</div>' + bbSpark(live.bb.hours);
   var i = h.lastIndexOf('</section>');
   return i > 0 ? h.slice(0, i) + row + h.slice(i) : h + row;
 };
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') loadExtra(); });
 
 /* ---------- sleep target ---------- */
 function minOf(s, d) { var m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : d; }

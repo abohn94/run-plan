@@ -44,6 +44,39 @@ jobs:
           GCAL_ICS_URLS: ${{ secrets.GCAL_ICS_URLS }}
         run: python3 scripts/calendar_sync.py
 
+      # Live readings for the Today screen (Body Battery, stress, heart rate, Training Readiness), 5 AM to 11 PM
+      - name: Check the hour
+        id: hour
+        run: |
+          h=$(TZ=America/Chicago date +%-H)
+          if [ "$h" -ge 5 ] && [ "$h" -le 23 ] && [ -n "${{ secrets.GARMIN_EMAIL }}" ]; then echo "live=1" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-python@v5
+        if: steps.hour.outputs.live == '1'
+        with:
+          python-version: "3.12"
+      - name: Restore saved Garmin sign-in
+        if: steps.hour.outputs.live == '1'
+        uses: actions/cache/restore@v4
+        with:
+          path: .garmin_tokens
+          key: garmin-tokens-${{ github.run_id }}
+          restore-keys: garmin-tokens-
+      - name: Live readings
+        if: steps.hour.outputs.live == '1'
+        continue-on-error: true
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: |
+          pip install --quiet "garminconnect==0.3.20"
+          PYTHONPATH=scripts python3 scripts/garmin_extra.py now
+      - name: Save Garmin sign-in for next time
+        if: steps.hour.outputs.live == '1' && hashFiles('.garmin_tokens/**') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .garmin_tokens
+          key: garmin-tokens-${{ github.run_id }}
+
       - name: Save changes
         if: always()
         run: |
