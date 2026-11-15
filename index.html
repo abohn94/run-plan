@@ -1073,6 +1073,35 @@ details.fold[open] > .foldbody, details.gdet[open] > *:not(summary), details.inf
 #main.enter .season button:nth-child(4n+2) > i { animation-delay: .06s; } #main.enter .season button:nth-child(4n+3) > i { animation-delay: .12s; } #main.enter .season button:nth-child(4n) > i { animation-delay: .18s; }
 #main.enter .phasebar { transform-origin: left center; animation: growx .8s .2s cubic-bezier(.2, .75, .25, 1) both; }
 
+/* app-styled dropdowns: closed state + custom picker (replaces the OS menu) */
+select.i { -webkit-appearance: none; appearance: none; padding-right: 40px; cursor: pointer; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 7.5l5 5 5-5' fill='none' stroke='%238a8a95' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 13px center; background-size: 18px; }
+select.i.sm { padding-right: 30px; background-position: right 8px center; background-size: 15px; }
+select.i[aria-expanded="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
+select.i option { background: var(--bg2); color: var(--ink); }
+.pick { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; justify-content: center; animation: fadein .16s ease both; }
+.pick-card { width: 100%; max-width: 560px; max-height: 72vh; display: flex; flex-direction: column; background: var(--card); border-radius: 26px 26px 0 0; padding: 8px 10px calc(14px + var(--safe-b)); box-shadow: 0 -10px 40px rgba(0,0,0,.35); animation: sheetup .26s cubic-bezier(.2, .8, .25, 1) both; }
+.pick-grab { width: 38px; height: 5px; border-radius: 3px; background: var(--line2); margin: 2px auto 8px; flex: none; }
+.pick-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 8px 10px; flex: none; }
+.pick-h b { font-size: 1.05rem; font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-x { border: 0; background: var(--card2); color: var(--muted); border-radius: 999px; min-width: 34px; height: 34px; font-size: 1.1rem; font-weight: 700; flex: none; }
+.pick-list { overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 4px; padding: 2px; }
+.pick-o { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 1rem; font-weight: 600; padding: 13px 14px; border-radius: 14px; min-height: 48px; }
+.pick-o:hover, .pick-o:focus-visible { background: var(--card2); outline: none; }
+.pick-o[aria-selected="true"] { background: var(--card2); font-weight: 800; box-shadow: inset 0 0 0 1.5px var(--green); }
+.pick-o .pk { width: 22px; height: 22px; border-radius: 999px; flex: none; display: grid; place-items: center; box-shadow: inset 0 0 0 1.5px var(--line2); }
+.pick-o[aria-selected="true"] .pk { background: var(--green); box-shadow: none; }
+.pick-o[aria-selected="true"] .pk::after { content: ''; width: 9px; height: 5px; border: solid #062b18; border-width: 0 0 2.5px 2.5px; transform: translateY(-1px) rotate(-45deg); }
+.pick-o:disabled { opacity: .4; }
+.pick-g { font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 10px 14px 4px; }
+@media (prefers-reduced-motion: reduce) { .pick, .pick-card { animation: none; } }
+input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 7.5l5 5 5-5' fill='none' stroke='%238a8a95' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; background-size: 18px; }
+.dl-pop { margin-top: -4px; max-height: 232px; overflow-y: auto; overscroll-behavior: contain; background: var(--card); border-radius: 16px; box-shadow: inset 0 0 0 1.5px var(--line2), 0 10px 28px rgba(0,0,0,.28); padding: 5px; display: grid; gap: 2px; animation: rise .16s ease both; }
+.dl-o { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: .98rem; font-weight: 600; text-align: left; padding: 12px 12px; border-radius: 11px; min-height: 44px; }
+.dl-o:hover, .dl-o:focus-visible { background: var(--card2); outline: none; }
+.dl-o mark { background: none; color: var(--green); font-weight: 800; }
+
 </style>
 </head>
 <body>
@@ -5744,7 +5773,7 @@ SHEETS.exmenu = function (a) {
 ACTIONS['wk-remove'] = function (a) { App.wk.ex.splice(a.i, 1); App.wk.touched = true; wkSave(); closeSheet(); render(); };
 SHEETS.exadd = function (a) {
   sheetCtx.swap = a.swap;
-  return '<h3>' + (a.swap != null ? 'Substitute exercise' : 'Add exercise') + '</h3><label class="f">Exercise<input class="i" id="exa-n" list="exa-list" placeholder="e.g. Leg press" autocomplete="off"></label><datalist id="exa-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist><div class="grid3"><label class="f">Sets<input class="i" id="exa-s" type="number" min="1" value="3"></label><label class="f">Reps<input class="i" id="exa-r" type="number" min="1" value="8"></label><label class="f">Rest (s)<input class="i" id="exa-rest" type="number" min="0" step="15" value="90"></label></div>' + sheetBtns(a.swap != null ? 'Substitute' : 'Add');
+  return '<h3>' + (a.swap != null ? 'Substitute exercise' : 'Add exercise') + '</h3><label class="f">Exercise<input class="i" id="exa-n" data-dl="exa-list" autocomplete="off" placeholder="e.g. Leg press" autocomplete="off"></label><datalist id="exa-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist><div class="grid3"><label class="f">Sets<input class="i" id="exa-s" type="number" min="1" value="3"></label><label class="f">Reps<input class="i" id="exa-r" type="number" min="1" value="8"></label><label class="f">Rest (s)<input class="i" id="exa-rest" type="number" min="0" step="15" value="90"></label></div>' + sheetBtns(a.swap != null ? 'Substitute' : 'Add');
 };
 SAVE2.exadd = function () {
   var n = $('#exa-n').value.trim(); if (!n) { $('#shErr').textContent = 'Name the exercise.'; return; }
@@ -5765,7 +5794,7 @@ SHEETS.exhist = function (a) {
 };
 SHEETS.orm = function (a) {
   sheetCtx.n = a.n;
-  return '<h3>Record a 1RM</h3><p class="small muted">' + esc(a.n || '') + '. Only test a true max with a spotter or safety bars, and not in race week.</p>' + (a.n ? '' : '<label class="f">Exercise<input class="i" id="orm-n" list="orm-list"></label><datalist id="orm-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>') +
+  return '<h3>Record a 1RM</h3><p class="small muted">' + esc(a.n || '') + '. Only test a true max with a spotter or safety bars, and not in race week.</p>' + (a.n ? '' : '<label class="f">Exercise<input class="i" id="orm-n" data-dl="orm-list" autocomplete="off"></label><datalist id="orm-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>') +
     '<div class="grid3"><label class="f">Weight (lb)<input class="i" id="orm-w" type="number" step="2.5" inputmode="decimal"></label><label class="f">Reps<input class="i" id="orm-r" type="number" min="1" value="1"></label><label class="f">Date<input class="i" id="orm-d" type="date" value="' + App.today + '"></label></div>' + sheetBtns('Save');
 };
 SAVE2.orm = function () {
@@ -7088,7 +7117,7 @@ var PCT = [[100, 1], [95, 2], [90, 4], [85, 6], [80, 8], [75, 10], [70, 12], [65
 SHEETS.ormcalc = function (a) {
   sheetCtx.n = a.n || '';
   return '<h3>1RM calculator</h3><p class="small muted">Enter a set you did with good form (ideally 2–10 reps). The calculator estimates the most you could lift once.</p>' +
-    '<label class="f">Exercise<input class="i" id="oc-n" list="oc-list" value="' + esc(a.n || '') + '" placeholder="e.g. Back squat"></label><datalist id="oc-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
+    '<label class="f">Exercise<input class="i" id="oc-n" data-dl="oc-list" autocomplete="off" value="' + esc(a.n || '') + '" placeholder="e.g. Back squat"></label><datalist id="oc-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
     '<div class="grid2"><label class="f">Weight (lb)<input class="i" id="oc-w" type="number" step="2.5" inputmode="decimal" value="' + (a.w || '') + '"></label><label class="f">Reps<input class="i" id="oc-r" type="number" min="1" max="20" inputmode="numeric" value="' + (a.r || '') + '"></label></div><div id="oc-out">' + ormOut(a.w, a.r) + '</div>' +
     '<div class="btns"><button class="btn primary" data-act="oc-save">Save as my 1RM</button><button class="btn" data-act="sheet" data-arg="' + jattr({ sheet: 'orm', n: a.n }) + '">Enter a tested 1RM</button><button class="btn ghost" data-act="sheet-close">Close</button></div><p class="err" id="shErr"></p>';
 };
@@ -9864,6 +9893,106 @@ route = function (keep) {
 };
 
 Object.assign(TITLES, { plan: 'This week', calendar: 'Season' });
+
+/* ---------- App-styled dropdown picker (replaces the OS select menu) ---------- */
+var PICK = { el: null, sel: null, touchAt: 0 };
+function pickLabel(sel) {
+  var lab = sel.closest('label');
+  if (lab) { var t = ''; lab.childNodes.forEach(function (n) { if (n.nodeType === 3) t += n.textContent; }); t = t.trim(); if (t) return t; }
+  return sel.getAttribute('aria-label') || sel.getAttribute('title') || 'Choose';
+}
+function pickClose(focus) {
+  if (!PICK.el) return;
+  PICK.el.remove(); PICK.el = null;
+  if (PICK.sel) { PICK.sel.setAttribute('aria-expanded', 'false'); if (focus) try { PICK.sel.focus({ preventScroll: true }); } catch (e) {} }
+  PICK.sel = null;
+}
+function pickOpen(sel) {
+  if (sel.disabled) return;
+  pickClose(false);
+  var rows = '';
+  Array.prototype.forEach.call(sel.children, function (ch) {
+    if (ch.tagName === 'OPTGROUP') { rows += '<div class="pick-g">' + esc(ch.label) + '</div>'; Array.prototype.forEach.call(ch.children, function (o) { rows += row(o); }); }
+    else if (ch.tagName === 'OPTION') rows += row(ch);
+  });
+  function row(o) {
+    if (o.hidden) return '';
+    return '<button type="button" class="pick-o" role="option" data-i="' + o.index + '" aria-selected="' + (o.selected ? 'true' : 'false') + '"' + (o.disabled ? ' disabled' : '') + '><span>' + esc(o.textContent) + '</span><span class="pk"></span></button>';
+  }
+  var d = document.createElement('div');
+  d.className = 'pick';
+  d.innerHTML = '<div class="pick-card" role="dialog" aria-modal="true" aria-label="' + esc(pickLabel(sel)) + '"><div class="pick-grab"></div><div class="pick-h"><b>' + esc(pickLabel(sel)) + '</b><button type="button" class="pick-x" aria-label="Close">×</button></div><div class="pick-list" role="listbox">' + rows + '</div></div>';
+  document.body.appendChild(d);
+  PICK.el = d; PICK.sel = sel;
+  sel.setAttribute('aria-expanded', 'true');
+  var cur = d.querySelector('.pick-o[aria-selected="true"]') || d.querySelector('.pick-o:not(:disabled)');
+  if (cur) { cur.scrollIntoView({ block: 'center' }); try { cur.focus({ preventScroll: true }); } catch (e) {} }
+  d.addEventListener('click', function (e) {
+    if (e.target === d || e.target.closest('.pick-x')) { pickClose(true); return; }
+    var b = e.target.closest('.pick-o'); if (!b || b.disabled) return;
+    var s = PICK.sel, i = +b.dataset.i, changed = s.selectedIndex !== i;
+    s.selectedIndex = i;
+    pickClose(true);
+    if (changed) { s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true })); }
+  });
+  d.addEventListener('keydown', function (e) {
+    var list = Array.prototype.slice.call(d.querySelectorAll('.pick-o:not(:disabled)')), k = list.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); pickClose(true); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); var n = list[Math.max(0, Math.min(list.length - 1, k + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) n.focus(); }
+    else if (e.key === 'Tab') { e.preventDefault(); }
+  });
+}
+function pickTarget(e) { var t = e.target; return t && t.tagName === 'SELECT' && !t.multiple && t.classList.contains('i') ? t : null; }
+document.addEventListener('touchstart', function (e) {
+  if (!pickTarget(e)) return; var t = e.touches[0]; PICK.tx = t.clientX; PICK.ty = t.clientY;
+}, { passive: true, capture: true });
+document.addEventListener('touchend', function (e) {
+  var s = pickTarget(e); if (!s) return;
+  var t = e.changedTouches[0]; if (t && Math.abs(t.clientX - PICK.tx) + Math.abs(t.clientY - PICK.ty) > 12) return;
+  e.preventDefault(); PICK.touchAt = Date.now(); pickOpen(s);
+}, { passive: false, capture: true });
+document.addEventListener('mousedown', function (e) {
+  var s = pickTarget(e); if (!s || e.button !== 0) return;
+  e.preventDefault();
+  if (Date.now() - PICK.touchAt < 700) return;
+  pickOpen(s);
+}, true);
+document.addEventListener('keydown', function (e) {
+  var s = pickTarget(e); if (!s || PICK.el) return;
+  if (e.key === 'Enter' || e.key === ' ' || (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) || e.key === 'F4') { e.preventDefault(); pickOpen(s); }
+}, true);
+window.addEventListener('hashchange', function () { pickClose(false); });
+
+/* ---------- App-styled suggestion list for text fields (replaces the OS datalist popup) ---------- */
+function dlOpts(inp) { var d = document.getElementById(inp.dataset.dl); return d ? Array.prototype.map.call(d.options, function (o) { return o.value; }).filter(Boolean) : []; }
+function dlHide(inp) { var p = inp && inp._dlPop; if (p) { p.remove(); inp._dlPop = null; inp.setAttribute('aria-expanded', 'false'); } }
+function dlShow(inp) {
+  var all = dlOpts(inp), q = inp.value.trim().toLowerCase();
+  var hits = q ? all.filter(function (v) { return v.toLowerCase().indexOf(q) >= 0; }) : all;
+  if (q && hits.length === 1 && hits[0].toLowerCase() === q) hits = [];
+  if (!hits.length) { dlHide(inp); return; }
+  hits.sort(function (a, b) { return (a.toLowerCase().indexOf(q) === 0 ? 0 : 1) - (b.toLowerCase().indexOf(q) === 0 ? 0 : 1); });
+  var p = inp._dlPop;
+  if (!p) { p = document.createElement('div'); p.className = 'dl-pop'; p.setAttribute('role', 'listbox'); (inp.closest('label') || inp).insertAdjacentElement('afterend', p); inp._dlPop = p; p._inp = inp; }
+  inp.setAttribute('aria-expanded', 'true');
+  p.innerHTML = hits.slice(0, 40).map(function (v) {
+    var i = q ? v.toLowerCase().indexOf(q) : -1;
+    var t = i >= 0 ? esc(v.slice(0, i)) + '<mark>' + esc(v.slice(i, i + q.length)) + '</mark>' + esc(v.slice(i + q.length)) : esc(v);
+    return '<button type="button" class="dl-o" role="option" data-v="' + esc(v) + '">' + t + '</button>';
+  }).join('');
+}
+document.addEventListener('focusin', function (e) { var t = e.target; if (t && t.dataset && t.dataset.dl) dlShow(t); });
+document.addEventListener('input', function (e) { var t = e.target; if (t && t.dataset && t.dataset.dl) dlShow(t); });
+document.addEventListener('focusout', function (e) { var t = e.target; if (t && t.dataset && t.dataset.dl) setTimeout(function () { if (document.activeElement !== t) dlHide(t); }, 120); });
+document.addEventListener('keydown', function (e) { var t = e.target; if (t && t.dataset && t.dataset.dl && e.key === 'Escape' && t._dlPop) { e.preventDefault(); e.stopPropagation(); dlHide(t); } }, true);
+document.addEventListener('pointerdown', function (e) { if (e.target.closest && e.target.closest('.dl-pop')) e.preventDefault(); }, true);
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('.dl-o'); if (!b) return;
+  var p = b.parentNode, inp = p._inp; if (!inp) return;
+  inp.value = b.dataset.v; dlHide(inp);
+  inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
+  dlHide(inp);
+});
 
 
 /* ---------------- Garmin polling ---------------- */

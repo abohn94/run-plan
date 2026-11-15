@@ -320,7 +320,7 @@ SHEETS.exmenu = function (a) {
 ACTIONS['wk-remove'] = function (a) { App.wk.ex.splice(a.i, 1); App.wk.touched = true; wkSave(); closeSheet(); render(); };
 SHEETS.exadd = function (a) {
   sheetCtx.swap = a.swap;
-  return '<h3>' + (a.swap != null ? 'Substitute exercise' : 'Add exercise') + '</h3><label class="f">Exercise<input class="i" id="exa-n" list="exa-list" placeholder="e.g. Leg press" autocomplete="off"></label><datalist id="exa-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist><div class="grid3"><label class="f">Sets<input class="i" id="exa-s" type="number" min="1" value="3"></label><label class="f">Reps<input class="i" id="exa-r" type="number" min="1" value="8"></label><label class="f">Rest (s)<input class="i" id="exa-rest" type="number" min="0" step="15" value="90"></label></div>' + sheetBtns(a.swap != null ? 'Substitute' : 'Add');
+  return '<h3>' + (a.swap != null ? 'Substitute exercise' : 'Add exercise') + '</h3><label class="f">Exercise<input class="i" id="exa-n" data-dl="exa-list" autocomplete="off" placeholder="e.g. Leg press" autocomplete="off"></label><datalist id="exa-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist><div class="grid3"><label class="f">Sets<input class="i" id="exa-s" type="number" min="1" value="3"></label><label class="f">Reps<input class="i" id="exa-r" type="number" min="1" value="8"></label><label class="f">Rest (s)<input class="i" id="exa-rest" type="number" min="0" step="15" value="90"></label></div>' + sheetBtns(a.swap != null ? 'Substitute' : 'Add');
 };
 SAVE2.exadd = function () {
   var n = $('#exa-n').value.trim(); if (!n) { $('#shErr').textContent = 'Name the exercise.'; return; }
@@ -341,7 +341,7 @@ SHEETS.exhist = function (a) {
 };
 SHEETS.orm = function (a) {
   sheetCtx.n = a.n;
-  return '<h3>Record a 1RM</h3><p class="small muted">' + esc(a.n || '') + '. Only test a true max with a spotter or safety bars, and not in race week.</p>' + (a.n ? '' : '<label class="f">Exercise<input class="i" id="orm-n" list="orm-list"></label><datalist id="orm-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>') +
+  return '<h3>Record a 1RM</h3><p class="small muted">' + esc(a.n || '') + '. Only test a true max with a spotter or safety bars, and not in race week.</p>' + (a.n ? '' : '<label class="f">Exercise<input class="i" id="orm-n" data-dl="orm-list" autocomplete="off"></label><datalist id="orm-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>') +
     '<div class="grid3"><label class="f">Weight (lb)<input class="i" id="orm-w" type="number" step="2.5" inputmode="decimal"></label><label class="f">Reps<input class="i" id="orm-r" type="number" min="1" value="1"></label><label class="f">Date<input class="i" id="orm-d" type="date" value="' + App.today + '"></label></div>' + sheetBtns('Save');
 };
 SAVE2.orm = function () {

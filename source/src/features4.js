@@ -256,7 +256,7 @@ var PCT = [[100, 1], [95, 2], [90, 4], [85, 6], [80, 8], [75, 10], [70, 12], [65
 SHEETS.ormcalc = function (a) {
   sheetCtx.n = a.n || '';
   return '<h3>1RM calculator</h3><p class="small muted">Enter a set you did with good form (ideally 2–10 reps). The calculator estimates the most you could lift once.</p>' +
-    '<label class="f">Exercise<input class="i" id="oc-n" list="oc-list" value="' + esc(a.n || '') + '" placeholder="e.g. Back squat"></label><datalist id="oc-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
+    '<label class="f">Exercise<input class="i" id="oc-n" data-dl="oc-list" autocomplete="off" value="' + esc(a.n || '') + '" placeholder="e.g. Back squat"></label><datalist id="oc-list">' + allLiftNames().map(function (n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>' +
     '<div class="grid2"><label class="f">Weight (lb)<input class="i" id="oc-w" type="number" step="2.5" inputmode="decimal" value="' + (a.w || '') + '"></label><label class="f">Reps<input class="i" id="oc-r" type="number" min="1" max="20" inputmode="numeric" value="' + (a.r || '') + '"></label></div><div id="oc-out">' + ormOut(a.w, a.r) + '</div>' +
     '<div class="btns"><button class="btn primary" data-act="oc-save">Save as my 1RM</button><button class="btn" data-act="sheet" data-arg="' + jattr({ sheet: 'orm', n: a.n }) + '">Enter a tested 1RM</button><button class="btn ghost" data-act="sheet-close">Close</button></div><p class="err" id="shErr"></p>';
 };

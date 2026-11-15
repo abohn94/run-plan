@@ -1051,3 +1051,32 @@ details.fold[open] > .foldbody, details.gdet[open] > *:not(summary), details.inf
 #main.enter .season button > i, #main.enter .season button > b { transform-origin: center bottom; animation: growy .7s cubic-bezier(.2, .75, .25, 1) both; }
 #main.enter .season button:nth-child(4n+2) > i { animation-delay: .06s; } #main.enter .season button:nth-child(4n+3) > i { animation-delay: .12s; } #main.enter .season button:nth-child(4n) > i { animation-delay: .18s; }
 #main.enter .phasebar { transform-origin: left center; animation: growx .8s .2s cubic-bezier(.2, .75, .25, 1) both; }
+
+/* app-styled dropdowns: closed state + custom picker (replaces the OS menu) */
+select.i { -webkit-appearance: none; appearance: none; padding-right: 40px; cursor: pointer; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 7.5l5 5 5-5' fill='none' stroke='%238a8a95' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 13px center; background-size: 18px; }
+select.i.sm { padding-right: 30px; background-position: right 8px center; background-size: 15px; }
+select.i[aria-expanded="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
+select.i option { background: var(--bg2); color: var(--ink); }
+.pick { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; justify-content: center; animation: fadein .16s ease both; }
+.pick-card { width: 100%; max-width: 560px; max-height: 72vh; display: flex; flex-direction: column; background: var(--card); border-radius: 26px 26px 0 0; padding: 8px 10px calc(14px + var(--safe-b)); box-shadow: 0 -10px 40px rgba(0,0,0,.35); animation: sheetup .26s cubic-bezier(.2, .8, .25, 1) both; }
+.pick-grab { width: 38px; height: 5px; border-radius: 3px; background: var(--line2); margin: 2px auto 8px; flex: none; }
+.pick-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 8px 10px; flex: none; }
+.pick-h b { font-size: 1.05rem; font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-x { border: 0; background: var(--card2); color: var(--muted); border-radius: 999px; min-width: 34px; height: 34px; font-size: 1.1rem; font-weight: 700; flex: none; }
+.pick-list { overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 4px; padding: 2px; }
+.pick-o { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 1rem; font-weight: 600; padding: 13px 14px; border-radius: 14px; min-height: 48px; }
+.pick-o:hover, .pick-o:focus-visible { background: var(--card2); outline: none; }
+.pick-o[aria-selected="true"] { background: var(--card2); font-weight: 800; box-shadow: inset 0 0 0 1.5px var(--green); }
+.pick-o .pk { width: 22px; height: 22px; border-radius: 999px; flex: none; display: grid; place-items: center; box-shadow: inset 0 0 0 1.5px var(--line2); }
+.pick-o[aria-selected="true"] .pk { background: var(--green); box-shadow: none; }
+.pick-o[aria-selected="true"] .pk::after { content: ''; width: 9px; height: 5px; border: solid #062b18; border-width: 0 0 2.5px 2.5px; transform: translateY(-1px) rotate(-45deg); }
+.pick-o:disabled { opacity: .4; }
+.pick-g { font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 10px 14px 4px; }
+@media (prefers-reduced-motion: reduce) { .pick, .pick-card { animation: none; } }
+input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 7.5l5 5 5-5' fill='none' stroke='%238a8a95' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; background-size: 18px; }
+.dl-pop { margin-top: -4px; max-height: 232px; overflow-y: auto; overscroll-behavior: contain; background: var(--card); border-radius: 16px; box-shadow: inset 0 0 0 1.5px var(--line2), 0 10px 28px rgba(0,0,0,.28); padding: 5px; display: grid; gap: 2px; animation: rise .16s ease both; }
+.dl-o { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: .98rem; font-weight: 600; text-align: left; padding: 12px 12px; border-radius: 11px; min-height: 44px; }
+.dl-o:hover, .dl-o:focus-visible { background: var(--card2); outline: none; }
+.dl-o mark { background: none; color: var(--green); font-weight: 800; }

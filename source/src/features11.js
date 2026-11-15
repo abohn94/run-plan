@@ -190,3 +190,103 @@ route = function (keep) {
 };
 
 Object.assign(TITLES, { plan: 'This week', calendar: 'Season' });
+
+/* ---------- App-styled dropdown picker (replaces the OS select menu) ---------- */
+var PICK = { el: null, sel: null, touchAt: 0 };
+function pickLabel(sel) {
+  var lab = sel.closest('label');
+  if (lab) { var t = ''; lab.childNodes.forEach(function (n) { if (n.nodeType === 3) t += n.textContent; }); t = t.trim(); if (t) return t; }
+  return sel.getAttribute('aria-label') || sel.getAttribute('title') || 'Choose';
+}
+function pickClose(focus) {
+  if (!PICK.el) return;
+  PICK.el.remove(); PICK.el = null;
+  if (PICK.sel) { PICK.sel.setAttribute('aria-expanded', 'false'); if (focus) try { PICK.sel.focus({ preventScroll: true }); } catch (e) {} }
+  PICK.sel = null;
+}
+function pickOpen(sel) {
+  if (sel.disabled) return;
+  pickClose(false);
+  var rows = '';
+  Array.prototype.forEach.call(sel.children, function (ch) {
+    if (ch.tagName === 'OPTGROUP') { rows += '<div class="pick-g">' + esc(ch.label) + '</div>'; Array.prototype.forEach.call(ch.children, function (o) { rows += row(o); }); }
+    else if (ch.tagName === 'OPTION') rows += row(ch);
+  });
+  function row(o) {
+    if (o.hidden) return '';
+    return '<button type="button" class="pick-o" role="option" data-i="' + o.index + '" aria-selected="' + (o.selected ? 'true' : 'false') + '"' + (o.disabled ? ' disabled' : '') + '><span>' + esc(o.textContent) + '</span><span class="pk"></span></button>';
+  }
+  var d = document.createElement('div');
+  d.className = 'pick';
+  d.innerHTML = '<div class="pick-card" role="dialog" aria-modal="true" aria-label="' + esc(pickLabel(sel)) + '"><div class="pick-grab"></div><div class="pick-h"><b>' + esc(pickLabel(sel)) + '</b><button type="button" class="pick-x" aria-label="Close">×</button></div><div class="pick-list" role="listbox">' + rows + '</div></div>';
+  document.body.appendChild(d);
+  PICK.el = d; PICK.sel = sel;
+  sel.setAttribute('aria-expanded', 'true');
+  var cur = d.querySelector('.pick-o[aria-selected="true"]') || d.querySelector('.pick-o:not(:disabled)');
+  if (cur) { cur.scrollIntoView({ block: 'center' }); try { cur.focus({ preventScroll: true }); } catch (e) {} }
+  d.addEventListener('click', function (e) {
+    if (e.target === d || e.target.closest('.pick-x')) { pickClose(true); return; }
+    var b = e.target.closest('.pick-o'); if (!b || b.disabled) return;
+    var s = PICK.sel, i = +b.dataset.i, changed = s.selectedIndex !== i;
+    s.selectedIndex = i;
+    pickClose(true);
+    if (changed) { s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true })); }
+  });
+  d.addEventListener('keydown', function (e) {
+    var list = Array.prototype.slice.call(d.querySelectorAll('.pick-o:not(:disabled)')), k = list.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); pickClose(true); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); var n = list[Math.max(0, Math.min(list.length - 1, k + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) n.focus(); }
+    else if (e.key === 'Tab') { e.preventDefault(); }
+  });
+}
+function pickTarget(e) { var t = e.target; return t && t.tagName === 'SELECT' && !t.multiple && t.classList.contains('i') ? t : null; }
+document.addEventListener('touchstart', function (e) {
+  if (!pickTarget(e)) return; var t = e.touches[0]; PICK.tx = t.clientX; PICK.ty = t.clientY;
+}, { passive: true, capture: true });
+document.addEventListener('touchend', function (e) {
+  var s = pickTarget(e); if (!s) return;
+  var t = e.changedTouches[0]; if (t && Math.abs(t.clientX - PICK.tx) + Math.abs(t.clientY - PICK.ty) > 12) return;
+  e.preventDefault(); PICK.touchAt = Date.now(); pickOpen(s);
+}, { passive: false, capture: true });
+document.addEventListener('mousedown', function (e) {
+  var s = pickTarget(e); if (!s || e.button !== 0) return;
+  e.preventDefault();
+  if (Date.now() - PICK.touchAt < 700) return;
+  pickOpen(s);
+}, true);
+document.addEventListener('keydown', function (e) {
+  var s = pickTarget(e); if (!s || PICK.el) return;
+  if (e.key === 'Enter' || e.key === ' ' || (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) || e.key === 'F4') { e.preventDefault(); pickOpen(s); }
+}, true);
+window.addEventListener('hashchange', function () { pickClose(false); });
+
+/* ---------- App-styled suggestion list for text fields (replaces the OS datalist popup) ---------- */
+function dlOpts(inp) { var d = document.getElementById(inp.dataset.dl); return d ? Array.prototype.map.call(d.options, function (o) { return o.value; }).filter(Boolean) : []; }
+function dlHide(inp) { var p = inp && inp._dlPop; if (p) { p.remove(); inp._dlPop = null; inp.setAttribute('aria-expanded', 'false'); } }
+function dlShow(inp) {
+  var all = dlOpts(inp), q = inp.value.trim().toLowerCase();
+  var hits = q ? all.filter(function (v) { return v.toLowerCase().indexOf(q) >= 0; }) : all;
+  if (q && hits.length === 1 && hits[0].toLowerCase() === q) hits = [];
+  if (!hits.length) { dlHide(inp); return; }
+  hits.sort(function (a, b) { return (a.toLowerCase().indexOf(q) === 0 ? 0 : 1) - (b.toLowerCase().indexOf(q) === 0 ? 0 : 1); });
+  var p = inp._dlPop;
+  if (!p) { p = document.createElement('div'); p.className = 'dl-pop'; p.setAttribute('role', 'listbox'); (inp.closest('label') || inp).insertAdjacentElement('afterend', p); inp._dlPop = p; p._inp = inp; }
+  inp.setAttribute('aria-expanded', 'true');
+  p.innerHTML = hits.slice(0, 40).map(function (v) {
+    var i = q ? v.toLowerCase().indexOf(q) : -1;
+    var t = i >= 0 ? esc(v.slice(0, i)) + '<mark>' + esc(v.slice(i, i + q.length)) + '</mark>' + esc(v.slice(i + q.length)) : esc(v);
+    return '<button type="button" class="dl-o" role="option" data-v="' + esc(v) + '">' + t + '</button>';
+  }).join('');
+}
+document.addEventListener('focusin', function (e) { var t = e.target; if (t && t.dataset && t.dataset.dl) dlShow(t); });
+document.addEventListener('input', function (e) { var t = e.target; if (t && t.dataset && t.dataset.dl) dlShow(t); });
+document.addEventListener('focusout', function (e) { var t = e.target; if (t && t.dataset && t.dataset.dl) setTimeout(function () { if (document.activeElement !== t) dlHide(t); }, 120); });
+document.addEventListener('keydown', function (e) { var t = e.target; if (t && t.dataset && t.dataset.dl && e.key === 'Escape' && t._dlPop) { e.preventDefault(); e.stopPropagation(); dlHide(t); } }, true);
+document.addEventListener('pointerdown', function (e) { if (e.target.closest && e.target.closest('.dl-pop')) e.preventDefault(); }, true);
+document.addEventListener('click', function (e) {
+  var b = e.target.closest && e.target.closest('.dl-o'); if (!b) return;
+  var p = b.parentNode, inp = p._inp; if (!inp) return;
+  inp.value = b.dataset.v; dlHide(inp);
+  inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true }));
+  dlHide(inp);
+});
