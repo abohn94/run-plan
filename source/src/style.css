@@ -776,3 +776,9 @@ body.printband .band { display: block; }
 .vbtn[aria-pressed="true"] { background: var(--ink); color: var(--inv); }
 .vsun { margin-left: auto; font-size: .72rem; color: var(--dim); font-weight: 700; }
 .phasebar i { display: block; height: 6px; border-radius: 3px; }
+.wxbig { width: 46px; height: 46px; flex: none; }
+.wxsm { width: 22px; height: 22px; margin: 2px 0 1px; }
+.wxsvg { width: 28px; height: 28px; }
+.moonp { fill: #d8dcf0; } .cl1 { fill: #c9ccd6; } .cl2 { fill: #8e93a3; } .snowp { fill: #f2f4fa; } .fogp { stroke: #b4b8c4; }
+:root[data-theme="light"] .moonp { fill: #7d84a8; } :root[data-theme="light"] .cl1 { fill: #b3b7c3; } :root[data-theme="light"] .cl2 { fill: #7c8192; } :root[data-theme="light"] .snowp { fill: #9fb3d1; } :root[data-theme="light"] .fogp { stroke: #8c909c; }
+.hrs .hrc.on .moonp { fill: #5b6280; } .hrs .hrc.on .cl1 { fill: #9a9eab; }

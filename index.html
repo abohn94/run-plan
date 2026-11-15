@@ -797,6 +797,12 @@ body.printband .band { display: block; }
 .vbtn[aria-pressed="true"] { background: var(--ink); color: var(--inv); }
 .vsun { margin-left: auto; font-size: .72rem; color: var(--dim); font-weight: 700; }
 .phasebar i { display: block; height: 6px; border-radius: 3px; }
+.wxbig { width: 46px; height: 46px; flex: none; }
+.wxsm { width: 22px; height: 22px; margin: 2px 0 1px; }
+.wxsvg { width: 28px; height: 28px; }
+.moonp { fill: #d8dcf0; } .cl1 { fill: #c9ccd6; } .cl2 { fill: #8e93a3; } .snowp { fill: #f2f4fa; } .fogp { stroke: #b4b8c4; }
+:root[data-theme="light"] .moonp { fill: #7d84a8; } :root[data-theme="light"] .cl1 { fill: #b3b7c3; } :root[data-theme="light"] .cl2 { fill: #7c8192; } :root[data-theme="light"] .snowp { fill: #9fb3d1; } :root[data-theme="light"] .fogp { stroke: #8c909c; }
+.hrs .hrc.on .moonp { fill: #5b6280; } .hrs .hrc.on .cl1 { fill: #9a9eab; }
 
 </style>
 </head>
@@ -7720,11 +7726,11 @@ function loadWx(force) {
   var L = loc(); if (!L) return;
   if (!force && App.wx && App.wx.lat === L.lat && Date.now() - App.wx.at < 45 * 60 * 1000) return;
   if (loadWx.busy) return; loadWx.busy = true;
-  var u = 'https://api.open-meteo.com/v1/forecast?latitude=' + L.lat + '&longitude=' + L.lon + '&hourly=temperature_2m,dew_point_2m,apparent_temperature,wind_speed_10m,precipitation_probability,snowfall,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=16';
+  var u = 'https://api.open-meteo.com/v1/forecast?latitude=' + L.lat + '&longitude=' + L.lon + '&hourly=temperature_2m,dew_point_2m,apparent_temperature,wind_speed_10m,precipitation_probability,snowfall,weather_code,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=16';
   fetch(u).then(function (r) { return r.json(); }).then(function (j) {
     loadWx.busy = false;
     var h = j.hourly, H = {};
-    (h.time || []).forEach(function (t, i) { H[t.slice(0, 13)] = { temp: h.temperature_2m[i], dew: h.dew_point_2m[i], feels: h.apparent_temperature[i], wind: h.wind_speed_10m[i], pop: h.precipitation_probability[i], snow: h.snowfall[i], code: h.weather_code[i] }; });
+    (h.time || []).forEach(function (t, i) { H[t.slice(0, 13)] = { temp: h.temperature_2m[i], dew: h.dew_point_2m[i], feels: h.apparent_temperature[i], wind: h.wind_speed_10m[i], pop: h.precipitation_probability[i], snow: h.snowfall[i], code: h.weather_code[i], day: h.is_day ? h.is_day[i] : null }; });
     App.wx = { at: Date.now(), lat: L.lat, H: H }; try { LS.set('rp-wx', JSON.stringify(App.wx)); } catch (e) { /* storage full */ }
     recompute(); if ($('#sheet').hidden) render();
   }).catch(function () { loadWx.busy = false; });
@@ -7739,7 +7745,46 @@ function heatFor(date) {
 }
 var _zonesAt7 = zonesAt;
 zonesAt = function (date) { var z = _zonesAt7(date), p = date >= App.today ? heatFor(date) : 0; return p ? E.heatZones(z, p) : z; };
-var WX_ICON = function (c) { return c >= 95 ? '⛈' : c >= 71 && c <= 86 ? '❄' : c >= 51 && c <= 67 ? '🌧' : c >= 45 && c <= 48 ? '🌫' : c >= 2 ? '⛅' : '☀'; };
+/* weather icons for every WMO weather code, with night versions (moon) after sunset */
+var WXG = {
+  sun: '<circle cx="12" cy="12" r="4.2" fill="var(--gold)"/><g stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></g>',
+  sunS: '<g transform="translate(-3 -4) scale(.78)"><circle cx="12" cy="12" r="4.2" fill="var(--gold)"/><g stroke="var(--gold)" stroke-width="2" stroke-linecap="round"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></g></g>',
+  moon: '<path class="moonp" d="M15.5 3.5a8.5 8.5 0 1 0 5 13.4A7 7 0 0 1 15.5 3.5z"/>',
+  moonS: '<path class="moonp" d="M10.5 2.5a6.2 6.2 0 1 0 4.2 9.7A5.2 5.2 0 0 1 10.5 2.5z"/>',
+  cloud: function (dark) { return '<path class="' + (dark ? 'cl2' : 'cl1') + '" d="M7 19.5h10.2a3.8 3.8 0 0 0 .4-7.6 5.6 5.6 0 0 0-10.8 1.6A3 3 0 0 0 7 19.5z"/>'; },
+  cloudHi: function (dark) { return '<path class="' + (dark ? 'cl2' : 'cl1') + '" d="M7 16h10.2a3.6 3.6 0 0 0 .4-7.2 5.4 5.4 0 0 0-10.4 1.5A2.9 2.9 0 0 0 7 16z"/>'; },
+  rain: function (n) { var d = ''; for (var i = 0; i < n; i++) d += '<path d="M' + (8.5 + i * 3.5) + ' 18.2l-1.2 3" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round"/>'; return d; },
+  snow: function (n) { var d = ''; for (var i = 0; i < n; i++) d += '<circle class="snowp" cx="' + (8.3 + i * 3.6) + '" cy="' + (19.6 + (i % 2) * 1.6) + '" r="1.15"/>'; return d; },
+  sleet: '<path d="M8.5 18.2l-1.2 3" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round"/><circle class="snowp" cx="12" cy="20" r="1.15"/><path d="M15.7 18.2l-1.2 3" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round"/>',
+  bolt: '<path d="M12.6 15.5l-2.6 4h2.4l-1.4 3.5 4-5h-2.5l1.5-2.5z" fill="var(--gold)"/>',
+  fog: '<g class="fogp" stroke-width="1.8" stroke-linecap="round"><path d="M4 9h16M6 12.5h12M4 16h16M7 19.5h10"/></g>'
+};
+function wxInfo(code, night) {
+  var c = +code, sky = night ? WXG.moonS : WXG.sunS;
+  if (c === 0) return { label: night ? 'Clear night' : 'Sunny', svg: night ? WXG.moon : WXG.sun };
+  if (c === 1) return { label: night ? 'Mostly clear' : 'Mostly sunny', svg: sky + '<g transform="translate(4 5) scale(.75)">' + WXG.cloudHi() + '</g>' };
+  if (c === 2) return { label: 'Partly cloudy', svg: sky + WXG.cloudHi() };
+  if (c === 3) return { label: 'Cloudy', svg: '<g transform="translate(-2 -3) scale(.75)">' + WXG.cloud(true) + '</g>' + WXG.cloudHi() };
+  if (c === 45 || c === 48) return { label: c === 48 ? 'Freezing fog' : 'Fog', svg: WXG.fog };
+  if (c >= 51 && c <= 55) return { label: 'Drizzle', svg: WXG.cloudHi(true) + WXG.rain(2) };
+  if (c === 56 || c === 57) return { label: 'Freezing drizzle', svg: WXG.cloudHi(true) + WXG.sleet };
+  if (c === 61 || c === 63 || c === 65) return { label: c === 61 ? 'Light rain' : c === 63 ? 'Rain' : 'Heavy rain', svg: WXG.cloudHi(true) + WXG.rain(c === 61 ? 2 : 3) };
+  if (c === 66 || c === 67) return { label: 'Freezing rain', svg: WXG.cloudHi(true) + WXG.sleet };
+  if (c === 71 || c === 73 || c === 75) return { label: c === 71 ? 'Light snow' : c === 73 ? 'Snow' : 'Heavy snow', svg: WXG.cloudHi() + WXG.snow(c === 71 ? 2 : 3) };
+  if (c === 77) return { label: 'Snow grains', svg: WXG.cloudHi() + WXG.snow(2) };
+  if (c >= 80 && c <= 82) return { label: c === 82 ? 'Heavy showers' : 'Showers', svg: sky + WXG.cloudHi(true) + WXG.rain(c === 80 ? 2 : 3) };
+  if (c === 85 || c === 86) return { label: 'Snow showers', svg: sky + WXG.cloudHi() + WXG.snow(c === 85 ? 2 : 3) };
+  if (c === 95) return { label: 'Thunderstorm', svg: WXG.cloudHi(true) + WXG.bolt + WXG.rain(1) };
+  if (c === 96 || c === 99) return { label: 'Thunderstorm with hail', svg: WXG.cloudHi(true) + WXG.bolt + WXG.snow(1) };
+  return { label: 'Cloudy', svg: WXG.cloudHi() };
+}
+function isNight(date, hr, w) {
+  if (w && w.day != null) return !w.day;
+  var L = loc(), s = L && E.sunTimes(date, L.lat, L.lon); if (!s) return hr < 7 || hr >= 18;
+  return hr * 60 + 30 < s.rise || hr * 60 + 30 > s.set;
+}
+function wxIcon(date, hr, w, cls) { var i = wxInfo(w.code, isNight(date, hr, w)); return '<svg class="' + (cls || 'wxsvg') + '" viewBox="0 0 24 24" role="img" aria-label="' + esc(i.label) + '"><title>' + esc(i.label) + '</title>' + i.svg + '</svg>'; }
+var WX_ICON = function (c) { return wxInfo(c, false).label; };
 function bestHour(date) {
   var best = null, cold = (wxAt(date, 12) || {}).temp < 40;
   var L0 = loc(), sun0 = L0 && E.sunTimes(date, L0.lat, L0.lon), dayOnly = (st().prefs || {}).darkRun === false;
@@ -7749,12 +7794,12 @@ function bestHour(date) {
 function hrLabel(h) { return (h % 12 || 12) + (h < 12 ? 'a' : 'p'); }
 function conditionsCard() {
   var t = App.today, day = dayOf(t), runs = day ? day.parts.filter(function (p) { return E.isRun(p) && p.mi > 0; }) : [];
-  if (!loc()) return '<section class="card cond"><div class="spread"><div><div class="eyebrow">Conditions</div><h3 style="margin-top:2px">Weather-smart paces</h3></div><span class="wxic">⛅</span></div><p class="small muted" style="margin-top:4px">Add your location and paces adjust for heat and humidity, and icy or bitter days get a treadmill option.</p><div class="btns" style="margin-top:10px"><button class="btn sm primary" data-act="loc-gps">Use my location</button><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'loc' }) + '">Enter a city</button></div></section>';
+  if (!loc()) return '<section class="card cond"><div class="spread"><div><div class="eyebrow">Conditions</div><h3 style="margin-top:2px">Weather-smart paces</h3></div><svg class="wxbig" viewBox="0 0 24 24" aria-hidden="true">' + wxInfo(2, false).svg + '</svg></div><p class="small muted" style="margin-top:4px">Add your location and paces adjust for heat and humidity, and icy or bitter days get a treadmill option.</p><div class="btns" style="margin-top:10px"><button class="btn sm primary" data-act="loc-gps">Use my location</button><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'loc' }) + '">Enter a city</button></div></section>';
   var h0 = runHour(), w = wxAt(t, h0); if (!w) { loadWx(); return ''; }
   var pct = heatFor(t), win = E.winterCheck(w), best = bestHour(t), zz = zonesAt(t), base = _zonesAt7(t);
   var hours = []; for (var h = Math.max(5, h0 - 3); h <= Math.min(21, h0 + 3); h++) { var x = wxAt(t, h); if (x) hours.push([h, x]); }
-  var html = '<section class="card cond"><div class="spread"><div><div class="eyebrow">Conditions · ' + esc(loc().name || '') + '</div><h3 style="margin-top:2px">' + Math.round(w.temp) + '°F at ' + hrLabel(h0) + (Math.abs(w.feels - w.temp) >= 4 ? ' <span class="muted" style="font-weight:600">feels ' + Math.round(w.feels) + '°</span>' : '') + '</h3></div><span class="wxic">' + WX_ICON(w.code) + '</span></div>';
-  html += '<div class="hrs">' + hours.map(function (p) { return '<button class="hrc' + (p[0] === h0 ? ' on' : '') + (best && best.h === p[0] ? ' best' : '') + '" data-act="run-hour" data-arg="' + jattr({ h: p[0] }) + '"><span>' + hrLabel(p[0]) + '</span><b>' + Math.round(p[1].temp) + '°</b><em>' + (p[1].pop >= 30 ? p[1].pop + '%' : 'dew ' + Math.round(p[1].dew)) + '</em></button>'; }).join('') + '</div>';
+  var html = '<section class="card cond"><div class="spread"><div><div class="eyebrow">Conditions · ' + esc(loc().name || '') + '</div><h3 style="margin-top:2px">' + Math.round(w.temp) + '°F at ' + hrLabel(h0) + (Math.abs(w.feels - w.temp) >= 4 ? ' <span class="muted" style="font-weight:600">feels ' + Math.round(w.feels) + '°</span>' : '') + '</h3><div class="small muted" style="margin-top:2px">' + esc(wxInfo(w.code, isNight(t, h0, w)).label) + (w.wind >= 10 ? ' · wind ' + Math.round(w.wind) + ' mph' : '') + '</div></div>' + wxIcon(t, h0, w, 'wxbig') + '</div>';
+  html += '<div class="hrs">' + hours.map(function (p) { return '<button class="hrc' + (p[0] === h0 ? ' on' : '') + (best && best.h === p[0] ? ' best' : '') + '" data-act="run-hour" data-arg="' + jattr({ h: p[0] }) + '"><span>' + hrLabel(p[0]) + '</span>' + wxIcon(t, p[0], p[1], 'wxsm') + '<b>' + Math.round(p[1].temp) + '°</b><em>' + (p[1].pop >= 30 ? p[1].pop + '%' : 'dew ' + Math.round(p[1].dew)) + '</em></button>'; }).join('') + '</div>';
   var notes = [];
   if (pct) notes.push('<b>Paces ' + Math.round(pct * 100) + '% slower</b> for the humidity (dew point ' + Math.round(w.dew) + '°F)' + (base && base.E ? ': easy ' + pace(zz.E[0]) + '–' + pace(zz.E[1]) + ' instead of ' + pace(base.E[0]) + '–' + pace(base.E[1]) : '') + '. Same effort, same training.');
   else if (runs.length) notes.push('No pace adjustment needed: dew point ' + Math.round(w.dew) + '°F.');
