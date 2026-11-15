@@ -91,7 +91,6 @@ function easyRuns(from, to) {
     return !(a.te >= 3.5);
   });
 }
-function median(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }); var m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
 function efficiency(list) { return median(list.map(function (a) { return ((a.gapSpd || (a.distM / (a.movS || a.durS))) / a.avgHR); })); }
 function progressFacts() {
   var t = App.today, out = [];
@@ -225,13 +224,23 @@ VIEWS.today = function () {
 function calEvents(date) { return ((App.cal && App.cal.events) || {})[date] || []; }
 function evTime(ev) { if (ev.a) return 'All day'; var f = function (m) { var h = Math.floor(m / 60) % 24, mm = m % 60; return (h % 12 || 12) + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); }; return f(ev.s) + (ev.e && ev.e !== ev.s ? '–' + f(Math.min(ev.e, 1439)) : ''); }
 function evRow(ev, cls) { return '<div class="pev' + (ev.f ? ' free' : '') + (cls ? ' ' + cls : '') + '" title="From your Google Calendar (change it there)"><span class="pt">' + evTime(ev) + '</span><span class="pn">' + esc(ev.t) + '</span></div>'; }
+/* work shifts from your calendar (shown even before you review them) plus ones you set yourself */
+function shownShifts() { try { return (typeof calShifts === 'function' && App.cal) ? calShifts().proposed : (typeof allShifts === 'function' ? allShifts() : {}); } catch (e) { return {}; } }
+var SHIFT_NAME = { day: 'Day shift', eve: 'Evening shift', night: 'Night shift' };
+function shiftRowHTML(date) {
+  var k = shownShifts()[date]; if (!k || !SHIFT_NAME[k]) return '';
+  var t = App.cal && App.cal.times && App.cal.times[date], applied = (typeof allShifts === 'function' ? allShifts() : {})[date] === k;
+  var f = function (m) { m = ((m % 1440) + 1440) % 1440; var h = Math.floor(m / 60), mm = m % 60; return (h % 12 || 12) + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); };
+  var tm = t ? f(t[0]) + '–' + f(t[1]) : k === 'day' ? 'Day' : k === 'eve' ? 'Evening' : 'Night';
+  return '<div class="pev shift k-' + k + '" title="Work shift from your calendar"><span class="pt">' + tm + '</span><span class="pn">' + SHIFT_NAME[k] + (applied ? '' : ' <a class="pendtag" href="#/calreview">review</a>') + '</span></div>';
+}
 function dayEventsHTML(date) {
-  var ev = calEvents(date); if (!ev.length) return '';
-  return '<div class="pevs" aria-label="Calendar events">' + ev.map(function (e) { return evRow(e); }).join('') + '</div>';
+  var ev = calEvents(date), sh = shiftRowHTML(date); if (!ev.length && !sh) return '';
+  return '<div class="pevs" aria-label="Work and calendar events">' + sh + ev.map(function (e) { return evRow(e); }).join('') + '</div>';
 }
 /* how booked a day is: personal events plus work, as a share of a 16-hour waking day */
 function busyShare(date) {
-  var mins = 0, sh = (typeof allShifts === 'function' ? allShifts() : {})[date];
+  var mins = 0, sh = shownShifts()[date];
   /* each event counts at least 2 hours (getting there, getting ready), so a busy day reads as busy */
   calEvents(date).forEach(function (e) { if (e.f) return; mins += e.a ? 120 : Math.max(120, Math.min(e.e || e.s, 1440) - e.s); });
   if (sh) mins += sh === 'day' ? 570 : 510;
@@ -251,14 +260,14 @@ VIEWS.preview = function () {
 /* session page: what else is on that day */
 var _day8e = VIEWS.day;
 VIEWS.day = function () {
-  var h = _day8e(), date = App.args[0] || App.today, ev = calEvents(date); if (!ev.length) return h;
-  var c = '<section class="card"><div class="spread"><h3>On your calendar</h3><span class="tiny muted">Google Calendar</span></div><div class="pevs" style="margin-top:8px">' + ev.map(function (e) { return evRow(e); }).join('') + '</div></section>';
+  var h = _day8e(), date = App.args[0] || App.today, inner = dayEventsHTML(date); if (!inner) return h;
+  var c = '<section class="card"><div class="spread"><h3>On your calendar</h3><span class="tiny muted">Google Calendar</span></div>' + inner + '</section>';
   var i = h.indexOf('<section class="card"><h3>Day actions'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c;
 };
 /* calendar tab: a busy bar in every day (the week-by-week list shows the events themselves) */
 function busyBar(d) {
   if (!App.cal) return '';
-  var b = busyShare(d), sh = (typeof allShifts === 'function' ? allShifts() : {})[d], n = calEvents(d).length, pw = sh ? Math.min(b, (sh === 'day' ? 570 : 510) / 960) : 0;
+  var b = busyShare(d), sh = shownShifts()[d], n = calEvents(d).length, pw = sh ? Math.min(b, (sh === 'day' ? 570 : 510) / 960) : 0;
   return '<span class="busy" title="' + (n ? plural(n, 'event') : 'No events') + (sh ? ' · ' + sh + ' shift' : '') + '"><i class="w" style="width:' + Math.round(pw * 100) + '%"></i><i style="width:' + Math.round((b - pw) * 100) + '%"></i></span>';
 }
 var _calendar8 = VIEWS.calendar;

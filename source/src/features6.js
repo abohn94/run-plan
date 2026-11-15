@@ -351,10 +351,13 @@ function loadFocusHTML() {
   if (!lf) return '<p class="empty">Needs about four weeks of Garmin activities.</p>';
   var max = 0; ['low', 'high', 'anaerobic'].forEach(function (k) { max = Math.max(max, lf.cats[k].load, lf.cats[k].hi); }); max *= 1.12;
   var rows = ['low', 'high', 'anaerobic'].map(function (k) {
-    var c = lf.cats[k], n = LF_NAMES[k], st0 = c.state === 'short' ? 'Below target' : c.state === 'over' ? 'Above target' : 'In range';
-    return '<div class="lfrow"><div class="spread"><b>' + n[0] + '</b><span class="pill ' + (c.state === 'ok' ? 'good' : 'warn') + '">' + st0 + '</span></div>' +
-      '<div class="lfbar"><i class="band" style="left:' + (c.lo / max * 100).toFixed(1) + '%;width:' + ((c.hi - c.lo) / max * 100).toFixed(1) + '%"></i><i class="val" style="width:' + Math.max(2, c.load / max * 100).toFixed(1) + '%;background:' + n[2] + '"></i><span>' + c.load + '</span></div>' +
-      '<div class="tiny muted">' + n[1] + ' Target ' + c.lo + '–' + c.hi + '.</div></div>';
+    var c = lf.cats[k], n = LF_NAMES[k];
+    var st0 = c.state === 'short' ? (c.lo - c.load) + ' below range' : c.state === 'over' ? (c.load - c.hi) + ' above range' : 'In range';
+    var pct = function (v) { return (v / max * 100).toFixed(1) + '%'; };
+    return '<div class="lfrow"><div class="spread"><b>' + n[0] + ' <span class="lfv">' + c.load + '</span></b><span class="pill ' + (c.state === 'ok' ? 'good' : 'warn') + '">' + st0 + '</span></div>' +
+      '<div class="lfbar" role="img" aria-label="' + n[0] + ' ' + c.load + ', target ' + c.lo + ' to ' + c.hi + '"><i class="val" style="width:' + pct(Math.max(c.load, max * 0.01)) + ';background:' + n[2] + '"></i><i class="tzone ' + (c.state === 'ok' ? 'in' : '') + '" style="left:' + pct(c.lo) + ';width:' + pct(c.hi - c.lo) + '"></i><i class="mk" style="left:' + pct(c.load) + ';background:' + n[2] + '"></i></div>' +
+      '<div class="lfscale"><span style="left:' + pct(c.lo) + '">' + c.lo + '</span><span style="left:' + pct(c.hi) + '">' + c.hi + '</span></div>' +
+      '<div class="tiny muted">' + n[1] + ' The outlined zone is the target.</div></div>';
   }).join('');
   var why = { anaerobic: 'This week gets six short strides on an easy day to top up anaerobic load.', high: 'An easy run this week finishes with a steady progression to top up high aerobic load.', low: 'One workout this week becomes easy running to rebuild your base.', 'anaerobic-excess': 'Intervals become threshold work this week to bring anaerobic load back into range.' }[lf.nudge];
   return '<p class="small muted">' + (lf.src === 'garmin' ? 'From Garmin: ' : 'Estimated from your activities: ') + '4-week load by type. Training across all three keeps fitness improving.' + (lf.status ? ' Status: <b>' + esc(String(lf.status).toLowerCase().replace(/_\d+$/, '').replace(/_/g, ' ')) + '</b>.' : '') + '</p><div class="stack tight" style="margin-top:10px">' + rows + '</div>' +

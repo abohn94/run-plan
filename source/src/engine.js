@@ -582,10 +582,24 @@ function defaultProfile() {
   };
 }
 
+/* Your own plan settings (profile.ctl) on top of the style: peak weekly miles, quality days, longest long run,
+   and the intensity mix (pyramidal = the style as written, polarized = more interval/hill work and no tempo,
+   threshold = tempo and cruise intervals in place of fast intervals). */
+function applyCtl(m, c) {
+  if (!c) return m;
+  var o = Object.assign({}, m, { ctl: c });
+  if (c.quality != null && c.quality !== '') o.quality = clamp(+c.quality, 0, 3);
+  if (+c.longCap) { o.longCapFull = clamp(+c.longCap, 6, 24); o.longCapHalf = Math.min(clamp(+c.longCap, 6, 24), 16); }
+  return o;
+}
+var MIX_SWAP = {
+  polarized: { tempo: function () { return SESS.intervals(5, 1000, 400); }, cruise: function () { return SESS.intervals(6, 800, 400); }, steady: function () { return SESS.hills(8, 60); }, subt: function () { return SESS.intervals(5, 1000, 400); } },
+  threshold: { intervals: function () { return SESS.cruise(4, 1, 60); }, hills: function () { return SESS.tempoMi(3); }, reps: function () { return SESS.cruise(5, 1, 60); }, fartlek: function () { return SESS.steady(20); } }
+};
 function generate(state) {
   var prof = Object.assign(defaultProfile(), state.profile || {});
   setWeekStart(prof.weekStart || 0);
-  var method = METHODS[prof.method] || METHODS.balanced;
+  var method = applyCtl(METHODS[prof.method] || METHODS.balanced, prof.ctl);
   var start = monday(prof.startDate || today());
   var events = (state.events || []).filter(function (e) { return e && e.date; }).slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; });
   var aEvents = events.filter(function (e) { return (e.priority || 'A') === 'A' && e.date >= start; });
@@ -625,7 +639,9 @@ function generate(state) {
     var cap = method.runs[1] * 10 + 4;
     if (+prof.runDays) cap = Math.min(cap, (+prof.runDays) * 10 + 2);
     peakTarget = Math.min(peakTarget, Math.max(cap, +prof.mpw || 8));
+    if (method.ctl && +method.ctl.peak) peakTarget = clamp(Math.round(+method.ctl.peak), Math.max(8, +prof.mpw || 8), 120);
     var longCap = Math.min(dist.longCap, dist.key === 'full' ? method.longCapFull : dist.key === 'half' ? method.longCapHalf : dist.longCap);
+    if (method.ctl && +method.ctl.longCap) longCap = Math.min(clamp(+method.ctl.longCap, 6, 24), dist.key === 'full' ? 24 : dist.key === 'half' ? 16 : 14);
     var gvB = ev ? goalVdot(ev) : null;
     var vStart = plannedV.length ? plannedV[plannedV.length - 1] : v0;
     var growth = Math.min(0.11 * L, Math.max(gvB ? gvB - vStart : 0, 0.045 * L));
@@ -760,6 +776,8 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
       var ttWeek = w.phase.key === 'thr' && w.qi === 0 && !w.cut && w.firstBlock && qn === 0 && !(prof.recent && prof.recent.time);
       var tuneup = w.phase.key === 'spec' && w.cut;
       var sess = qualityFor({ phase: w.phase.key === 'maint' ? 'base' : w.phase.key, qi: w.qi, dist: w.dist, method: method, cut: w.cut, firstBlock: w.firstBlock && w.phase.key !== 'maint', slot: qn, tt: ttWeek, tuneup: tuneup });
+      var mixK = method.ctl && method.ctl.mix, swap = mixK && MIX_SWAP[mixK];
+      if (swap && sess && swap[sess.key] && w.phase.key !== 'race' && w.phase.key !== 'taper' && !(w.phase.key === 'spec' && /goal/.test(sess.key))) sess = swap[sess.key]();
       if (!sess) { lay.roles[d] = lay.roles[d].map(function (r) { return /^quality/.test(r) ? 'easy' : r; }); return; }
       var p = mkQuality(w, sess, qMiles, zz);
       days[d].parts.push(p); qParts.push(p); used += p.mi;

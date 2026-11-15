@@ -335,7 +335,7 @@ VIEWS.plan = function () {
   }).join('') + '</div>';
   if (typeof addWkBtn === 'function') html += addWkBtn(w);
   html += legend();
-  html += '<div class="btns"><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'weekstatus', week: w.n }) + '">Week status' + (mod && mod.phase === 'status' ? ': ' + E.STATUS[mod.kind].label : '') + '</button><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'life' }) + '">Something came up</button><button class="btn sm" data-act="garmin-week" data-arg="' + jattr({ week: w.n }) + '">Garmin workouts (.zip)</button></div>';
+  html += '<div class="btns"><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'weekstatus', week: w.n }) + '">Week status' + (mod && mod.phase === 'status' ? ': ' + E.STATUS[mod.kind].label : '') + '</button><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'life' }) + '">Something came up</button><a class="btn sm" href="#/planctl">Plan settings</a></div>';
   return html;
 };
 function weekActual(w) {

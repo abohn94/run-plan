@@ -7,6 +7,7 @@ The private address(es) come from the GCAL_ICS_URLS secret (one per line). Saved
   busy    {date: [[startMin, endMin], ...]}  timed events, minutes after local midnight
   away    {date: "travel" | "vacation"}     trips and time off
   starts  {date: minutes}                   when a day shift starts (for wake-up times)
+  times   {date: [startMin, endMin]}        every shift's hours (end may be the next morning)
   events  {date: [{s, e, t, a, f}]}         personal events to show beside your training: start/end minutes,
                                            title (shortened), a = all day, f = marked free; work shifts are left out
 Keywords are read from user/state.json (prefs.cal), with sensible defaults.
@@ -164,7 +165,7 @@ def main():
     work, vac, trav, tz = prefs()
     today = dt.datetime.now(tz).date()
     lo, hi = today - dt.timedelta(days=DAYS_BACK), today + dt.timedelta(days=DAYS_AHEAD)
-    res = {"shifts": {}, "busy": {}, "away": {}, "starts": {}, "ends": {}, "events": {}}
+    res = {"shifts": {}, "busy": {}, "away": {}, "starts": {}, "ends": {}, "events": {}, "times": {}}
     n = 0
     for i, u in enumerate(urls):
         if u.startswith("webcal://"):
@@ -207,6 +208,7 @@ def main():
                     night = s.hour >= 19 or (end.date() > s.date() and end.hour >= 3)
                     eve = not night and s.hour >= 11
                     res["shifts"][d0] = "night" if night else "eve" if eve else "day"
+                    res["times"][d0] = [s.hour * 60 + s.minute, end.hour * 60 + end.minute]
                     if not night and not eve:
                         res["starts"][d0] = s.hour * 60 + s.minute
                         res["ends"][d0] = end.hour * 60 + end.minute
