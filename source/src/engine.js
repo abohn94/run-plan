@@ -2075,12 +2075,12 @@ function applyDaylight(w, st, zz) {
       var mins = Math.round((p.mi || 3) * 10);
       if (kind === 'day') {
         var start = (ends[d.date] || 930) + commute;
-        if (start + mins > sun.set - 15) return Object.assign({}, p, { treadmill: true, changed: true, dark: true, note: 'Treadmill after work: it’s dark by ' + clockMin(sun.set) + '. Set a 1% incline. ' + (p.note || '') });
+        if (start + mins > sun.set - 20) return Object.assign({}, p, { treadmill: true, changed: true, dark: true, note: 'Treadmill after work: it’s dark by ' + clockMin(sun.set) + '. Set a 1% incline. ' + (p.note || '') });
         return Object.assign({}, p, { note: 'After work, finish by sunset (' + clockMin(sun.set) + '). ' + (p.note || '') });
       }
       if (kind === 'eve' || kind === 'night') return p;
       var h = pr.runHour == null ? 17 : +pr.runHour, t0 = h * 60;
-      if (t0 + mins > sun.set - 15 || t0 < sun.rise) return Object.assign({}, p, { daylight: true, note: 'Daylight runs only: ' + (t0 < sun.rise ? 'sunrise is ' + clockMin(sun.rise) : 'sunset is ' + clockMin(sun.set)) + ', so go between ' + clockMin(sun.rise + 15) + ' and ' + clockMin(sun.set - mins) + ', or use the treadmill. ' + (p.note || '') });
+      if (t0 + mins > sun.set - 20 || t0 < sun.rise) return Object.assign({}, p, { daylight: true, note: 'Daylight runs only: ' + (t0 < sun.rise ? 'sunrise is ' + clockMin(sun.rise) : 'sunset is ' + clockMin(sun.set)) + ', so go between ' + clockMin(sun.rise + 15) + ' and ' + clockMin(sun.set - mins) + ', or use the treadmill. ' + (p.note || '') });
       return p;
     });
   });
