@@ -58,7 +58,7 @@ function recompute() {
 function dayOf(date) {
   if (!App.plan) return null;
   var w = E.weekOf(App.plan, date);
-  return w ? w.days[E.dow(date)] : null;
+  return w ? E.dayAt(w, date) : null;
 }
 function zonesAt(date) { var w = App.plan && E.weekOf(App.plan, date); return w ? w.zonesAdj : (App.plan ? App.plan.weeks[0].zonesAdj : null); }
 function logOf(date) { return (Store.state.logs || {})[date] || {}; }
@@ -804,7 +804,7 @@ VIEWS.settings = function () {
     '<label class="f">Extra gym days (lift + treadmill run)<select class="i" name="crossDays">' + [0, 1, 2, 3].map(function (n) { return '<option' + (+p.crossDays === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label></div>' +
     '<label class="check"><input type="checkbox" name="doubles"' + (p.doubles !== false ? ' checked' : '') + '> Lift on run days (run first). Turn off to keep lifting on separate days; runs per week drop to fit.</label></section>' +
     '<section class="card stack"><h3>Fitness</h3><div class="grid2">' +
-    '<label class="f">Plan start (Monday)<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"></label>' +
+    '<label class="f">Plan start<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"></label<p class="tiny muted">Start on a Friday, Saturday or Sunday and those days join week 1, so your weeks still begin on your usual day.</p>' +
     '<label class="f">Weekly miles at start<input class="i" type="number" min="0" max="120" name="mpw" value="' + esc(p.mpw) + '"></label>' +
     '<label class="f">Longest recent run (mi)<input class="i" type="number" min="0" max="30" name="longest" value="' + esc(p.longest) + '"></label>' +
     '<label class="f">Typical easy pace (m:ss)<input class="i" name="easyPace" placeholder="10:00" value="' + esc(p.easyPace || '') + '"></label>' +
@@ -822,7 +822,7 @@ function readSettings(form) {
   p.avail = [0, 1, 2, 3, 4, 5, 6].map(function (i) { var b = $('[data-toggle="avail"][data-i="' + i + '"]', form); return b ? b.getAttribute('aria-pressed') === 'true' : true; });
   p.runDays = +f('runDays').value; p.longDay = +f('longDay').value; p.liftDays = +f('liftDays').value; p.crossDays = +f('crossDays').value;
   p.doubles = f('doubles').checked;
-  if (f('startDate').value) p.startDate = E.monday(f('startDate').value);
+  if (f('startDate').value) p.startDate = E.dow(f('startDate').value) >= 4 ? f('startDate').value : E.monday(f('startDate').value);
   p.mpw = +f('mpw').value || 0; p.longest = +f('longest').value || 0; p.easyPace = f('easyPace').value.trim();
   p.weightKg = +f('weightLb').value ? Math.round(+f('weightLb').value / 2.2046 * 10) / 10 : null;
   p.volume = +f('volume').value || 1; p.injuryProne = f('injuryProne').checked; p.runWalk = f('runWalk').checked;
@@ -937,7 +937,7 @@ VIEWS.setup = function () {
   } else if (name === 'days') {
     html += '<form class="stack" data-form="wiz"><div class="q"><h1>Which days can you run?</h1><p class="lead">The plan only schedules runs on these days.</p></div><div class="card stack"><div class="chips">' + E.DOW.map(function (d, i) { return '<button type="button" class="chip" data-toggle="avail" data-i="' + i + '" aria-pressed="' + !!p.avail[i] + '">' + d + '</button>'; }).join('') + '</div>' +
       '<div class="grid2"><label class="f">Most runs per week<select class="i" name="runDays">' + [3, 4, 5, 6, 7].map(function (n) { return '<option' + (+p.runDays === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label><label class="f">Long run day<select class="i" name="longDay">' + E.DOW_LONG.map(function (d, i) { return '<option value="' + i + '"' + (+p.longDay === i ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></label></div>' +
-      '<label class="f">Plan starts (a Monday)<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"></label></div><p class="err" id="wizErr"></p>' + wizFoot('Continue', true, true) + '</form>';
+      '<label class="f">Plan starts<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"></label></div><p class="err" id="wizErr"></p>' + wizFoot('Continue', true, true) + '</form>';
   } else if (name === 'gym') {
     html += '<form class="stack" data-form="wiz"><div class="q"><h1>How about the gym?</h1><p class="lead">Lifting makes you a more durable, more efficient runner. Your run schedule is arranged around your gym days.</p></div><div class="card stack">' +
       '<label class="f">Lifting days per week<div class="chips">' + [0, 1, 2, 3, 4].map(function (n) { return '<button type="button" class="chip" data-pick="liftDays" data-v="' + n + '" aria-pressed="' + (+p.liftDays === n) + '">' + n + '</button>'; }).join('') + '</div></label>' +
@@ -1318,7 +1318,7 @@ document.addEventListener('submit', function (e) {
       p.avail = [0, 1, 2, 3, 4, 5, 6].map(function (i) { return $('[data-toggle="avail"][data-i="' + i + '"]', f).getAttribute('aria-pressed') === 'true'; });
       if (p.avail.filter(Boolean).length < 2) { werr.textContent = 'Pick at least two days.'; return; }
       p.runDays = +el.runDays.value; p.longDay = +el.longDay.value;
-      if (el.startDate.value) p.startDate = E.monday(el.startDate.value);
+      if (el.startDate.value) p.startDate = E.dow(el.startDate.value) >= 4 ? el.startDate.value : E.monday(el.startDate.value);
       if (!p.avail[p.longDay]) p.avail[p.longDay] = true;
     } else if (name === 'gym') {
       p.doubles = el.doubles.checked;

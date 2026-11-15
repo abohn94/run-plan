@@ -274,6 +274,7 @@ function reviewCard() {
   var t = App.today, tm = E.addD(t, 1), rv = (st().prefs || {}).reviewed || {}, w = null, lead = '';
   if (E.dow(tm) === 0) { w = E.weekOf(p, tm); lead = 'Next week starts tomorrow'; }
   else if (E.dow(t) === 0) { w = E.weekOf(p, t); lead = 'A new week starts today'; }
+  if (w && w.lead && t >= w.start) lead = t === w.start ? 'Your plan starts today' : 'This week';
   if (!w || rv[w.start]) return '';
   var long = 0, keys = []; w.days.forEach(function (d) { d.parts.forEach(function (x) { if (x.type === 'long') long = Math.max(long, x.mi); if (x.type === 'speed') keys.push(x.title.toLowerCase()); }); });
   return '<a class="card reviewcard" href="#/preview/' + w.start + '"><div class="eyebrow">' + lead + '</div><h3>Week ' + w.n + ': ' + mi(w.tot.mi) + ' mi, ' + plural(w.tot.runs, 'run') + ', ' + plural(w.tot.lifts, 'lift') + '</h3>' +

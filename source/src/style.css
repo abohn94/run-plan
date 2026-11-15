@@ -1080,3 +1080,5 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .dl-o { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: .98rem; font-weight: 600; text-align: left; padding: 12px 12px; border-radius: 11px; min-height: 44px; }
 .dl-o:hover, .dl-o:focus-visible { background: var(--card2); outline: none; }
 .dl-o mark { background: none; color: var(--green); font-weight: 800; }
+/* week strips size to the week: a plan's first week can run 8–10 days */
+.weekstrip, .pvmini, .shchips { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }

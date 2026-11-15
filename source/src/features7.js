@@ -563,7 +563,7 @@ recompute = function () {
     Object.keys(weeks).sort().forEach(function (m) {
       for (var k = 0; k < 7; k++) {
         var d = E.addD(m, k); if (d < App.today) continue;
-        var a = dayOf(d), wb = E.weekOf(P, d), b = wb ? wb.days[E.dow(d)] : null;
+        var a = dayOf(d), wb = E.weekOf(P, d), b = wb ? E.dayAt(wb, d) : null;
         var sa = daySum(a), sb = daySum(b), shA = cs.applied[d] || '', shB = cs.proposed[d] || '';
         if (sa !== sb || shA !== shB) rows.push({ date: d, week: m, before: sa, after: sb, shA: shA, shB: shB, note: b && b.parts[0] && b.parts[0].note || '' });
       }
@@ -798,7 +798,7 @@ SHEETS.addwk = function (a) {
   var sugs = opts.map(function (o, i) { return o.sug ? row(o, i) : ''; }).join(''), rest = opts.map(function (o, i) { return o.sug ? '' : row(o, i); }).join('');
   return '<h3>Add a workout</h3><p class="small muted">Pick a day, then a session.' + (watchOn() ? ' Anything added for today goes to your watch within a couple of minutes.' : '') + '</p>' +
     '<div class="adddays">' + days.map(function (d) { return '<button class="' + (d.date === sel ? 'on' : '') + '" data-act="extra-day" data-arg="' + jattr({ d: d.date }) + '"><span>' + (d.date === App.today ? 'Today' : d.dow) + '</span><b>' + E.pd(d.date).getDate() + '</b></button>'; }).join('') + '</div>' +
-    '<p class="tiny muted" style="margin:8px 0 4px">' + fmtD(sel, { weekday: 'long', month: 'short', day: 'numeric' }) + ': ' + esc(dayHas(w.days[E.dow(sel)])) + '</p>' +
+    '<p class="tiny muted" style="margin:8px 0 4px">' + fmtD(sel, { weekday: 'long', month: 'short', day: 'numeric' }) + ': ' + esc(dayHas(E.dayAt(w, sel))) + '</p>' +
     (mine.length ? '<div class="stack tight">' + mine.map(function (p, i) { return '<div class="addmine"><span>Added: <b>' + esc(p.title) + (E.isRun(p) && p.mi ? ' · ' + mi(p.mi) + ' mi' : '') + '</b></span><button class="linkbtn" data-act="extra-del" data-arg="' + jattr({ d: sel, i: i }) + '">Remove</button></div>'; }).join('') + '</div>' : '') +
     (sugs ? '<div class="eyebrow" style="margin-top:12px">Skipped this week</div><div class="stack tight">' + sugs + '</div>' : '') +
     '<div class="eyebrow" style="margin-top:12px">Or add</div><div class="stack tight">' + rest + '</div><div class="btns"><button class="btn ghost" data-act="sheet-close">Done</button></div>';

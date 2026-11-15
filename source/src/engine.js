@@ -601,6 +601,10 @@ function generate(state) {
   setWeekStart(prof.weekStart || 0);
   var method = applyCtl(METHODS[prof.method] || METHODS.balanced, prof.ctl);
   var start = monday(prof.startDate || today());
+  /* a start a few days before the week begins (Fri, Sat or Sun) makes the first week longer instead of
+     dragging the plan back to an earlier Monday: those lead-in days join week 1 (an 8-, 9- or 10-day week) */
+  var lead = [];
+  if (prof.startDate && dow(prof.startDate) >= 4) { start = addD(monday(prof.startDate), 7); for (var ld = prof.startDate; ld < start; ld = addD(ld, 1)) lead.push(ld); }
   var events = (state.events || []).filter(function (e) { return e && e.date; }).slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; });
   var aEvents = events.filter(function (e) { return (e.priority || 'A') === 'A' && e.date >= start; });
   var otherEvents = events.filter(function (e) { return aEvents.indexOf(e) < 0 && e.date >= start; });
@@ -698,7 +702,7 @@ function generate(state) {
     if (!w.cut) { counters[bk].q++; counters[bk].l++; }
   });
   weeks.forEach(function (w, idx) { buildWeek(w, idx, weeks, prof, method, otherEvents, lastLongs); });
-  return { start: start, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
+  return { start: lead[0] || start, weekStart: start, lead: lead, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
 }
 
 function longMilesFor(w, prev) {
@@ -1185,9 +1189,47 @@ function adapt(plan, st, analysis) {
     });
     w.tot = totals(w.days);
   });
+  addLead(plan, st);
   plan.statusByWeek = stat;
   plan.mult = mult;
   return plan;
+}
+/* lead-in days before week 1 (see generate): rest by default. A move from a week-1 day onto a lead-in day
+   (st.moves {from: leadDate}) carries that whole day's sessions over and leaves the old day as rest; workouts
+   you add yourself (st.extras) land there too. Week 1 then runs from the first lead-in day: an 8+ day week. */
+function addLead(plan, st) {
+  var lead = plan.lead || [], w = plan.weeks[0];
+  if (!lead.length || !w || (w.days[0] && w.days[0].lead)) return;
+  var moves = st.moves || {}, ex = st.extras || {}, zz = w.zonesAdj;
+  var days = lead.map(function (date, k) {
+    var d = { date: date, dow: DOW_ABS[(pd(date).getDay() + 6) % 7], i: k - lead.length, lead: true, parts: [] };
+    Object.keys(moves).forEach(function (from) {
+      if (moves[from] !== date) return;
+      var src = w.days.filter(function (x) { return x.date === from; })[0]; if (!src) return;
+      var mv = src.parts.filter(function (p) { return p.type !== 'rest'; }); if (!mv.length) return;
+      mv.forEach(function (p) { d.parts.push(Object.assign({}, p, { moved: from })); });
+      src.parts = [restPart('Rest & recover', 'Rest day: its sessions moved to ' + DOW_LONG_ABS[(pd(date).getDay() + 6) % 7] + '.')];
+    });
+    (ex[date] || []).forEach(function (q, i) {
+      var p = JSON.parse(JSON.stringify(q));
+      if (isRun(p) && !(p.steps && p.steps.length)) p = Object.assign(easyPart(p.title || 'Easy run', p.mi || 3, p.type === 'recovery' ? 'recovery' : 'easy', zz, ''), { role: p.role || 'easy' });
+      p.added = true; p.userAdded = true; p.xi = i; p.changed = true; p.note = 'Added by you. ' + (p.note || ''); d.parts.push(p);
+    });
+    var ven = st.venue || {};
+    d.parts = d.parts.map(function (p) { var v = isRun(p) && ven[p.akey || partKey(p.moved || date, p)]; return v === 'in' ? Object.assign({}, p, { treadmill: true, venue: 'in', dark: false, title: /^Easy run$/.test(p.title) ? 'Treadmill run' : p.title, note: 'Indoors on the treadmill, by your choice. Set a 1% incline so the effort matches the road.' }) : v === 'out' ? Object.assign({}, p, { treadmill: false, venue: 'out' }) : p; });
+    if (!d.parts.length) d.parts.push(restPart('Rest & recover', 'Your plan starts here. Rest, walk, or get set up for the week ahead.'));
+    return d;
+  });
+  w.days = days.concat(w.days);
+  w.start = lead[0];
+  w.lead = lead.length;
+  w.tot = totals(w.days);
+}
+/* the day object for a date, by date (week 1 can be longer than 7 days) */
+function dayAt(w, date) {
+  if (!w) return null;
+  for (var i = 0; i < w.days.length; i++) if (w.days[i].date === date) return w.days[i];
+  return null;
 }
 function applyLoadFocus(w, lf, zz) {
   var t = today(), next = addD(monday(t), 13);
@@ -1310,13 +1352,13 @@ function missedThisWeek(plan, st, date) {
 /* rested on a rest day? offer a workout that fits around the rest of the week */
 function restDayOffer(plan, st, garmin, date, rd) {
   var w = weekOf(plan, date); if (!w || !rd || !rd.factors) return null;
-  var d = w.days[dow(date)];
+  var d = dayAt(w, date); if (!d) return null;
   if (d.parts.some(function (p) { return p.type !== 'rest'; }) || (st.overrides || {})[date]) return null;
   if (rd.level !== 'green' || rd.score < 70) return null;
   var logs = st.logs || {}, acts = (garmin && garmin.activities) || [], idle = 0;
   for (var i = 1; i <= 4; i++) { var dd = addD(date, -i), l = logs[dd] || {}, active = (l.run && +l.run.mi > 0) || l.lift || acts.some(function (a) { return a.date === dd && (a.run || a.strength); }); if (active) break; idle++; }
   if (idle < 2) return null;
-  var tm = w.days[dow(date) + 1] || null, tmHard = tm && tm.parts.some(function (p) { return p.type === 'speed' || p.type === 'long' || p.type === 'race'; });
+  var tm = w.days[w.days.indexOf(d) + 1] || null, tmHard = tm && tm.parts.some(function (p) { return p.type === 'speed' || p.type === 'long' || p.type === 'race'; });
   var liftsPlanned = w.tot.lifts, liftsDone = w.days.filter(function (x) { return x.date < date && logs[x.date] && logs[x.date].lift; }).length;
   var keys = w.days.map(function (x) { return x.parts.filter(function (p) { return p.type === 'strength'; })[0]; }).filter(Boolean).map(function (p) { return p.key; });
   var missingLift = liftsDone < liftsPlanned ? (['A', 'B', 'C'].filter(function (k) { return keys.indexOf(k) < 0; })[0] || 'UB') : null;
@@ -1363,7 +1405,7 @@ function weekIntensity(w, prof) {
   var legs = function (d) { return d.parts.some(function (p) { return p.type === 'strength' && (p.key === 'A' || p.key === 'B' || p.key === 'C') && (p.lp || 0) < 3; }); };
   var runs = function (d) { return d.parts.filter(isRun).length; };
   var title = function (d, f) { var p = d.parts.filter(f)[0]; return p ? p.title : ''; };
-  for (var i = 0; i < 7; i++) {
+  for (var i = 0; i < days.length; i++) {
     var d = days[i], n = days[i + 1];
     if (runs(d) > 1) out.push({ level: 'warn', date: d.date, text: d.dow + ' has two runs. Unless you planned a double on purpose, move one to a free day.', fix: freeFix(w, d, function (p) { return isRun(p) && p.type !== 'long'; }) });
     var subThenLong = n && d.parts.some(function (p) { return p.key === 'subt'; }) && !d.parts.some(function (p) { return p.type === 'long' || p.type === 'race'; }) && n.parts.some(function (p) { return p.type === 'long'; }) && !n.parts.some(function (p) { return p.type === 'speed'; });   /* controlled sub-threshold the day before an easy long run is part of the Norwegian layout */
@@ -1425,7 +1467,7 @@ function runLogs(st) {
 function partOn(plan, date, type) {
   var w = weekOf(plan, date);
   if (!w) return null;
-  var d = w.days[dow(date)];
+  var d = dayAt(w, date); if (!d) return null;
   return d.parts.filter(function (p) { return type ? p.type === type : isRun(p); })[0] || null;
 }
 function weekOf(plan, date) {
@@ -2173,7 +2215,7 @@ var api = {
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
   sunTimes: sunTimes, clockMin: clockMin, applyDaylight: applyDaylight, heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
-  weekOf: weekOf, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
+  weekOf: weekOf, dayAt: dayAt, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,
   loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
 };

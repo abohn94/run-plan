@@ -1101,6 +1101,8 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .dl-o { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: .98rem; font-weight: 600; text-align: left; padding: 12px 12px; border-radius: 11px; min-height: 44px; }
 .dl-o:hover, .dl-o:focus-visible { background: var(--card2); outline: none; }
 .dl-o mark { background: none; color: var(--green); font-weight: 800; }
+/* week strips size to the week: a plan's first week can run 8–10 days */
+.weekstrip, .pvmini, .shchips { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 
 </style>
 </head>
@@ -1909,6 +1911,10 @@ function generate(state) {
   setWeekStart(prof.weekStart || 0);
   var method = applyCtl(METHODS[prof.method] || METHODS.balanced, prof.ctl);
   var start = monday(prof.startDate || today());
+  /* a start a few days before the week begins (Fri, Sat or Sun) makes the first week longer instead of
+     dragging the plan back to an earlier Monday: those lead-in days join week 1 (an 8-, 9- or 10-day week) */
+  var lead = [];
+  if (prof.startDate && dow(prof.startDate) >= 4) { start = addD(monday(prof.startDate), 7); for (var ld = prof.startDate; ld < start; ld = addD(ld, 1)) lead.push(ld); }
   var events = (state.events || []).filter(function (e) { return e && e.date; }).slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; });
   var aEvents = events.filter(function (e) { return (e.priority || 'A') === 'A' && e.date >= start; });
   var otherEvents = events.filter(function (e) { return aEvents.indexOf(e) < 0 && e.date >= start; });
@@ -2006,7 +2012,7 @@ function generate(state) {
     if (!w.cut) { counters[bk].q++; counters[bk].l++; }
   });
   weeks.forEach(function (w, idx) { buildWeek(w, idx, weeks, prof, method, otherEvents, lastLongs); });
-  return { start: start, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
+  return { start: lead[0] || start, weekStart: start, lead: lead, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
 }
 
 function longMilesFor(w, prev) {
@@ -2493,9 +2499,47 @@ function adapt(plan, st, analysis) {
     });
     w.tot = totals(w.days);
   });
+  addLead(plan, st);
   plan.statusByWeek = stat;
   plan.mult = mult;
   return plan;
+}
+/* lead-in days before week 1 (see generate): rest by default. A move from a week-1 day onto a lead-in day
+   (st.moves {from: leadDate}) carries that whole day's sessions over and leaves the old day as rest; workouts
+   you add yourself (st.extras) land there too. Week 1 then runs from the first lead-in day: an 8+ day week. */
+function addLead(plan, st) {
+  var lead = plan.lead || [], w = plan.weeks[0];
+  if (!lead.length || !w || (w.days[0] && w.days[0].lead)) return;
+  var moves = st.moves || {}, ex = st.extras || {}, zz = w.zonesAdj;
+  var days = lead.map(function (date, k) {
+    var d = { date: date, dow: DOW_ABS[(pd(date).getDay() + 6) % 7], i: k - lead.length, lead: true, parts: [] };
+    Object.keys(moves).forEach(function (from) {
+      if (moves[from] !== date) return;
+      var src = w.days.filter(function (x) { return x.date === from; })[0]; if (!src) return;
+      var mv = src.parts.filter(function (p) { return p.type !== 'rest'; }); if (!mv.length) return;
+      mv.forEach(function (p) { d.parts.push(Object.assign({}, p, { moved: from })); });
+      src.parts = [restPart('Rest & recover', 'Rest day: its sessions moved to ' + DOW_LONG_ABS[(pd(date).getDay() + 6) % 7] + '.')];
+    });
+    (ex[date] || []).forEach(function (q, i) {
+      var p = JSON.parse(JSON.stringify(q));
+      if (isRun(p) && !(p.steps && p.steps.length)) p = Object.assign(easyPart(p.title || 'Easy run', p.mi || 3, p.type === 'recovery' ? 'recovery' : 'easy', zz, ''), { role: p.role || 'easy' });
+      p.added = true; p.userAdded = true; p.xi = i; p.changed = true; p.note = 'Added by you. ' + (p.note || ''); d.parts.push(p);
+    });
+    var ven = st.venue || {};
+    d.parts = d.parts.map(function (p) { var v = isRun(p) && ven[p.akey || partKey(p.moved || date, p)]; return v === 'in' ? Object.assign({}, p, { treadmill: true, venue: 'in', dark: false, title: /^Easy run$/.test(p.title) ? 'Treadmill run' : p.title, note: 'Indoors on the treadmill, by your choice. Set a 1% incline so the effort matches the road.' }) : v === 'out' ? Object.assign({}, p, { treadmill: false, venue: 'out' }) : p; });
+    if (!d.parts.length) d.parts.push(restPart('Rest & recover', 'Your plan starts here. Rest, walk, or get set up for the week ahead.'));
+    return d;
+  });
+  w.days = days.concat(w.days);
+  w.start = lead[0];
+  w.lead = lead.length;
+  w.tot = totals(w.days);
+}
+/* the day object for a date, by date (week 1 can be longer than 7 days) */
+function dayAt(w, date) {
+  if (!w) return null;
+  for (var i = 0; i < w.days.length; i++) if (w.days[i].date === date) return w.days[i];
+  return null;
 }
 function applyLoadFocus(w, lf, zz) {
   var t = today(), next = addD(monday(t), 13);
@@ -2618,13 +2662,13 @@ function missedThisWeek(plan, st, date) {
 /* rested on a rest day? offer a workout that fits around the rest of the week */
 function restDayOffer(plan, st, garmin, date, rd) {
   var w = weekOf(plan, date); if (!w || !rd || !rd.factors) return null;
-  var d = w.days[dow(date)];
+  var d = dayAt(w, date); if (!d) return null;
   if (d.parts.some(function (p) { return p.type !== 'rest'; }) || (st.overrides || {})[date]) return null;
   if (rd.level !== 'green' || rd.score < 70) return null;
   var logs = st.logs || {}, acts = (garmin && garmin.activities) || [], idle = 0;
   for (var i = 1; i <= 4; i++) { var dd = addD(date, -i), l = logs[dd] || {}, active = (l.run && +l.run.mi > 0) || l.lift || acts.some(function (a) { return a.date === dd && (a.run || a.strength); }); if (active) break; idle++; }
   if (idle < 2) return null;
-  var tm = w.days[dow(date) + 1] || null, tmHard = tm && tm.parts.some(function (p) { return p.type === 'speed' || p.type === 'long' || p.type === 'race'; });
+  var tm = w.days[w.days.indexOf(d) + 1] || null, tmHard = tm && tm.parts.some(function (p) { return p.type === 'speed' || p.type === 'long' || p.type === 'race'; });
   var liftsPlanned = w.tot.lifts, liftsDone = w.days.filter(function (x) { return x.date < date && logs[x.date] && logs[x.date].lift; }).length;
   var keys = w.days.map(function (x) { return x.parts.filter(function (p) { return p.type === 'strength'; })[0]; }).filter(Boolean).map(function (p) { return p.key; });
   var missingLift = liftsDone < liftsPlanned ? (['A', 'B', 'C'].filter(function (k) { return keys.indexOf(k) < 0; })[0] || 'UB') : null;
@@ -2671,7 +2715,7 @@ function weekIntensity(w, prof) {
   var legs = function (d) { return d.parts.some(function (p) { return p.type === 'strength' && (p.key === 'A' || p.key === 'B' || p.key === 'C') && (p.lp || 0) < 3; }); };
   var runs = function (d) { return d.parts.filter(isRun).length; };
   var title = function (d, f) { var p = d.parts.filter(f)[0]; return p ? p.title : ''; };
-  for (var i = 0; i < 7; i++) {
+  for (var i = 0; i < days.length; i++) {
     var d = days[i], n = days[i + 1];
     if (runs(d) > 1) out.push({ level: 'warn', date: d.date, text: d.dow + ' has two runs. Unless you planned a double on purpose, move one to a free day.', fix: freeFix(w, d, function (p) { return isRun(p) && p.type !== 'long'; }) });
     var subThenLong = n && d.parts.some(function (p) { return p.key === 'subt'; }) && !d.parts.some(function (p) { return p.type === 'long' || p.type === 'race'; }) && n.parts.some(function (p) { return p.type === 'long'; }) && !n.parts.some(function (p) { return p.type === 'speed'; });   /* controlled sub-threshold the day before an easy long run is part of the Norwegian layout */
@@ -2733,7 +2777,7 @@ function runLogs(st) {
 function partOn(plan, date, type) {
   var w = weekOf(plan, date);
   if (!w) return null;
-  var d = w.days[dow(date)];
+  var d = dayAt(w, date); if (!d) return null;
   return d.parts.filter(function (p) { return type ? p.type === type : isRun(p); })[0] || null;
 }
 function weekOf(plan, date) {
@@ -3584,7 +3628,7 @@ var api = {
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
   sunTimes: sunTimes, clockMin: clockMin, applyDaylight: applyDaylight, heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
-  weekOf: weekOf, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
+  weekOf: weekOf, dayAt: dayAt, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,
   loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
 };
@@ -4074,7 +4118,7 @@ function recompute() {
 function dayOf(date) {
   if (!App.plan) return null;
   var w = E.weekOf(App.plan, date);
-  return w ? w.days[E.dow(date)] : null;
+  return w ? E.dayAt(w, date) : null;
 }
 function zonesAt(date) { var w = App.plan && E.weekOf(App.plan, date); return w ? w.zonesAdj : (App.plan ? App.plan.weeks[0].zonesAdj : null); }
 function logOf(date) { return (Store.state.logs || {})[date] || {}; }
@@ -4820,7 +4864,7 @@ VIEWS.settings = function () {
     '<label class="f">Extra gym days (lift + treadmill run)<select class="i" name="crossDays">' + [0, 1, 2, 3].map(function (n) { return '<option' + (+p.crossDays === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label></div>' +
     '<label class="check"><input type="checkbox" name="doubles"' + (p.doubles !== false ? ' checked' : '') + '> Lift on run days (run first). Turn off to keep lifting on separate days; runs per week drop to fit.</label></section>' +
     '<section class="card stack"><h3>Fitness</h3><div class="grid2">' +
-    '<label class="f">Plan start (Monday)<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"></label>' +
+    '<label class="f">Plan start<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"></label<p class="tiny muted">Start on a Friday, Saturday or Sunday and those days join week 1, so your weeks still begin on your usual day.</p>' +
     '<label class="f">Weekly miles at start<input class="i" type="number" min="0" max="120" name="mpw" value="' + esc(p.mpw) + '"></label>' +
     '<label class="f">Longest recent run (mi)<input class="i" type="number" min="0" max="30" name="longest" value="' + esc(p.longest) + '"></label>' +
     '<label class="f">Typical easy pace (m:ss)<input class="i" name="easyPace" placeholder="10:00" value="' + esc(p.easyPace || '') + '"></label>' +
@@ -4838,7 +4882,7 @@ function readSettings(form) {
   p.avail = [0, 1, 2, 3, 4, 5, 6].map(function (i) { var b = $('[data-toggle="avail"][data-i="' + i + '"]', form); return b ? b.getAttribute('aria-pressed') === 'true' : true; });
   p.runDays = +f('runDays').value; p.longDay = +f('longDay').value; p.liftDays = +f('liftDays').value; p.crossDays = +f('crossDays').value;
   p.doubles = f('doubles').checked;
-  if (f('startDate').value) p.startDate = E.monday(f('startDate').value);
+  if (f('startDate').value) p.startDate = E.dow(f('startDate').value) >= 4 ? f('startDate').value : E.monday(f('startDate').value);
   p.mpw = +f('mpw').value || 0; p.longest = +f('longest').value || 0; p.easyPace = f('easyPace').value.trim();
   p.weightKg = +f('weightLb').value ? Math.round(+f('weightLb').value / 2.2046 * 10) / 10 : null;
   p.volume = +f('volume').value || 1; p.injuryProne = f('injuryProne').checked; p.runWalk = f('runWalk').checked;
@@ -4953,7 +4997,7 @@ VIEWS.setup = function () {
   } else if (name === 'days') {
     html += '<form class="stack" data-form="wiz"><div class="q"><h1>Which days can you run?</h1><p class="lead">The plan only schedules runs on these days.</p></div><div class="card stack"><div class="chips">' + E.DOW.map(function (d, i) { return '<button type="button" class="chip" data-toggle="avail" data-i="' + i + '" aria-pressed="' + !!p.avail[i] + '">' + d + '</button>'; }).join('') + '</div>' +
       '<div class="grid2"><label class="f">Most runs per week<select class="i" name="runDays">' + [3, 4, 5, 6, 7].map(function (n) { return '<option' + (+p.runDays === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label><label class="f">Long run day<select class="i" name="longDay">' + E.DOW_LONG.map(function (d, i) { return '<option value="' + i + '"' + (+p.longDay === i ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></label></div>' +
-      '<label class="f">Plan starts (a Monday)<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"></label></div><p class="err" id="wizErr"></p>' + wizFoot('Continue', true, true) + '</form>';
+      '<label class="f">Plan starts<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"></label></div><p class="err" id="wizErr"></p>' + wizFoot('Continue', true, true) + '</form>';
   } else if (name === 'gym') {
     html += '<form class="stack" data-form="wiz"><div class="q"><h1>How about the gym?</h1><p class="lead">Lifting makes you a more durable, more efficient runner. Your run schedule is arranged around your gym days.</p></div><div class="card stack">' +
       '<label class="f">Lifting days per week<div class="chips">' + [0, 1, 2, 3, 4].map(function (n) { return '<button type="button" class="chip" data-pick="liftDays" data-v="' + n + '" aria-pressed="' + (+p.liftDays === n) + '">' + n + '</button>'; }).join('') + '</div></label>' +
@@ -5334,7 +5378,7 @@ document.addEventListener('submit', function (e) {
       p.avail = [0, 1, 2, 3, 4, 5, 6].map(function (i) { return $('[data-toggle="avail"][data-i="' + i + '"]', f).getAttribute('aria-pressed') === 'true'; });
       if (p.avail.filter(Boolean).length < 2) { werr.textContent = 'Pick at least two days.'; return; }
       p.runDays = +el.runDays.value; p.longDay = +el.longDay.value;
-      if (el.startDate.value) p.startDate = E.monday(el.startDate.value);
+      if (el.startDate.value) p.startDate = E.dow(el.startDate.value) >= 4 ? el.startDate.value : E.monday(el.startDate.value);
       if (!p.avail[p.longDay]) p.avail[p.longDay] = true;
     } else if (name === 'gym') {
       p.doubles = el.doubles.checked;
@@ -7747,6 +7791,7 @@ function reviewCard() {
   var t = App.today, tm = E.addD(t, 1), rv = (st().prefs || {}).reviewed || {}, w = null, lead = '';
   if (E.dow(tm) === 0) { w = E.weekOf(p, tm); lead = 'Next week starts tomorrow'; }
   else if (E.dow(t) === 0) { w = E.weekOf(p, t); lead = 'A new week starts today'; }
+  if (w && w.lead && t >= w.start) lead = t === w.start ? 'Your plan starts today' : 'This week';
   if (!w || rv[w.start]) return '';
   var long = 0, keys = []; w.days.forEach(function (d) { d.parts.forEach(function (x) { if (x.type === 'long') long = Math.max(long, x.mi); if (x.type === 'speed') keys.push(x.title.toLowerCase()); }); });
   return '<a class="card reviewcard" href="#/preview/' + w.start + '"><div class="eyebrow">' + lead + '</div><h3>Week ' + w.n + ': ' + mi(w.tot.mi) + ' mi, ' + plural(w.tot.runs, 'run') + ', ' + plural(w.tot.lifts, 'lift') + '</h3>' +
@@ -8659,7 +8704,7 @@ recompute = function () {
     Object.keys(weeks).sort().forEach(function (m) {
       for (var k = 0; k < 7; k++) {
         var d = E.addD(m, k); if (d < App.today) continue;
-        var a = dayOf(d), wb = E.weekOf(P, d), b = wb ? wb.days[E.dow(d)] : null;
+        var a = dayOf(d), wb = E.weekOf(P, d), b = wb ? E.dayAt(wb, d) : null;
         var sa = daySum(a), sb = daySum(b), shA = cs.applied[d] || '', shB = cs.proposed[d] || '';
         if (sa !== sb || shA !== shB) rows.push({ date: d, week: m, before: sa, after: sb, shA: shA, shB: shB, note: b && b.parts[0] && b.parts[0].note || '' });
       }
@@ -8894,7 +8939,7 @@ SHEETS.addwk = function (a) {
   var sugs = opts.map(function (o, i) { return o.sug ? row(o, i) : ''; }).join(''), rest = opts.map(function (o, i) { return o.sug ? '' : row(o, i); }).join('');
   return '<h3>Add a workout</h3><p class="small muted">Pick a day, then a session.' + (watchOn() ? ' Anything added for today goes to your watch within a couple of minutes.' : '') + '</p>' +
     '<div class="adddays">' + days.map(function (d) { return '<button class="' + (d.date === sel ? 'on' : '') + '" data-act="extra-day" data-arg="' + jattr({ d: d.date }) + '"><span>' + (d.date === App.today ? 'Today' : d.dow) + '</span><b>' + E.pd(d.date).getDate() + '</b></button>'; }).join('') + '</div>' +
-    '<p class="tiny muted" style="margin:8px 0 4px">' + fmtD(sel, { weekday: 'long', month: 'short', day: 'numeric' }) + ': ' + esc(dayHas(w.days[E.dow(sel)])) + '</p>' +
+    '<p class="tiny muted" style="margin:8px 0 4px">' + fmtD(sel, { weekday: 'long', month: 'short', day: 'numeric' }) + ': ' + esc(dayHas(E.dayAt(w, sel))) + '</p>' +
     (mine.length ? '<div class="stack tight">' + mine.map(function (p, i) { return '<div class="addmine"><span>Added: <b>' + esc(p.title) + (E.isRun(p) && p.mi ? ' · ' + mi(p.mi) + ' mi' : '') + '</b></span><button class="linkbtn" data-act="extra-del" data-arg="' + jattr({ d: sel, i: i }) + '">Remove</button></div>'; }).join('') + '</div>' : '') +
     (sugs ? '<div class="eyebrow" style="margin-top:12px">Skipped this week</div><div class="stack tight">' + sugs + '</div>' : '') +
     '<div class="eyebrow" style="margin-top:12px">Or add</div><div class="stack tight">' + rest + '</div><div class="btns"><button class="btn ghost" data-act="sheet-close">Done</button></div>';
@@ -9078,7 +9123,8 @@ function reportWeek() {
   if (!App.plan) return null;
   var d = E.dow(App.today);   /* 0 = first day of your week */
   var ref = d === 6 ? App.today : d <= 1 ? E.addD(App.today, -7) : null; if (!ref) return null;
-  return E.weekOf(App.plan, ref);
+  var w = E.weekOf(App.plan, ref);
+  return w && w.end <= App.today ? w : null;
 }
 function weekReport(w) {
   if (!w) return null;

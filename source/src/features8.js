@@ -137,7 +137,8 @@ function reportWeek() {
   if (!App.plan) return null;
   var d = E.dow(App.today);   /* 0 = first day of your week */
   var ref = d === 6 ? App.today : d <= 1 ? E.addD(App.today, -7) : null; if (!ref) return null;
-  return E.weekOf(App.plan, ref);
+  var w = E.weekOf(App.plan, ref);
+  return w && w.end <= App.today ? w : null;
 }
 function weekReport(w) {
   if (!w) return null;
