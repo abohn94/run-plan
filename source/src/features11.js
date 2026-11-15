@@ -10,7 +10,9 @@ function foldWrap(key, title, teaser, bodyHTML, dflt) {
 }
 document.addEventListener('toggle', function (e) {
   var d = e.target; if (!d || !d.dataset || !d.dataset.fold) return;
-  FOLDS[d.dataset.fold] = d.open; try { LS.set('rp-folds', JSON.stringify(FOLDS)); } catch (err) { /* ignore */ }
+  FOLDS[d.dataset.fold] = d.open;
+  /* calendar weeks are remembered for this visit only; everything else is remembered for good */
+  try { var keep = {}; Object.keys(FOLDS).forEach(function (k) { if (!/^cal-/.test(k)) keep[k] = FOLDS[k]; }); LS.set('rp-folds', JSON.stringify(keep)); } catch (err) { /* ignore */ }
 }, true);
 function domOf(h) { var t = document.createElement('template'); t.innerHTML = h; return t.content; }
 function htmlOf(nodes) { return nodes.map(function (n) { return n.outerHTML; }).join(''); }
@@ -49,7 +51,7 @@ VIEWS.today = function () {
   } catch (e) { console.warn(e); return h; }
 };
 
-/* ---------- Plan: this week first; races and the season overview fold underneath ---------- */
+/* ---------- Plan: races and the season chart on top, then this week, decisions, days ---------- */
 var _plan11 = VIEWS.plan;
 VIEWS.plan = function () {
   var h = _plan11();
@@ -67,10 +69,8 @@ VIEWS.plan = function () {
       else (g.days.length ? g.after : g.top).push(el);
     });
     if (!g.week.length || !g.days.length) return h;
-    var next = (typeof upcoming === 'function' ? upcoming() : [])[0];
-    var strip = (typeof upcoming === 'function' ? upcoming() : []).slice(0, 2).map(function (e) { return '<a href="#/goals" class="rpill"><b>' + E.diffD(App.today, e.date) + '</b> days · ' + esc(e.name || E.distOf(e).label) + '</a>'; }).join('');
-    var out = (strip ? '<div class="rstrip">' + strip + '</div>' : '') + htmlOf(g.top) + htmlOf(g.week) + htmlOf(g.decide) + htmlOf(g.days) + htmlOf(g.after);
-    if (g.races.length || g.season.length) out += foldWrap('plan-season', 'Races and season', next ? E.diffD(App.today, next.date) + ' days to ' + (next.name || E.distOf(next).label) : App.plan.weeks.length + ' weeks', htmlOf(g.races) + htmlOf(g.season), false);
+    /* top: your races side by side (full names), then the season chart, then this week */
+    var out = (g.races.length ? '<div class="racegrid' + (g.races.length === 1 ? ' one' : '') + '">' + htmlOf(g.races) + '</div>' : '') + htmlOf(g.season) + htmlOf(g.top) + htmlOf(g.week) + htmlOf(g.decide) + htmlOf(g.days) + htmlOf(g.after);
     return out + htmlOf(g.tools);
   } catch (e) { console.warn(e); return h; }
 };
@@ -85,7 +85,7 @@ VIEWS.calendar = function () {
       var el = kids[i], nx = kids[i + 1];
       if (cls(el, / sechead /) && nx && cls(nx, / calweek /)) {
         var title = txt1(el, 'h2'), sub = txt1(el, 'span').replace(/\s*·\s*Edit\s*$/, ''), isNow = !!nx.querySelector('.calday.today'), edit = el.querySelector('a');
-        out += foldWrap('cal-wk-' + n, title, sub + (isNow ? ' · this week' : ''), nx.outerHTML + (edit ? '<div class="foldmore">' + edit.outerHTML.replace('>Edit<', '>Edit this week ›<') + '</div>' : ''), isNow).replace('data-fold="cal-wk-' + n + '"', 'data-calwk="1"');
+        out += foldWrap('cal-' + (App.args[0] || App.today.slice(0, 7)) + '-' + n, title, sub + (isNow ? ' · this week' : ''), nx.outerHTML + (edit ? '<div class="foldmore">' + edit.outerHTML.replace('>Edit<', '>Edit this week ›<') + '</div>' : ''), isNow);
         n++; i++; continue;
       }
       out += el.outerHTML;
@@ -160,4 +160,19 @@ render = function () {
   _render11();
   var m = $('#main'); if (!m) return;
   if (fresh) { m.classList.remove('enter'); void m.offsetWidth; m.classList.add('enter'); clearTimeout(render._t); render._t = setTimeout(function () { m.classList.remove('enter'); }, 900); }
+};
+
+/* ---------- going back returns you to where you were on the previous screen ---------- */
+var NAV = { stack: [location.hash || '#/today'], pos: {}, t: 0 };
+window.addEventListener('scroll', function () { var n = Date.now(); if (n - NAV.t < 120) return; NAV.t = n; if (!NAV.lock) NAV.pos[location.hash || '#/today'] = window.scrollY; }, { passive: true });
+var _route11 = route;
+route = function (keep) {
+  var h = location.hash || '#/today', st = NAV.stack, cur = st[st.length - 1], back = st.length >= 2 && st[st.length - 2] === h && h !== cur;
+  if (h !== cur) { if (back) st.pop(); else { st.push(h); if (st.length > 50) st.shift(); } }
+  NAV.lock = true;
+  _route11(keep);
+  if (back && keep !== true && NAV.pos[h]) {
+    var y = NAV.pos[h]; window.scrollTo(0, y);
+    requestAnimationFrame(function () { window.scrollTo(0, y); setTimeout(function () { window.scrollTo(0, y); NAV.lock = false; }, 60); });
+  } else setTimeout(function () { NAV.lock = false; }, 150);
 };

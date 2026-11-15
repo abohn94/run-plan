@@ -1037,3 +1037,17 @@ details.fold[open] > .foldbody, details.gdet[open] > *:not(summary), details.inf
 #sheet:not([hidden]) #sheetCard { animation: sheetup .28s cubic-bezier(.2, .8, .25, 1) both; }
 .toggle i, .toggle { transition: transform .18s ease, background .18s ease; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* plan: races side by side, slightly staggered, full names */
+.racegrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: start; margin-bottom: 12px; }
+.racegrid.one { grid-template-columns: minmax(0, 1fr); }
+.racegrid .racecard { padding: 14px; border-radius: 22px; gap: 6px; height: 100%; box-sizing: border-box; align-content: start; }
+.racegrid:not(.one) .racecard:nth-child(even) { margin-top: 14px; }
+.racegrid:not(.one) .racecard:nth-child(odd) { margin-bottom: 14px; }
+.racegrid .racecard .eyebrow { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; letter-spacing: .05em; font-size: .68rem; }
+.racegrid:not(.one) .racecard .cd { font-size: 2.1rem; }
+.racegrid:not(.one) .racecard .cd span { display: block; font-size: .82rem !important; margin-top: 2px; }
+.racegrid:not(.one) .racecard .small { font-size: .74rem; line-height: 1.35; }
+#main.enter .season button > i, #main.enter .season button > b { transform-origin: center bottom; animation: growy .7s cubic-bezier(.2, .75, .25, 1) both; }
+#main.enter .season button:nth-child(4n+2) > i { animation-delay: .06s; } #main.enter .season button:nth-child(4n+3) > i { animation-delay: .12s; } #main.enter .season button:nth-child(4n) > i { animation-delay: .18s; }
+#main.enter .phasebar { transform-origin: left center; animation: growx .8s .2s cubic-bezier(.2, .75, .25, 1) both; }
