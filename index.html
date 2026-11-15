@@ -7772,8 +7772,11 @@ function wxInfo(code, night) {
   if (c === 66 || c === 67) return { label: 'Freezing rain', svg: WXG.cloudHi(true) + WXG.sleet };
   if (c === 71 || c === 73 || c === 75) return { label: c === 71 ? 'Light snow' : c === 73 ? 'Snow' : 'Heavy snow', svg: WXG.cloudHi() + WXG.snow(c === 71 ? 2 : 3) };
   if (c === 77) return { label: 'Snow grains', svg: WXG.cloudHi() + WXG.snow(2) };
-  if (c >= 80 && c <= 82) return { label: c === 82 ? 'Heavy showers' : 'Showers', svg: sky + WXG.cloudHi(true) + WXG.rain(c === 80 ? 2 : 3) };
-  if (c === 85 || c === 86) return { label: 'Snow showers', svg: sky + WXG.cloudHi() + WXG.snow(c === 85 ? 2 : 3) };
+  /* light daytime showers often fall with sun between the clouds; at night, or when showers are heavier, the sky is covered */
+  if (c === 80) return { label: night ? 'Light showers' : 'Sun and showers', svg: (night ? '' : WXG.sunS) + WXG.cloudHi(true) + WXG.rain(2) };
+  if (c === 81 || c === 82) return { label: c === 82 ? 'Heavy showers' : 'Showers', svg: WXG.cloudHi(true) + WXG.rain(3) };
+  /* snow falls from a covered sky: no sun or moon */
+  if (c === 85 || c === 86) return { label: c === 86 ? 'Heavy snow showers' : 'Snow showers', svg: WXG.cloudHi() + WXG.snow(c === 85 ? 2 : 3) };
   if (c === 95) return { label: 'Thunderstorm', svg: WXG.cloudHi(true) + WXG.bolt + WXG.rain(1) };
   if (c === 96 || c === 99) return { label: 'Thunderstorm with hail', svg: WXG.cloudHi(true) + WXG.bolt + WXG.snow(1) };
   return { label: 'Cloudy', svg: WXG.cloudHi() };
