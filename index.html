@@ -803,6 +803,8 @@ body.printband .band { display: block; }
 .moonp { fill: #d8dcf0; } .cl1 { fill: #c9ccd6; } .cl2 { fill: #8e93a3; } .snowp { fill: #f2f4fa; } .fogp { stroke: #b4b8c4; }
 :root[data-theme="light"] .moonp { fill: #7d84a8; } :root[data-theme="light"] .cl1 { fill: #b3b7c3; } :root[data-theme="light"] .cl2 { fill: #7c8192; } :root[data-theme="light"] .snowp { fill: #9fb3d1; } :root[data-theme="light"] .fogp { stroke: #8c909c; }
 .hrs .hrc.on .moonp { fill: #5b6280; } .hrs .hrc.on .cl1 { fill: #9a9eab; }
+.hrs .hrc.now { box-shadow: inset 0 0 0 1.5px var(--blue); }
+.hrs .hrc.now span { color: var(--blue); }
 
 </style>
 </head>
@@ -7798,11 +7800,15 @@ function hrLabel(h) { return (h % 12 || 12) + (h < 12 ? 'a' : 'p'); }
 function conditionsCard() {
   var t = App.today, day = dayOf(t), runs = day ? day.parts.filter(function (p) { return E.isRun(p) && p.mi > 0; }) : [];
   if (!loc()) return '<section class="card cond"><div class="spread"><div><div class="eyebrow">Conditions</div><h3 style="margin-top:2px">Weather-smart paces</h3></div><svg class="wxbig" viewBox="0 0 24 24" aria-hidden="true">' + wxInfo(2, false).svg + '</svg></div><p class="small muted" style="margin-top:4px">Add your location and paces adjust for heat and humidity, and icy or bitter days get a treadmill option.</p><div class="btns" style="margin-top:10px"><button class="btn sm primary" data-act="loc-gps">Use my location</button><button class="btn sm" data-act="sheet" data-arg="' + jattr({ sheet: 'loc' }) + '">Enter a city</button></div></section>';
-  var h0 = runHour(), w = wxAt(t, h0); if (!w) { loadWx(); return ''; }
+  var hNow = new Date().getHours(), wNow = wxAt(t, hNow);
+  var h0 = runHour(), w = wxAt(t, h0) || wNow; if (!w || !wNow) { loadWx(); return ''; }
+  var runLater = runs.length && h0 > hNow;
   var pct = heatFor(t), win = E.winterCheck(w), best = bestHour(t), zz = zonesAt(t), base = _zonesAt7(t);
-  var hours = []; for (var h = Math.max(5, h0 - 3); h <= Math.min(21, h0 + 3); h++) { var x = wxAt(t, h); if (x) hours.push([h, x]); }
-  var html = '<section class="card cond"><div class="spread"><div><div class="eyebrow">Conditions · ' + esc(loc().name || '') + '</div><h3 style="margin-top:2px">' + Math.round(w.temp) + '°F at ' + hrLabel(h0) + (Math.abs(w.feels - w.temp) >= 4 ? ' <span class="muted" style="font-weight:600">feels ' + Math.round(w.feels) + '°</span>' : '') + '</h3><div class="small muted" style="margin-top:2px">' + esc(wxInfo(w.code, isNight(t, h0, w)).label) + (w.wind >= 10 ? ' · wind ' + Math.round(w.wind) + ' mph' : '') + '</div></div>' + wxIcon(t, h0, w, 'wxbig') + '</div>';
-  html += '<div class="hrs">' + hours.map(function (p) { return '<button class="hrc' + (p[0] === h0 ? ' on' : '') + (best && best.h === p[0] ? ' best' : '') + '" data-act="run-hour" data-arg="' + jattr({ h: p[0] }) + '"><span>' + hrLabel(p[0]) + '</span>' + wxIcon(t, p[0], p[1], 'wxsm') + '<b>' + Math.round(p[1].temp) + '°</b><em>' + (p[1].pop >= 30 ? p[1].pop + '%' : 'dew ' + Math.round(p[1].dew)) + '</em></button>'; }).join('') + '</div>';
+  /* the strip starts now and runs 7 hours ahead (into tomorrow late in the day) */
+  var hours = []; for (var k = 0; k < 7; k++) { var hh = hNow + k, dd = hh >= 24 ? E.addD(t, 1) : t, hr = hh % 24, x = wxAt(dd, hr); if (x) hours.push([hr, x, dd, k === 0]); }
+  var html = '<section class="card cond"><div class="spread"><div><div class="eyebrow">Now · ' + esc(loc().name || '') + ' · ' + clockOf(new Date().getHours() * 60 + new Date().getMinutes()) + '</div><h3 style="margin-top:2px">' + Math.round(wNow.temp) + '°F' + (Math.abs(wNow.feels - wNow.temp) >= 4 ? ' <span class="muted" style="font-weight:600">feels ' + Math.round(wNow.feels) + '°</span>' : '') + '</h3><div class="small muted" style="margin-top:2px">' + esc(wxInfo(wNow.code, isNight(t, hNow, wNow)).label) + (wNow.wind >= 10 ? ' · wind ' + Math.round(wNow.wind) + ' mph' : '') + '</div></div>' + wxIcon(t, hNow, wNow, 'wxbig') + '</div>';
+  if (runLater) html += '<p class="small" style="margin-top:8px">At your run time (' + hrLabel(h0) + '): <b>' + Math.round(w.temp) + '°F</b>, ' + esc(wxInfo(w.code, isNight(t, h0, w)).label.toLowerCase()) + (Math.abs(w.feels - w.temp) >= 4 ? ', feels ' + Math.round(w.feels) + '°' : '') + '.</p>';
+  html += '<div class="hrs">' + hours.map(function (p) { return '<button class="hrc' + (p[3] ? ' now' : '') + (p[2] === t && p[0] === h0 ? ' on' : '') + (p[2] === t && best && best.h === p[0] ? ' best' : '') + '" data-act="run-hour" data-arg="' + jattr({ h: p[0] }) + '"><span>' + hrLabel(p[0]) + '</span>' + wxIcon(t, p[0], p[1], 'wxsm') + '<b>' + Math.round(p[1].temp) + '°</b><em>' + (p[1].pop >= 30 ? p[1].pop + '%' : 'dew ' + Math.round(p[1].dew)) + '</em></button>'; }).join('') + '</div>';
   var notes = [];
   if (pct) notes.push('<b>Paces ' + Math.round(pct * 100) + '% slower</b> for the humidity (dew point ' + Math.round(w.dew) + '°F)' + (base && base.E ? ': easy ' + pace(zz.E[0]) + '–' + pace(zz.E[1]) + ' instead of ' + pace(base.E[0]) + '–' + pace(base.E[1]) : '') + '. Same effort, same training.');
   else if (runs.length) notes.push('No pace adjustment needed: dew point ' + Math.round(w.dew) + '°F.');
@@ -8302,6 +8308,18 @@ var _hero7v = heroHTML;
 heroHTML = function (x, date, zz) { return _hero7v(x, date, zz) + venueBar(x, date); };
 var _partDetail7v = partDetail;
 partDetail = function (x, date, w, zz, l, idx) { var h = _partDetail7v(x, date, w, zz, l, idx), b = venueBar(x, date); if (!b) return h; var i = h.indexOf('</section>'); return i > 0 ? h.slice(0, i) + b + h.slice(i) : h + b; };
+
+/* keep the weather current: re-render Today when the clock passes the hour, refresh the forecast every 30 minutes */
+(function () {
+  var lastH = new Date().getHours();
+  setInterval(function () {
+    if (document.visibilityState !== 'visible') return;
+    var h = new Date().getHours();
+    if (App.wx && Date.now() - App.wx.at > 30 * 60 * 1000) loadWx(true);
+    if (h !== lastH) { lastH = h; if (App.view === 'today' && $('#sheet').hidden) render(); }
+  }, 60 * 1000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') { if (App.wx && Date.now() - App.wx.at > 30 * 60 * 1000) loadWx(true); else if (App.view === 'today' && $('#sheet').hidden) render(); lastH = new Date().getHours(); } });
+})();
 
 
 /* ---------------- Garmin polling ---------------- */

@@ -782,3 +782,5 @@ body.printband .band { display: block; }
 .moonp { fill: #d8dcf0; } .cl1 { fill: #c9ccd6; } .cl2 { fill: #8e93a3; } .snowp { fill: #f2f4fa; } .fogp { stroke: #b4b8c4; }
 :root[data-theme="light"] .moonp { fill: #7d84a8; } :root[data-theme="light"] .cl1 { fill: #b3b7c3; } :root[data-theme="light"] .cl2 { fill: #7c8192; } :root[data-theme="light"] .snowp { fill: #9fb3d1; } :root[data-theme="light"] .fogp { stroke: #8c909c; }
 .hrs .hrc.on .moonp { fill: #5b6280; } .hrs .hrc.on .cl1 { fill: #9a9eab; }
+.hrs .hrc.now { box-shadow: inset 0 0 0 1.5px var(--blue); }
+.hrs .hrc.now span { color: var(--blue); }
