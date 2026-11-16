@@ -16,7 +16,8 @@ recompute = function () {
       acts.forEach(function (a) { if (/TEMPO|THRESHOLD|VO2|ANAEROBIC|SPEED/.test(a.teLabel || '')) why = 'Garmin labelled it ' + a.teLabel.toLowerCase().replace(/_/g, ' '); else if (+a.te >= 3.8) why = 'aerobic training effect ' + a.te; });
       var lr = (logOf(y).run || {}); if (!why && +lr.rpe >= 7) why = 'you rated it ' + lr.rpe + '/10';
     }
-    App.rec = E.recommend(App.rd, dayOf(App.today), { yesterdayHard: why });
+    var rv = null; try { rv = recoveryLeft(App.today); } catch (e2) { rv = null; }
+    App.rec = E.recommend(App.rd, dayOf(App.today), { yesterdayHard: why, recovery: rv });
   } catch (e) { console.error(e); }
 };
 var _readSettings6 = readSettings;

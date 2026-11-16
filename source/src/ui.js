@@ -256,8 +256,9 @@ function readinessCard(rd, rec, date) {
       metricTile('Sleep', sl ? mi(sl.v) + 'h' : '–', sl && sl.score ? 'score ' + sl.score : '', sl && sl.v < 6.25 ? 'warn' : '') +
       metricTile('Battery', bb ? bb.v : '–', bb && bb.low != null ? 'low ' + bb.low : 'peak', bb && bb.v < 45 ? 'warn' : '') + '</div>';
   }
-  var head = !rd.factors ? 'No readiness data yet' : rec.headline;
-  var body = !rd.factors ? (Store.mode === 'github' ? 'Sync your watch with Garmin Connect, or do a quick check-in.' : 'Do a quick check-in, or connect Garmin for automatic readiness.') : rec.body;
+  var noData = !rd.factors && !(rec && rec.src === 'recovery');
+  var head = noData ? 'No readiness data yet' : rec.headline;
+  var body = noData ? (Store.mode === 'github' ? 'Sync your watch with Garmin Connect, or do a quick check-in.' : 'Do a quick check-in, or connect Garmin for automatic readiness.') : rec.body;
   var acts = (rec && rec.actions || []).filter(function (a) { return a.action !== 'keep' || true; }).map(function (a) {
     return '<button class="btn sm' + (a.action === 'keep' ? ' ghost' : '') + '" data-act="rec" data-arg="' + jattr({ action: a.action, date: date }) + '">' + esc(a.label) + '</button>';
   }).join('');

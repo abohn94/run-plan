@@ -1116,6 +1116,17 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .askd-btns .btn { width: 100%; padding: 0 12px; }
 .btn.dangerfill { background: var(--danger); color: #fff; }
 @media (prefers-reduced-motion: reduce) { .askd, .askd-card { animation: none; } }
+/* Garmin training status inside Morning readiness */
+.tsbox { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.tshead { display: flex; align-items: center; gap: 12px; }
+.tshead > div { display: grid; min-width: 0; }
+.tshead b { font-size: 1.25rem; font-weight: 800; line-height: 1.2; }
+.tshead em { font-style: normal; font-size: .8rem; color: var(--muted); }
+.tsdot { width: 14px; height: 14px; border-radius: 999px; flex: none; box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 0%, transparent); }
+.gready.ts3 { grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 0; margin-top: 6px; padding-top: 0; row-gap: 10px; }
+.tsstrip { display: flex; gap: 3px; height: 10px; margin-top: 10px; }
+.tsstrip i { display: block; border-radius: 999px; min-width: 6px; }
+.tsaxis { display: flex; justify-content: space-between; gap: 8px; font-size: .7rem; color: var(--muted); }
 
 </style>
 </head>
@@ -3076,6 +3087,16 @@ function recommend(rd, day, ctx) {
     r0.actions = [{ action: 'easy', label: 'Swap to easy run' }, { action: 'keep', label: 'Keep the workout' }];
     if (r0.level === 'green') r0.level = 'amber';
   }
+  /* Garmin's recovery time still running when a hard session is due: suggest easing off, you decide */
+  var rv = ctx && ctx.recovery, hardP = parts.filter(function (p) { return p.type === 'speed' || p.type === 'long'; })[0];
+  if (rv && hardP && rv.atRun >= 6 && rd.level !== 'red' && !rd.flags.ill && !rd.flags.pain && !r0.actions.some(function (a) { return a.action === 'rest'; })) {
+    var hrs = Math.ceil(rv.atRun), longRun = hardP.type === 'long';
+    r0.headline = 'Garmin says you are still recovering'; r0.src = 'recovery';
+    r0.body = 'Your watch has about ' + hrs + ' hours of recovery left at your usual run time' + (rv.untilTxt ? ' (' + rv.untilTxt + ')' : '') + '. ' +
+      (longRun ? 'A shorter, easy long run keeps the habit without digging a deeper hole.' : 'A hard ' + hardP.title.toLowerCase() + ' before then adds fatigue for little gain.') + ' If you feel good, keeping it is your call.';
+    r0.actions = [{ action: 'easy', label: longRun ? 'Shorter, easy long run' : 'Swap to easy run' }, { action: 'keep', label: 'Keep the ' + (longRun ? 'long run' : 'workout') }];
+    if (r0.level === 'green') r0.level = 'amber';
+  }
   return r0;
 }
 function recommend0(rd, day) {
@@ -4323,8 +4344,9 @@ function readinessCard(rd, rec, date) {
       metricTile('Sleep', sl ? mi(sl.v) + 'h' : '–', sl && sl.score ? 'score ' + sl.score : '', sl && sl.v < 6.25 ? 'warn' : '') +
       metricTile('Battery', bb ? bb.v : '–', bb && bb.low != null ? 'low ' + bb.low : 'peak', bb && bb.v < 45 ? 'warn' : '') + '</div>';
   }
-  var head = !rd.factors ? 'No readiness data yet' : rec.headline;
-  var body = !rd.factors ? (Store.mode === 'github' ? 'Sync your watch with Garmin Connect, or do a quick check-in.' : 'Do a quick check-in, or connect Garmin for automatic readiness.') : rec.body;
+  var noData = !rd.factors && !(rec && rec.src === 'recovery');
+  var head = noData ? 'No readiness data yet' : rec.headline;
+  var body = noData ? (Store.mode === 'github' ? 'Sync your watch with Garmin Connect, or do a quick check-in.' : 'Do a quick check-in, or connect Garmin for automatic readiness.') : rec.body;
   var acts = (rec && rec.actions || []).filter(function (a) { return a.action !== 'keep' || true; }).map(function (a) {
     return '<button class="btn sm' + (a.action === 'keep' ? ' ghost' : '') + '" data-act="rec" data-arg="' + jattr({ action: a.action, date: date }) + '">' + esc(a.label) + '</button>';
   }).join('');
@@ -7540,7 +7562,8 @@ recompute = function () {
       acts.forEach(function (a) { if (/TEMPO|THRESHOLD|VO2|ANAEROBIC|SPEED/.test(a.teLabel || '')) why = 'Garmin labelled it ' + a.teLabel.toLowerCase().replace(/_/g, ' '); else if (+a.te >= 3.8) why = 'aerobic training effect ' + a.te; });
       var lr = (logOf(y).run || {}); if (!why && +lr.rpe >= 7) why = 'you rated it ' + lr.rpe + '/10';
     }
-    App.rec = E.recommend(App.rd, dayOf(App.today), { yesterdayHard: why });
+    var rv = null; try { rv = recoveryLeft(App.today); } catch (e2) { rv = null; }
+    App.rec = E.recommend(App.rd, dayOf(App.today), { yesterdayHard: why, recovery: rv });
   } catch (e) { console.error(e); }
 };
 var _readSettings6 = readSettings;
@@ -8153,15 +8176,17 @@ App.extra = (function () { try { return JSON.parse(LS.get('rp-gextra') || 'null'
 function GX() { return App.extra || {}; }
 function lastOf(o) { var ks = Object.keys(o || {}).sort(); return ks.length ? o[ks[ks.length - 1]] : null; }
 function loadExtra() {
-  if (Store.mode !== 'github' || loadExtra.busy) return;
-  loadExtra.busy = true;
+  if (Store.mode !== 'github') return;
+  if (loadExtra.busy && Date.now() - loadExtra.busy < 45000) return;   /* a request lost while the phone slept must not block refreshes forever */
+  loadExtra.busy = Date.now();
   Store.getFile('garmin/extra.json').then(function (f) {
-    loadExtra.busy = false;
+    loadExtra.busy = 0;
     if (!f || !f.text) return;
-    var changed = !App.extra || JSON.parse(f.text).updated !== App.extra.updated;
+    var changed = f.text !== loadExtra.last;
+    loadExtra.last = f.text; loadExtra.at = Date.now();
     App.extra = JSON.parse(f.text); LS.set('rp-gextra', f.text);
     if (changed) { recompute(); if ($('#sheet').hidden) render(); }
-  }, function () { loadExtra.busy = false; });
+  }, function () { loadExtra.busy = 0; });
 }
 /* fold Garmin's threshold and load balance into the data the engine already reads */
 function mergeExtra() {
@@ -8328,6 +8353,67 @@ ACTIONS['loc-pick'] = function (a) { closeSheet(); saveLoc(a); };
 /* ---------- Garmin readiness next to ours ---------- */
 var _readinessCard7 = readinessCard;
 function hhmm(s) { var m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? clockOf(+m[1] * 60 + +m[2]) : ''; }
+/* Garmin gives recovery time in minutes; older saved readings stored minutes under recoveryH */
+function recHours(v) { v = +v || 0; return Math.round(v > 120 ? v / 60 : v); }
+/* ---------- Garmin Training Status (refreshed hourly with the sync) ---------- */
+var TS_COLORS = { PRODUCTIVE: 'var(--green)', MAINTAINING: 'var(--gold)', RECOVERY: 'var(--blue)', PEAKING: 'var(--violet)', OVERREACHING: 'var(--red)',
+  STRAINED: '#e04bd0', UNPRODUCTIVE: '#ff7a2e', DETRAINING: 'var(--gray)', NO_STATUS: 'var(--dim)', PAUSED: 'transparent' };
+function tsKey(phrase) { var p = String(phrase || '').toUpperCase(); var k = Object.keys(TS_COLORS).filter(function (x) { return p.indexOf(x) === 0 || p.indexOf('_' + x) >= 0; }).sort(function (a, b) { return b.length - a.length; })[0]; return p.indexOf('UNPRODUCTIVE') >= 0 ? 'UNPRODUCTIVE' : k || 'NO_STATUS'; }
+var TS_LABEL = { PRODUCTIVE: 'Productive', MAINTAINING: 'Maintaining', RECOVERY: 'Recovery', PEAKING: 'Peaking', OVERREACHING: 'Overreaching', STRAINED: 'Strained', UNPRODUCTIVE: 'Unproductive', DETRAINING: 'Detraining', NO_STATUS: 'No status', PAUSED: 'Paused' };
+/* Garmin's VO2 max ratings (Cooper Institute norms), lower bounds of Fair, Good, Excellent, Superior by age band */
+var VO2_NORMS = { MALE: [[29, 41.7, 45.4, 51.1, 55.5], [39, 40.5, 44.0, 48.3, 54.1], [49, 38.5, 42.4, 46.4, 52.6], [59, 35.6, 39.2, 43.4, 49.0], [69, 32.3, 35.5, 39.5, 45.8], [200, 29.4, 32.3, 36.7, 42.2]],
+  FEMALE: [[29, 36.1, 39.5, 43.9, 49.7], [39, 34.4, 37.8, 42.4, 47.5], [49, 33.0, 36.3, 39.7, 45.4], [59, 30.1, 33.0, 36.7, 41.2], [69, 27.5, 30.0, 33.0, 37.9], [200, 25.9, 28.1, 30.9, 36.8]] };
+function vo2Rating(v, who) {
+  if (!v || !who || !who.by || !VO2_NORMS[who.sex]) return '';
+  var age = +App.today.slice(0, 4) - who.by, row = VO2_NORMS[who.sex].filter(function (r) { return age <= r[0]; })[0];
+  return v >= row[4] ? 'Superior' : v >= row[3] ? 'Excellent' : v >= row[2] ? 'Good' : v >= row[1] ? 'Fair' : 'Poor';
+}
+function balanceText(p) {
+  var m = { AEROBIC_HIGH_SHORTAGE: 'High aerobic shortage', AEROBIC_LOW_SHORTAGE: 'Low aerobic shortage', ANAEROBIC_SHORTAGE: 'Anaerobic shortage', BALANCED: 'Balanced',
+    AEROBIC_HIGH_FOCUS: 'High aerobic focus', AEROBIC_LOW_FOCUS: 'Low aerobic focus', ANAEROBIC_FOCUS: 'Anaerobic focus', NO_DATA: '' };
+  return m[String(p || '').toUpperCase()] != null ? m[String(p || '').toUpperCase()] : phraseText(p);
+}
+function trainingStatusHTML(date) {
+  var x = GX(), st = x.status; if (!st || (!st.phrase && !st.acwrStatus)) return '';
+  var key = tsKey(st.phrase), hrv = x.hrv && (x.hrv[date] || lastOf(x.hrv));
+  var vo = (x.vo2 && x.vo2.v) || lastOf(((Store.garmin || {}).fitness || {}).vo2), rating = vo2Rating(vo, x.who);
+  var bal = x.balance && balanceText(x.balance.phrase);
+  /* Garmin's recovery time, counted down from when the watch last worked it out */
+  var rv = recoveryLeft(date), recTile = '';
+  if (rv) {
+    var left = rv.left, untilTxt = rv.untilTxt;
+    recTile = '<div><span>Recovery time</span><b class="' + (left <= 0 ? 'ok' : left >= 36 ? 'warn' : '') + '">' + (left <= 0 ? 'Recovered' : Math.ceil(left) + ' h') + '</b><em>' + (left <= 0 ? 'ready for hard training' : (untilTxt || 'left') + (left >= 36 ? ' · keep it easy' : left > 0 ? ' · easy or rest' : '')) + '</em></div>';
+  }
+  /* four-week strip: one segment per run of days with the same status */
+  var hist = x.statusHist || {}, segs = [], start = E.addD(date, -27), since = null;
+  for (var d = start; d <= date; d = E.addD(d, 1)) {
+    var hk = hist[d] ? tsKey(hist[d].phrase) : (d === date ? key : null);
+    if (!hk) continue;
+    if (segs.length && segs[segs.length - 1].k === hk) segs[segs.length - 1].n++; else segs.push({ k: hk, n: 1, from: d });
+  }
+  if (segs.length) since = segs[segs.length - 1].from;
+  var strip = segs.length > 1 || (segs.length && segs[0].n > 1) ? '<div class="tsstrip">' + segs.map(function (g) { return '<i style="flex:' + g.n + ';background:' + TS_COLORS[g.k] + (g.k === 'PAUSED' ? ';box-shadow:inset 0 0 0 1.5px var(--line2)' : '') + '" title="' + TS_LABEL[g.k] + ' from ' + fmtD(g.from, { month: 'short', day: 'numeric' }) + '"></i>'; }).join('') + '</div>' +
+    '<div class="tsaxis"><span>' + (segs[0].from <= start ? 'Last 4 weeks' : fmtD(segs[0].from, { month: 'short', day: 'numeric' })) + '</span><span>' + TS_LABEL[segs[segs.length - 1].k] + ' since ' + fmtD(since, { month: 'short', day: 'numeric' }) + '</span></div>' : '';
+  return '<div class="tsbox"><div class="tshead"><span class="tsdot" style="background:' + TS_COLORS[key] + '"></span><div><span class="eyebrow">Garmin training status</span><b>' + TS_LABEL[key] + '</b>' + (bal ? '<em>Load focus: ' + esc(bal) + '</em>' : '') + '</div></div>' +
+    '<div class="gready ts3">' + recTile +
+    (vo ? '<div><span>VO₂ max</span><b class="' + (rating === 'Superior' || rating === 'Excellent' ? 'ok' : '') + '">' + (rating || (+vo).toFixed(1)) + '</b><em>' + (rating ? (+vo).toFixed(1) + ' ml/kg/min' : 'ml/kg/min') + '</em></div>' : '') +
+    (st.acwrStatus ? '<div><span>Load</span><b class="' + (st.acwrStatus === 'OPTIMAL' ? 'ok' : 'warn') + '">' + esc(phraseText(st.acwrStatus)) + '</b><em>' + (st.acute ? 'acute ' + Math.round(st.acute) + (st.chronicMin && st.chronicMax ? ' · range ' + Math.round(st.chronicMin) + '–' + Math.round(st.chronicMax) : '') : '') + '</em></div>' : '') +
+    (hrv ? '<div><span>HRV status</span><b class="' + (hrv.status === 'BALANCED' ? 'ok' : 'warn') + '">' + esc(phraseText(hrv.status)) + '</b><em>' + (hrv.week ? '7-day avg ' + hrv.week + ' ms' : '') + '</em></div>' : '') +
+    '</div>' + strip + '</div>';
+}
+/* Garmin's recovery time for a day: hours left now, when it ends, and how much will be left at your usual run time */
+function recoveryLeft(date) {
+  var x = GX(), rr = (x.now && x.now.date === date && x.now.ready) || (x.readiness && x.readiness[date]) || null;
+  if (!rr || rr.recoveryH == null) return null;
+  var recH = +rr.recoveryH > 120 ? rr.recoveryH / 60 : +rr.recoveryH, m = /^(\d{1,2}):(\d{2})/.exec(rr.at || '');
+  if (!m || date !== App.today) return { left: recH, total: recH, untilTxt: '', atRun: recH };
+  var nowD = new Date(), base = new Date(nowD.getFullYear(), nowD.getMonth(), nowD.getDate(), +m[1], +m[2]);
+  var end = new Date(base.getTime() + recH * 3600e3), left = Math.max(0, (end - nowD) / 3600e3);
+  var rh = (st().prefs || {}).runHour, runAt = new Date(nowD.getFullYear(), nowD.getMonth(), nowD.getDate(), rh == null ? 17 : +rh, 0);
+  var atRun = Math.max(0, (end - Math.max(runAt, nowD)) / 3600e3);
+  return { left: left, total: recH, end: end, atRun: atRun,
+    untilTxt: left > 0 ? 'until ' + (end.toDateString() !== nowD.toDateString() ? end.toLocaleDateString([], { weekday: 'short' }) + ' ' : '') + clockOf(end.getHours() * 60 + end.getMinutes()) : '' };
+}
 /* live readings (refreshed every hour by the sync): today's Body Battery, stress, heart rate, Garmin readiness */
 function liveNow(date) { var n = GX().now; return n && n.date === date && date === App.today ? n : null; }
 function bbSpark(hours) {
@@ -8344,13 +8430,14 @@ readinessCard = function (rd, rec, date) {
   if (!r && !v && !live) return h;
   var lr = live && live.ready, at = live && ((live.bb && live.bb.at) || (live.stress && live.stress.at) || (live.hr && live.hr.at));
   var row = (live ? '<div class="livehd"><span class="eyebrow">Right now</span><span class="tiny muted">' + (at ? 'as of ' + hhmm(at) + ' (your last watch sync)' : '') + '</span></div>' : '') +
-    '<div class="gready">' + (lr || r ? '<div><span>Garmin readiness</span><b>' + (lr || r).score + '</b><em>' + esc(phraseText((lr || r).level)) + ((lr || r).recoveryH ? ' · ' + (lr || r).recoveryH + ' h recovery' : '') + (lr && lr.at ? ' · ' + hhmm(lr.at) : '') + '</em></div>' : '') +
+    '<div class="gready">' + (lr || r ? '<div><span>Garmin readiness</span><b>' + (lr || r).score + '</b><em>' + esc(phraseText((lr || r).level)) + ((lr || r).recoveryH ? ' · ' + recHours((lr || r).recoveryH) + ' h recovery' : '') + (lr && lr.at ? ' · ' + hhmm(lr.at) : '') + '</em></div>' : '') +
     (live && live.bb ? '<div><span>Body Battery</span><b class="' + (live.bb.v < 30 ? 'warn' : '') + '">' + live.bb.v + '</b><em>' + (live.bb.drained ? '−' + live.bb.drained + ' today' + (live.bb.charged ? ' · +' + live.bb.charged + ' overnight' : '') : 'now') + '</em></div>' : '') +
     (live && live.stress ? '<div><span>Stress</span><b class="' + (live.stress.v >= 50 ? 'warn' : '') + '">' + live.stress.v + '</b><em>' + (live.stress.v < 26 ? 'rest' : live.stress.v < 51 ? 'low' : live.stress.v < 76 ? 'medium' : 'high') + (live.stress.avg != null ? ' · avg ' + live.stress.avg : '') + '</em></div>' : '') +
     (live && live.hr && live.hr.v ? '<div><span>Heart rate</span><b>' + live.hr.v + '</b><em>bpm' + (live.hr.rest ? ' · resting ' + live.hr.rest : '') + '</em></div>' : '') +
     (v ? '<div><span>HRV status</span><b class="' + (v.status === 'BALANCED' ? 'ok' : 'warn') + '">' + esc(phraseText(v.status)) + '</b><em>' + v.last + ' ms · normal ' + v.lo + '–' + v.hi + '</em></div>' : '') +
     (x.status && x.status.acwr ? '<div><span>Load ratio</span><b>' + x.status.acwr + '</b><em>' + esc(phraseText(x.status.acwrStatus)) + '</em></div>' : '') + '</div>';
   if (live && live.bb && live.bb.hours && Object.keys(live.bb.hours).length > 2) row += '<div class="tiny muted" style="margin-top:8px">Body Battery today</div>' + bbSpark(live.bb.hours);
+  row = trainingStatusHTML(date) + row;
   var i = h.lastIndexOf('</section>');
   return i > 0 ? h.slice(0, i) + row + h.slice(i) : h + row;
 };

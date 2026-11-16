@@ -1095,3 +1095,14 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .askd-btns .btn { width: 100%; padding: 0 12px; }
 .btn.dangerfill { background: var(--danger); color: #fff; }
 @media (prefers-reduced-motion: reduce) { .askd, .askd-card { animation: none; } }
+/* Garmin training status inside Morning readiness */
+.tsbox { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.tshead { display: flex; align-items: center; gap: 12px; }
+.tshead > div { display: grid; min-width: 0; }
+.tshead b { font-size: 1.25rem; font-weight: 800; line-height: 1.2; }
+.tshead em { font-style: normal; font-size: .8rem; color: var(--muted); }
+.tsdot { width: 14px; height: 14px; border-radius: 999px; flex: none; box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 0%, transparent); }
+.gready.ts3 { grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 0; margin-top: 6px; padding-top: 0; row-gap: 10px; }
+.tsstrip { display: flex; gap: 3px; height: 10px; margin-top: 10px; }
+.tsstrip i { display: block; border-radius: 999px; min-width: 6px; }
+.tsaxis { display: flex; justify-content: space-between; gap: 8px; font-size: .7rem; color: var(--muted); }

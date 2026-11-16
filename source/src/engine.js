@@ -1759,6 +1759,16 @@ function recommend(rd, day, ctx) {
     r0.actions = [{ action: 'easy', label: 'Swap to easy run' }, { action: 'keep', label: 'Keep the workout' }];
     if (r0.level === 'green') r0.level = 'amber';
   }
+  /* Garmin's recovery time still running when a hard session is due: suggest easing off, you decide */
+  var rv = ctx && ctx.recovery, hardP = parts.filter(function (p) { return p.type === 'speed' || p.type === 'long'; })[0];
+  if (rv && hardP && rv.atRun >= 6 && rd.level !== 'red' && !rd.flags.ill && !rd.flags.pain && !r0.actions.some(function (a) { return a.action === 'rest'; })) {
+    var hrs = Math.ceil(rv.atRun), longRun = hardP.type === 'long';
+    r0.headline = 'Garmin says you are still recovering'; r0.src = 'recovery';
+    r0.body = 'Your watch has about ' + hrs + ' hours of recovery left at your usual run time' + (rv.untilTxt ? ' (' + rv.untilTxt + ')' : '') + '. ' +
+      (longRun ? 'A shorter, easy long run keeps the habit without digging a deeper hole.' : 'A hard ' + hardP.title.toLowerCase() + ' before then adds fatigue for little gain.') + ' If you feel good, keeping it is your call.';
+    r0.actions = [{ action: 'easy', label: longRun ? 'Shorter, easy long run' : 'Swap to easy run' }, { action: 'keep', label: 'Keep the ' + (longRun ? 'long run' : 'workout') }];
+    if (r0.level === 'green') r0.level = 'amber';
+  }
   return r0;
 }
 function recommend0(rd, day) {
