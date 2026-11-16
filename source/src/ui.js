@@ -1466,7 +1466,7 @@ Store.onstatus = function () { renderSyncChip(); };
 })();
 window.addEventListener('hashchange', function () { route(); });
 document.addEventListener('visibilitychange', function () { if (!document.hidden && Store.mode === 'github') { Store.refreshGarmin(); if (App.today !== E.today()) onData('day'); } });
-setInterval(function () { if (!document.hidden && Store.mode === 'github') Store.refreshGarmin(); }, 10 * 60 * 1000);
+setInterval(function () { if (!document.hidden && Store.mode === 'github') Store.refreshGarmin(); }, 5 * 60 * 1000);
 recompute(); applyGarmin(); recompute(); route();
 Store.init().then(function () { onData('init'); });
 window.__APP = App;

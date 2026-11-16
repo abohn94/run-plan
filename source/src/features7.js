@@ -14,7 +14,7 @@ function loadExtra() {
     var changed = f.text !== loadExtra.last;
     loadExtra.last = f.text; loadExtra.at = Date.now();
     App.extra = JSON.parse(f.text); LS.set('rp-gextra', f.text);
-    if (changed) { recompute(); if ($('#sheet').hidden) render(); }
+    if (changed) { recompute(); if ($('#sheet').hidden) render(); else loadExtra.last = null; /* redraw on the next check once the sheet is closed */ }
   }, function () { loadExtra.busy = 0; });
 }
 /* fold Garmin's threshold and load balance into the data the engine already reads */
@@ -29,7 +29,7 @@ recompute = function () { mergeExtra(); _recompute7(); };
 var _onchange7 = Store.onchange;
 Store.onchange = function (why) { _onchange7(why); if (why === 'init' || why === 'pull' || why === 'garmin') setTimeout(loadExtra, 400); };
 setTimeout(loadExtra, 1500);
-setInterval(function () { if (document.visibilityState === 'visible') loadExtra(); }, 10 * 60 * 1000);
+setInterval(function () { if (document.visibilityState === 'visible') { loadExtra(); loadCal(); } }, 5 * 60 * 1000);
 /* with Garmin's threshold coming in automatically, the weekly "update your readings" prompt is only needed if the job stops */
 var _fpn7 = fitnessPromptNeeded;
 fitnessPromptNeeded = function () { var x = GX(); if (x.updated && (Date.now() - new Date(x.updated).getTime()) < 3 * 864e5 && x.lt && x.lt.pace) return null; return _fpn7(); };
@@ -207,6 +207,7 @@ function trainingStatusHTML(date) {
   var key = tsKey(st.phrase), hrv = x.hrv && (x.hrv[date] || lastOf(x.hrv));
   var vo = (x.vo2 && x.vo2.v) || lastOf(((Store.garmin || {}).fitness || {}).vo2), rating = vo2Rating(vo, x.who);
   var bal = x.balance && balanceText(x.balance.phrase);
+  var upd = '', ud = x.now && x.now.updated ? new Date(x.now.updated) : null; if (ud && !isNaN(ud) && x.now.date === date) upd = clockOf(ud.getHours() * 60 + ud.getMinutes());
   /* Garmin's recovery time, counted down from when the watch last worked it out */
   var rv = recoveryLeft(date), recTile = '';
   if (rv) {
@@ -223,7 +224,7 @@ function trainingStatusHTML(date) {
   if (segs.length) since = segs[segs.length - 1].from;
   var strip = segs.length > 1 || (segs.length && segs[0].n > 1) ? '<div class="tsstrip">' + segs.map(function (g) { return '<i style="flex:' + g.n + ';background:' + TS_COLORS[g.k] + (g.k === 'PAUSED' ? ';box-shadow:inset 0 0 0 1.5px var(--line2)' : '') + '" title="' + TS_LABEL[g.k] + ' from ' + fmtD(g.from, { month: 'short', day: 'numeric' }) + '"></i>'; }).join('') + '</div>' +
     '<div class="tsaxis"><span>' + (segs[0].from <= start ? 'Last 4 weeks' : fmtD(segs[0].from, { month: 'short', day: 'numeric' })) + '</span><span>' + TS_LABEL[segs[segs.length - 1].k] + ' since ' + fmtD(since, { month: 'short', day: 'numeric' }) + '</span></div>' : '';
-  return '<div class="tsbox"><div class="tshead"><span class="tsdot" style="background:' + TS_COLORS[key] + '"></span><div><span class="eyebrow">Garmin training status</span><b>' + TS_LABEL[key] + '</b>' + (bal ? '<em>Load focus: ' + esc(bal) + '</em>' : '') + '</div></div>' +
+  return '<div class="tsbox"><div class="tshead"><span class="tsdot" style="background:' + TS_COLORS[key] + '"></span><div><span class="eyebrow">Garmin training status' + (upd ? ' · updated ' + upd : '') + '</span><b>' + TS_LABEL[key] + '</b>' + (bal ? '<em>Load focus: ' + esc(bal) + '</em>' : '') + '</div></div>' +
     '<div class="gready ts3">' + recTile +
     (vo ? '<div><span>VO₂ max</span><b class="' + (rating === 'Superior' || rating === 'Excellent' ? 'ok' : '') + '">' + (rating || (+vo).toFixed(1)) + '</b><em>' + (rating ? (+vo).toFixed(1) + ' ml/kg/min' : 'ml/kg/min') + '</em></div>' : '') +
     (st.acwrStatus ? '<div><span>Load</span><b class="' + (st.acwrStatus === 'OPTIMAL' ? 'ok' : 'warn') + '">' + esc(phraseText(st.acwrStatus)) + '</b><em>' + (st.acute ? 'acute ' + Math.round(st.acute) + (st.chronicMin && st.chronicMax ? ' · range ' + Math.round(st.chronicMin) + '–' + Math.round(st.chronicMax) : '') : '') + '</em></div>' : '') +
@@ -259,7 +260,7 @@ readinessCard = function (rd, rec, date) {
   if (!r && !v && !live) return h;
   var lr = live && live.ready, at = live && ((live.bb && live.bb.at) || (live.stress && live.stress.at) || (live.hr && live.hr.at));
   var row = (live ? '<div class="livehd"><span class="eyebrow">Right now</span><span class="tiny muted">' + (at ? 'as of ' + hhmm(at) + ' (your last watch sync)' : '') + '</span></div>' : '') +
-    '<div class="gready">' + (lr || r ? '<div><span>Garmin readiness</span><b>' + (lr || r).score + '</b><em>' + esc(phraseText((lr || r).level)) + ((lr || r).recoveryH ? ' · ' + recHours((lr || r).recoveryH) + ' h recovery' : '') + (lr && lr.at ? ' · ' + hhmm(lr.at) : '') + '</em></div>' : '') +
+    '<div class="gready">' + (lr || r ? '<div><span>Garmin readiness</span><b>' + (lr || r).score + '</b><em>' + esc(phraseText((lr || r).level)) + ((lr || r).recoveryH ? ' · ' + recHours((lr || r).recoveryH) + ' h recovery' : '') + (lr && lr.at ? ' · Garmin checked ' + hhmm(lr.at) : '') + '</em></div>' : '') +
     (live && live.bb ? '<div><span>Body Battery</span><b class="' + (live.bb.v < 30 ? 'warn' : '') + '">' + live.bb.v + '</b><em>' + (live.bb.drained ? '−' + live.bb.drained + ' today' + (live.bb.charged ? ' · +' + live.bb.charged + ' overnight' : '') : 'now') + '</em></div>' : '') +
     (live && live.stress ? '<div><span>Stress</span><b class="' + (live.stress.v >= 50 ? 'warn' : '') + '">' + live.stress.v + '</b><em>' + (live.stress.v < 26 ? 'rest' : live.stress.v < 51 ? 'low' : live.stress.v < 76 ? 'medium' : 'high') + (live.stress.avg != null ? ' · avg ' + live.stress.avg : '') + '</em></div>' : '') +
     (live && live.hr && live.hr.v ? '<div><span>Heart rate</span><b>' + live.hr.v + '</b><em>bpm' + (live.hr.rest ? ' · resting ' + live.hr.rest : '') + '</em></div>' : '') +
@@ -590,13 +591,13 @@ VIEWS.you = function () { var h = _you7(), link = '<a href="#/shareapp">Set up f
 /* ---------- Google Calendar (private iCal address, read by the hourly sync) ---------- */
 App.cal = (function () { try { return JSON.parse(LS.get('rp-gcal') || 'null'); } catch (e) { return null; } })();
 function loadCal() {
-  if (Store.mode !== 'github' || loadCal.busy) return; loadCal.busy = true;
+  if (Store.mode !== 'github' || (loadCal.busy && Date.now() - loadCal.busy < 45000)) return; loadCal.busy = Date.now();
   Store.getFile('garmin/calendar.json').then(function (f) {
-    loadCal.busy = false; if (!f || !f.text) return;
-    var j = JSON.parse(f.text), changed = !App.cal || j.updated !== App.cal.updated;
-    App.cal = j; LS.set('rp-gcal', f.text);
-    if (changed) { recompute(); if ($('#sheet').hidden) render(); }
-  }, function () { loadCal.busy = false; });
+    loadCal.busy = 0; if (!f || !f.text) return;
+    var j = JSON.parse(f.text), changed = f.text !== loadCal.last;
+    loadCal.last = f.text; App.cal = j; LS.set('rp-gcal', f.text);
+    if (changed) { recompute(); if ($('#sheet').hidden) render(); else loadCal.last = null; }
+  }, function () { loadCal.busy = 0; });
 }
 setTimeout(loadCal, 1700);
 var _onchange7c = Store.onchange;

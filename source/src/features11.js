@@ -39,7 +39,7 @@ VIEWS.today = function () {
       if (cls(el, / lv-/) && el.querySelector('.livehd')) {
         /* live readings inside the readiness card */
         var live = el.querySelector('.livehd'), rest = [], nx = live; while (nx) { rest.push(nx); nx = nx.nextElementSibling; }
-        var bits = [].slice.call(el.querySelectorAll('.gready > div')).slice(0, 3).map(function (d) { return txt1(d, 'span') + ' ' + txt1(d, 'b'); });
+        var bits = [].slice.call(el.querySelectorAll('.livehd ~ .gready > div')).slice(0, 3).map(function (d) { return txt1(d, 'span') + ' ' + txt1(d, 'b'); });
         var det = document.createElement('details'); det.className = 'infold'; det.dataset.fold = 'today-live'; if (foldOpen('today-live', false)) det.setAttribute('open', '');
         det.innerHTML = '<summary><span class="ft"><b>Right now</b><span>' + esc(bits.join(' · ').replace(/Garmin readiness/i, 'Garmin').replace(/Body Battery/i, 'Battery')) + '</span></span><i class="fchev" aria-hidden="true"></i></summary>';
         live.parentNode.insertBefore(det, live); rest.forEach(function (r) { det.appendChild(r); });
