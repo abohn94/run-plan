@@ -930,7 +930,8 @@ VIEWS.setup = function () {
     html += '<div class="q"><h1>How would you describe your running?</h1><p class="lead">This sets how gently the plan starts and how fast it builds.</p></div><div class="stack">' +
       optCard('level', 'new', 'New or returning', 'Running for less than a year, or coming back after a long break', p.level) +
       optCard('level', 'some', 'Regular runner', 'Running most weeks, with a few races done', p.level) +
-      optCard('level', 'exp', 'Experienced', 'Years of consistent training and structured workouts', p.level) + '</div>' + wizFoot('Continue', !!p.level);
+      optCard('level', 'exp', 'Experienced', 'Years of consistent training and structured workouts', p.level) +
+      optCard('level', 'elite', 'Sub-elite / very experienced', 'High mileage, racing near the front of your age group or the field', p.level) + '</div>' + wizFoot('Continue', !!p.level);
   } else if (name === 'goal') {
     html += '<div class="q"><h1>What are you training for?</h1><p class="lead">You can add specific races next.</p></div><div class="stack">' +
       optCard('goalType', 'time', 'Hit a goal time', 'Race faster: a PR or a target finish time', p.goalType) +

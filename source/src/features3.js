@@ -15,7 +15,7 @@ var LEVELS = [[1, 'Beginner', 'New to running, coming back, or under about 10 mi
 function styleCatalog(prof, events, mode) {
   var sug = E.suggestMethods(prof, events), by = {}; sug.forEach(function (s, i) { by[s.key] = s; s.rank = i; });
   var f = App.ui.mf || 'all', cur = prof.method;
-  var lv = prof.level === 'new' ? 1 : prof.level === 'exp' ? 3 : 2;
+  var lv = prof.level === 'new' ? 1 : (prof.level === 'exp' || prof.level === 'elite') ? 3 : 2;
   var html = '<div class="chips">' + [['all', 'All styles'], ['run', 'Run-focused'], ['mixed', 'Running + lifting']].map(function (x) { return '<button class="chip" data-act="ui" data-arg="' + jattr({ k: 'mf', v: x[0] }) + '" aria-pressed="' + (f === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
   LEVELS.forEach(function (L) {
     var keys = Object.keys(E.METHODS).filter(function (k) { return E.METHODS[k].level === L[0] && (f === 'all' || E.METHODS[k].focus === f); }).sort(function (a, b) { return by[a].rank - by[b].rank; });

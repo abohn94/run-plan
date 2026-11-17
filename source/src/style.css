@@ -1192,3 +1192,7 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .rtcard > div { display: grid; min-width: 0; } .rtcard b { font-size: 1.02rem; }
 .opt.rt { display: grid; gap: 2px; text-align: left; }
 .flash { animation: flashy 1.6s ease; } @keyframes flashy { 0%, 60% { box-shadow: inset 0 0 0 2px var(--green); } 100% { box-shadow: none; } }
+.rt-warn { margin-top: 2px; line-height: 1.45; }
+.rt-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-top: 8px; }
+.rt-cmp span { display: grid; font-size: .78rem; color: var(--muted); } .rt-cmp b { color: var(--ink); font-size: .86rem; }
+.rthint .btns { margin-top: 8px; }

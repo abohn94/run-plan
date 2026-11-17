@@ -45,28 +45,33 @@ var RUNNER_TYPES = [
   ['starter', 'Brand new to running', 'An 8-week run-walk start, by time, building to 30 minutes non-stop. Simple screens.'],
   ['comeback', 'Coming back from a break', 'Starts from a share of what you ran before, with timed weeks first. Tell us how long you were off.'],
   ['regular', 'Regular runner', 'You run most weeks and have done a few races. The standard plan.'],
-  ['exp', 'Experienced', 'Years of structured training. Full numbers, pace suggestions and bigger workouts.']
+  ['exp', 'Experienced', 'Years of structured training. Full numbers, pace suggestions and bigger workouts.'],
+  ['elite', 'Sub-elite / very experienced', 'Racing near the front: high mileage, two or three key sessions a week, faster paces and longer long runs.']
 ];
-function runnerType(p) { p = p || st().profile || {}; if (p.comeback && +p.comeback.off) return 'comeback'; if (p.level === 'new') return 'starter'; if (p.level === 'exp') return 'exp'; return 'regular'; }
+function runnerType(p) { p = p || st().profile || {}; if (p.comeback && +p.comeback.off) return 'comeback'; if (p.level === 'new') return 'starter'; if (p.level === 'exp') return 'exp'; if (p.level === 'elite') return 'elite'; return 'regular'; }
 function runnerTypeLabel(p) { p = p || st().profile || {}; var t = RUNNER_TYPES.filter(function (x) { return x[0] === runnerType(p); })[0][1]; var mods = []; if (p.masters) mods.push('masters'); if (+p.weekdayMin) mods.push('weekdays ≤ ' + p.weekdayMin + ' min'); return t + (mods.length ? ' · ' + mods.join(' · ') : ''); }
-SHEETS.runnertype = function () {
-  var p = st().profile || {}, cur = runnerType(p); sheetCtx.rt = cur;
+SHEETS.runnertype = function (a) {
+  var p = st().profile || {}, cur = (a && a.pre) || runnerType(p); sheetCtx.rt = cur;
   return '<h3>What kind of runner are you?</h3><p class="small muted">This shapes how runs are written (by time or distance), how fast the plan builds, and how much detail you see. You can change it any time; your logs are kept.</p>' +
     '<div class="stack tight rt-list">' + RUNNER_TYPES.map(function (r) { return '<button type="button" class="opt rt" data-act="rt-pick" data-arg="' + jattr({ k: r[0] }) + '" aria-pressed="' + (cur === r[0]) + '"><b>' + esc(r[1]) + '</b><span class="small muted">' + esc(r[2]) + '</span></button>'; }).join('') + '</div>' +
     '<div id="rt-cb" class="grid2"' + (cur === 'comeback' ? '' : ' hidden') + '><label class="f">Time off<select class="i" id="rt-off">' + [[3, '2 to 4 weeks'], [6, '5 to 8 weeks'], [12, '2 to 4 months'], [30, '4 months to a year'], [60, 'More than a year']].map(function (o) { return '<option value="' + o[0] + '"' + (p.comeback && +p.comeback.off === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label><label class="f">Miles a week before<input class="i" id="rt-before" type="number" min="0" max="150" value="' + esc(p.comeback ? p.comeback.before || '' : '') + '" placeholder="e.g. 25"></label></div>' +
+    '<div id="rt-elite" class="banner warn small rt-warn"' + (cur === 'elite' ? '' : ' hidden') + '>' + (cur === 'elite' ? eliteWarnHTML() : '') + '</div>' +
     '<h4>Also true for me</h4><label class="check"><input type="checkbox" id="rt-masters"' + (p.masters ? ' checked' : '') + '> 40 or older: a lighter week every third week</label>' +
     '<label class="f">Longest weekday run<select class="i" id="rt-wd">' + [[0, 'No limit'], [40, '40 minutes'], [50, '50 minutes'], [60, '1 hour'], [75, '1 hour 15'], [90, '1 hour 30']].map(function (o) { return '<option value="' + o[0] + '"' + ((+p.weekdayMin || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
     '<div class="btns"><button class="btn primary" data-act="rt-save">Save and rebuild plan</button><button class="btn ghost" data-act="sheet-close">Cancel</button></div>';
 };
-ACTIONS['rt-pick'] = function (a) { sheetCtx.rt = a.k; $$('[data-act="rt-pick"]').forEach(function (b) { b.setAttribute('aria-pressed', String(JSON.parse(b.dataset.arg).k === a.k)); }); var cb = $('#rt-cb'); if (cb) cb.hidden = a.k !== 'comeback'; };
+ACTIONS['rt-pick'] = function (a) { sheetCtx.rt = a.k; $$('[data-act="rt-pick"]').forEach(function (b) { b.setAttribute('aria-pressed', String(JSON.parse(b.dataset.arg).k === a.k)); }); var cb = $('#rt-cb'); if (cb) cb.hidden = a.k !== 'comeback'; var ew = $('#rt-elite'); if (ew) { ew.hidden = a.k !== 'elite'; if (a.k === 'elite') ew.innerHTML = eliteWarnHTML(); } };
 ACTIONS['rt-save'] = function () {
+  var k0 = sheetCtx.rt;
+  /* stepping up to sub-elite asks once more, in the app's own dialog */
+  if (k0 === 'elite' && runnerType() !== 'elite' && !ASK({ icon: '⚠', title: 'Switch to sub-elite training?', text: 'Peak weeks grow to roughly 60 to 95 miles depending on your race and style, with two or more hard sessions a week and long runs up to 22 miles. This is for runners already handling 50+ miles a week injury-free. The safety checks stay on.', ok: 'Yes, I train at this level', cancel: 'Not yet' }, ACTIONS['rt-save'], this, arguments)) return;
   var k = sheetCtx.rt, masters = $('#rt-masters').checked, wd = +$('#rt-wd').value || 0, off = +$('#rt-off').value || 3, before = +$('#rt-before').value || 0;
   Store.edit('profile', null, function (S) {
     var p = S.profile; if (!p) return;
     p.masters = masters; p.weekdayMin = wd;
     if (k === 'starter') { p.level = 'new'; if (+p.mpw > 3) { p.prevMpw = p.mpw; p.mpw = 0; } delete p.comeback; }
-    else if (k === 'comeback') { p.level = p.level === 'exp' ? 'exp' : 'some'; p.comeback = { off: off, before: before, from: (p.comeback && p.comeback.from) || App.today }; }
-    else { p.level = k === 'exp' ? 'exp' : 'some'; delete p.comeback; if (p.prevMpw && !(+p.mpw)) p.mpw = p.prevMpw; }
+    else if (k === 'comeback') { p.level = p.level === 'exp' || p.level === 'elite' ? p.level : 'some'; p.comeback = { off: off, before: before, from: (p.comeback && p.comeback.from) || App.today }; }
+    else { p.level = k === 'exp' || k === 'elite' ? k : 'some'; delete p.comeback; if (p.prevMpw && !(+p.mpw)) p.mpw = p.prevMpw; }
   });
   if (k === 'starter' || k === 'comeback') Store.edit('prefs', 'display', function (S) { S.prefs = S.prefs || {}; if (S.prefs.display == null) S.prefs.display = 'simple'; });
   closeSheet(); toast('Plan rebuilt for: ' + RUNNER_TYPES.filter(function (x) { return x[0] === k; })[0][1].toLowerCase());

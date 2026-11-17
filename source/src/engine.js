@@ -233,7 +233,8 @@ function suggestMethods(profile, events) {
   /* Scores each style against the runner's answers. Returns [{key, score, why}] best first. */
   var p = profile || {};
   var mpw = +p.mpw || 0, runs = +p.runDays || 4, lifts = (+p.liftDays || 0) + (+p.crossDays || 0);
-  var lvl = p.level || 'some', goal = p.goalType || 'time';
+  var lvl = p.level || 'some', goal = p.goalType || 'time', elite = lvl === 'elite';
+  if (elite) lvl = 'exp';
   var hasFull = (events || []).some(function (e) { return (e.priority || 'A') === 'A' && distOf(e).key === 'full'; });
   var sc = {}, why = {};
   Object.keys(METHODS).forEach(function (k) { sc[k] = 0; why[k] = []; });
@@ -270,6 +271,7 @@ function suggestMethods(profile, events) {
   if (runs >= 4 && mpw >= 15 && lvl !== 'new') add('lydiard', 2, 'A long aerobic base suits the time you have before your race.'); else add('lydiard', -2);
   var far = (events || []).filter(function (e) { return (e.priority || 'A') === 'A'; }).some(function (e) { return diffD(today(), e.date) > 150; });
   if (far && lvl !== 'new' && runs >= 4) add('lydiard', 2);
+  if (elite) { add('endurance', 3, 'Sub-elite volume with medium-long runs and threshold work.'); add('norwegian', 2); add('canova', hasFull ? 3 : 0); add('lowfreq', -5); add('hybrid', -4); add('runwalk', -6); }
   /* never rank a style far above the runner's level or current mileage as the best match */
   var lv = lvl === 'new' ? 1 : lvl === 'exp' ? 3 : 2;
   Object.keys(sc).forEach(function (k) { var m = METHODS[k]; if (m.level > lv) sc[k] -= 4 * (m.level - lv); if (mpw < m.minMpw * 0.6) sc[k] -= 3; });
@@ -604,7 +606,12 @@ var MIX_SWAP = {
 function generate(state) {
   var prof = Object.assign(defaultProfile(), state.profile || {});
   setWeekStart(prof.weekStart || 0);
-  var method = applyCtl(METHODS[prof.method] || METHODS.balanced, prof.ctl);
+  var elite = prof.level === 'elite';
+  var baseM = METHODS[prof.method] || METHODS.balanced;
+  /* sub-elite / very experienced: higher peak mileage (about 62 mi for a half, 72 for a marathon in a balanced style), a second key session every week, medium-long runs,
+     up to 7 run days, and long runs up to 22 mi (marathon) or 16 mi (half). Your own plan settings still win. */
+  if (elite) baseM = Object.assign({}, baseM, { quality: Math.max(baseM.quality, 2), mlr: true, longCapFull: Math.max(baseM.longCapFull, 22), longCapHalf: Math.max(baseM.longCapHalf, 16), runs: [Math.max(baseM.runs[0], 5), 7], elite: true });
+  var method = applyCtl(baseM, prof.ctl);
   var start = monday(prof.startDate || today());
   /* a start a few days before the week begins (Fri, Sat or Sun) makes the first week longer instead of
      dragging the plan back to an earlier Monday: those lead-in days join week 1 (an 8-, 9- or 10-day week) */
@@ -628,7 +635,7 @@ function generate(state) {
   var cb = prof.comeback && +prof.comeback.off ? prof.comeback : null;
   if (cb && v0 && prof.recent && prof.recent.time) v0 = v0 * (1 - (cb.off <= 4 ? 0.03 : cb.off <= 8 ? 0.06 : cb.off <= 16 ? 0.1 : 0.15));
   var gv = aEvents.length ? goalVdot(aEvents[0]) : null;
-  if (!v0) v0 = gv ? gv - 3 : prof.level === 'new' && !(+prof.mpw > 5) ? 30 : 38;   /* a true beginner with no pace on file starts around 12:30/mi easy */
+  if (!v0) v0 = elite ? (gv ? gv - 2 : 58) : gv ? gv - 3 : prof.level === 'new' && !(+prof.mpw > 5) ? 30 : 38;   /* a true beginner with no pace on file starts around 12:30/mi easy */
 
   /* assign every week to a block */
   var weeks = [];
@@ -648,17 +655,19 @@ function generate(state) {
     var baseLen = R - specLen - thrLen;
     if (!ev) { baseLen = Math.ceil(R / 2); thrLen = R - baseLen; specLen = 0; }
     var peakTarget = Math.max(+prof.mpw || 8, Math.round(dist.peak * method.peakMult * (prof.volume || 1)));
-    var cap = method.runs[1] * 10 + 4;
-    if (+prof.runDays) cap = Math.min(cap, (+prof.runDays) * 10 + 2);
+    /* sub-elite peaks: about 50 (5K), 55 (10K), 62 (half), 72 (marathon) mi a week in a balanced style, and always some growth over where you are now */
+    if (elite) peakTarget = Math.max(peakTarget, Math.round(({ '5k': 50, '10k': 55, half: 62, full: 72 }[dist.key] || 60) * method.peakMult * (prof.volume || 1)), Math.round((+prof.mpw || 0) * 1.2));
+    var cap = method.runs[1] * (elite ? 13 : 10) + 4;
+    if (+prof.runDays) cap = Math.min(cap, (+prof.runDays) * (elite ? 13 : 10) + (elite ? 4 : 2));
     peakTarget = Math.min(peakTarget, Math.max(cap, +prof.mpw || 8));
     if (method.ctl && +method.ctl.peak) peakTarget = clamp(Math.round(+method.ctl.peak), Math.max(8, +prof.mpw || 8), 120);
-    var longCap = Math.min(dist.longCap, dist.key === 'full' ? method.longCapFull : dist.key === 'half' ? method.longCapHalf : dist.longCap);
+    var longCap = Math.min(dist.longCap + (elite ? 2 : 0), dist.key === 'full' ? method.longCapFull : dist.key === 'half' ? method.longCapHalf : dist.longCap);
     if (method.ctl && +method.ctl.longCap) longCap = Math.min(clamp(+method.ctl.longCap, 6, 24), dist.key === 'full' ? 24 : dist.key === 'half' ? 16 : 14);
     var gvB = ev ? goalVdot(ev) : null;
     var vStart = plannedV.length ? plannedV[plannedV.length - 1] : v0;
     var growth = Math.min(0.11 * L, Math.max(gvB ? gvB - vStart : 0, 0.045 * L));
 
-    var m = firstBlock ? Math.max(6, +prof.mpw || (prof.level === 'new' ? 6 : 10)) : Math.max(8, Math.round((prevPeak || 20) * 0.35));
+    var m = firstBlock ? Math.max(6, +prof.mpw || (prof.level === 'new' ? 6 : elite ? 35 : 10)) : Math.max(8, Math.round((prevPeak || 20) * 0.35));
     /* comeback: start from a share of what you ran before the break (more time off, a smaller share), never below what you run now */
     if (firstBlock && cb && cb.before) m = Math.max(6, +prof.mpw || 0, Math.round(cb.before * (cb.off <= 4 ? 0.7 : cb.off <= 8 ? 0.5 : cb.off <= 16 ? 0.35 : cb.off <= 52 ? 0.25 : 0.2)));
     var m0 = m, lastBuild = m, buildIdx = 0, lastLong = firstBlock ? Math.max(3, +prof.longest || 4) : 6;
@@ -814,7 +823,7 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
   var quality = method.quality;
   if (w.cut || w.phase.key === 'recov' || w.phase.key === 'taper' || w.phase.key === 'race') quality = Math.min(quality, 1);
   if (runs <= 3 && method.key !== 'lowfreq') quality = Math.min(quality, 1);
-  if (w.phase.key === 'base' && ['lowfreq', 'polarized', 'norwegian', 'canova'].indexOf(method.key) < 0) quality = Math.min(quality, 1);
+  if (w.phase.key === 'base' && ['lowfreq', 'polarized', 'norwegian', 'canova'].indexOf(method.key) < 0 && !(method.elite && w.blockWeek >= 2)) quality = Math.min(quality, 1);
   if (method.key === 'norwegian' && !(w.cut || w.phase.key === 'recov' || w.phase.key === 'taper' || w.phase.key === 'race')) {
     /* ease in: one session for the first two weeks, three only with enough days and miles */
     quality = runs >= 6 && m >= 30 ? 3 : runs >= 4 ? 2 : 1;
