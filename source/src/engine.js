@@ -340,6 +340,7 @@ var SESS = {
 /* Session sequences by phase. Cutback weeks use a lighter option. */
 function qualityFor(ctx) {
   var ph = ctx.phase, i = ctx.qi, d = ctx.dist.key, meth = ctx.method, slot = ctx.slot || 0;
+  if (ctx.check) return SESS.tt();   /* a fitness checkpoint on a lighter week */
   if (ctx.cut) {
     if (ph === 'spec' && d === 'half' && ctx.tuneup) return SESS.tuneup();
     if (ph === 'base') return SESS.strides(6);
@@ -777,9 +778,11 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
     var nQ = lay.qDays.length;
     var qMiles = clamp(Math.round(m * (method.key === 'lowfreq' ? 0.28 : method.key === 'norwegian' ? (nQ >= 3 ? 0.13 : 0.16) : method.key === 'canova' && nQ > 1 ? 0.2 : nQ > 1 ? 0.16 : 0.2)), method.key === 'norwegian' ? 4 : 3, method.key === 'canova' ? 14 : method.key === 'norwegian' ? 8 : 10);
     lay.qDays.forEach(function (d, qn) {
-      var ttWeek = w.phase.key === 'thr' && w.qi === 0 && !w.cut && w.firstBlock && qn === 0 && !(prof.recent && prof.recent.time);
+      var ttWeek = w.phase.key === 'thr' && w.qi === 0 && !w.cut && w.firstBlock && qn === 0 && !(prof.recent && prof.recent.time) && !(idx > 0 && weeks[idx - 1].cut && !prof.runWalk);
       var tuneup = w.phase.key === 'spec' && w.cut;
-      var sess = qualityFor({ phase: w.phase.key === 'maint' ? 'base' : w.phase.key, qi: w.qi, dist: w.dist, method: method, cut: w.cut, firstBlock: w.firstBlock && w.phase.key !== 'maint', slot: qn, tt: ttWeek, tuneup: tuneup });
+      /* fitness checkpoint: every lighter (cutback) week in base and threshold blocks gets a 5K time trial, unless a race is near */
+      var check = w.cut && qn === 0 && /^(base|thr|maint)$/.test(w.phase.key) && !prof.runWalk && !(others || []).some(function (e) { return e.date >= addD(w.start, -14) && e.date <= addD(w.end, 7); });
+      var sess = qualityFor({ phase: w.phase.key === 'maint' ? 'base' : w.phase.key, qi: w.qi, dist: w.dist, method: method, cut: w.cut, firstBlock: w.firstBlock && w.phase.key !== 'maint', slot: qn, tt: ttWeek, tuneup: tuneup, check: check });
       var mixK = method.ctl && method.ctl.mix, swap = mixK && MIX_SWAP[mixK];
       if (swap && sess && swap[sess.key] && w.phase.key !== 'race' && w.phase.key !== 'taper' && !(w.phase.key === 'spec' && /goal/.test(sess.key))) sess = swap[sess.key]();
       if (!sess) { lay.roles[d] = lay.roles[d].map(function (r) { return /^quality/.test(r) ? 'easy' : r; }); return; }
@@ -820,6 +823,17 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
       days[d].parts = days[d].parts.filter(function (p) { return p.type === 'strength' || p.type === 'cross'; });
       days[d].parts.unshift({ type: 'race', role: 'race', tuneup: true, title: e.name || dd.label, mi: dd.mi, goal: e.goal, steps: [S('run', { mi: dd.mi, z: 'F', label: 'Race or tune-up effort' })], note: 'Tune-up race (' + (e.priority || 'B') + ' priority). Race it if you feel good, or run it at steady effort as a workout.' });
       if (d + 1 < 7) days[d + 1].parts = days[d + 1].parts.filter(function (p) { return p.type !== 'speed'; });
+      /* sharpen, don't tire: no hard running in the two days before, no heavy legs the day before, an easy shakeout after */
+      [d - 1, d - 2].forEach(function (k) {
+        if (k < 0) return;
+        days[k].parts = days[k].parts.map(function (p) {
+          if (p.type === 'speed') return easyPart('Easy run', Math.max(2, Math.round((p.mi || 4) * 0.6)), 'easy', zz, 'Easy, because of your ' + (e.name || dd.label) + ' on ' + DOW_LONG[d] + '.');
+          if (p.type === 'long' && k === d - 1) return easyPart('Easy run', Math.max(2, Math.round((p.mi || 6) * 0.5)), 'easy', zz, 'Shortened: race on ' + DOW_LONG[d] + '.');
+          return p;
+        }).filter(function (p) { return !(k === d - 1 && p.type === 'strength' && p.key !== 'UB'); });
+        if (!days[k].parts.length) days[k].parts.push(restPart());
+      });
+      if (d + 1 < 7) days[d + 1].parts = days[d + 1].parts.map(function (p) { return p.type === 'easy' ? Object.assign(easyPart('Recovery run', Math.max(2, Math.round((p.mi || 3) * 0.7)), 'recovery', zz, 'Shake out the race legs. Truly easy.'), { role: p.role }) : p; });
     });
     /* lifts */
     var mods = liftRotation(lifts + gymDays.length, runs);
@@ -1514,7 +1528,8 @@ function analyze(plan, st, garmin) {
   function note(level, title, body) { res.notes.push({ level: level, title: title, body: body }); }
   /* 1. the latest fitness anchor: a race or time trial, a lactate threshold test, or a VO2max reading */
   var anchors = [];
-  runs.forEach(function (r) { if (r.seg && r.seg.race && r.seg.mi >= 1 && r.seg.sec > 0) anchors.push({ date: r.date, src: 'race', v: vdotOf(r.seg.mi, r.seg.sec), w: 1, mi: r.seg.mi, sec: r.seg.sec }); });
+  var skipA = st.anchorSkip || {};
+  runs.forEach(function (r) { if (r.seg && r.seg.race && r.seg.mi >= 1 && r.seg.sec > 0 && !skipA[r.date]) anchors.push({ date: r.date, src: 'race', v: vdotOf(r.seg.mi, r.seg.sec), w: 1, mi: r.seg.mi, sec: r.seg.sec }); });
   var fr = fitnessReadings(st, garmin);
   res.readings = fr;
   /* one anchor per source per day; a Garmin threshold reading repeats daily, so only changes count */
@@ -1582,6 +1597,10 @@ function analyze(plan, st, garmin) {
     if (rp - RPE_T[z] >= 1.5) note('warn', 'Slow down your ' + (z === 'T' ? 'tempo' : 'interval') + ' work', 'Your last ' + g.length + ' sessions averaged RPE ' + rp.toFixed(1) + ' against a target of ' + RPE_T[z] + '. Those paces are ' + res.off[z] + ' s/mi slower for now.');
     else if (RPE_T[z] - rp >= 1) note('good', 'You can push your ' + (z === 'T' ? 'tempo' : 'interval') + ' work', 'Recent sessions averaged RPE ' + rp.toFixed(1) + '. Paces move ' + Math.abs(res.off[z]) + ' s/mi faster.');
   });
+  /* 2b. your accepted pace calibration from workout execution (st.paceCal {T, I, TAt, IAt}); a newer race or time trial supersedes it */
+  var pc = st.paceCal || {};
+  ['T', 'I'].forEach(function (z) { if (pc[z] && (!res.anchor || !res.anchor.date || (pc[z + 'At'] || '') >= res.anchor.date)) res.off[z] = r5(clamp((res.off[z] || 0) + pc[z], -30, 40)); });
+  res.paceCal = pc;
   /* 3. easy runs: effort and heart rate */
   var er = runs.filter(function (r) { return (r.ptype === 'easy' || r.ptype === 'recovery' || r.ptype === 'long') && r.pace; }).slice(-5);
   var easyAdj = 0;

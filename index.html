@@ -1127,6 +1127,19 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .tsstrip { display: flex; gap: 3px; height: 10px; margin-top: 10px; }
 .tsstrip i { display: block; border-radius: 999px; min-width: 6px; }
 .tsaxis { display: flex; justify-content: space-between; gap: 8px; font-size: .7rem; color: var(--muted); }
+/* Phase 1: pace suggestion, insight line, new fitness reading, simple view */
+.pcal-row { display: flex; align-items: baseline; gap: 10px; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.pcal-row span { color: var(--muted); font-weight: 700; text-decoration: line-through; text-decoration-color: var(--line2); }
+.pcal-row i { font-style: normal; color: var(--muted); }
+.pcal-row b { font-size: 1.15rem; font-weight: 800; color: var(--green); }
+.pcal-row em { font-style: normal; font-size: .8rem; color: var(--muted); }
+.card.insight { display: flex; align-items: flex-start; gap: 6px; padding: 12px 10px 12px 14px; }
+.ins-main { flex: 1; display: flex; gap: 10px; align-items: flex-start; color: inherit; text-decoration: none; font-size: .9rem; line-height: 1.4; min-width: 0; }
+.ins-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--line2); flex: none; margin-top: 6px; }
+.ins-dot.ok { background: var(--green); } .ins-dot.mid { background: var(--gold); } .ins-dot.low { background: var(--red); }
+.ins-x { border: 0; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; padding: 2px 6px; min-width: 32px; min-height: 32px; }
+.dispt { justify-self: start; font-size: .78rem; margin-top: 6px; }
+.simple .tsbox .ts3, .simple .tsbox .tsstrip, .simple .tsbox .tsaxis, .simple details.infold[data-fold="today-live"] { display: none; }
 
 </style>
 </head>
@@ -1668,6 +1681,7 @@ var SESS = {
 /* Session sequences by phase. Cutback weeks use a lighter option. */
 function qualityFor(ctx) {
   var ph = ctx.phase, i = ctx.qi, d = ctx.dist.key, meth = ctx.method, slot = ctx.slot || 0;
+  if (ctx.check) return SESS.tt();   /* a fitness checkpoint on a lighter week */
   if (ctx.cut) {
     if (ph === 'spec' && d === 'half' && ctx.tuneup) return SESS.tuneup();
     if (ph === 'base') return SESS.strides(6);
@@ -2105,9 +2119,11 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
     var nQ = lay.qDays.length;
     var qMiles = clamp(Math.round(m * (method.key === 'lowfreq' ? 0.28 : method.key === 'norwegian' ? (nQ >= 3 ? 0.13 : 0.16) : method.key === 'canova' && nQ > 1 ? 0.2 : nQ > 1 ? 0.16 : 0.2)), method.key === 'norwegian' ? 4 : 3, method.key === 'canova' ? 14 : method.key === 'norwegian' ? 8 : 10);
     lay.qDays.forEach(function (d, qn) {
-      var ttWeek = w.phase.key === 'thr' && w.qi === 0 && !w.cut && w.firstBlock && qn === 0 && !(prof.recent && prof.recent.time);
+      var ttWeek = w.phase.key === 'thr' && w.qi === 0 && !w.cut && w.firstBlock && qn === 0 && !(prof.recent && prof.recent.time) && !(idx > 0 && weeks[idx - 1].cut && !prof.runWalk);
       var tuneup = w.phase.key === 'spec' && w.cut;
-      var sess = qualityFor({ phase: w.phase.key === 'maint' ? 'base' : w.phase.key, qi: w.qi, dist: w.dist, method: method, cut: w.cut, firstBlock: w.firstBlock && w.phase.key !== 'maint', slot: qn, tt: ttWeek, tuneup: tuneup });
+      /* fitness checkpoint: every lighter (cutback) week in base and threshold blocks gets a 5K time trial, unless a race is near */
+      var check = w.cut && qn === 0 && /^(base|thr|maint)$/.test(w.phase.key) && !prof.runWalk && !(others || []).some(function (e) { return e.date >= addD(w.start, -14) && e.date <= addD(w.end, 7); });
+      var sess = qualityFor({ phase: w.phase.key === 'maint' ? 'base' : w.phase.key, qi: w.qi, dist: w.dist, method: method, cut: w.cut, firstBlock: w.firstBlock && w.phase.key !== 'maint', slot: qn, tt: ttWeek, tuneup: tuneup, check: check });
       var mixK = method.ctl && method.ctl.mix, swap = mixK && MIX_SWAP[mixK];
       if (swap && sess && swap[sess.key] && w.phase.key !== 'race' && w.phase.key !== 'taper' && !(w.phase.key === 'spec' && /goal/.test(sess.key))) sess = swap[sess.key]();
       if (!sess) { lay.roles[d] = lay.roles[d].map(function (r) { return /^quality/.test(r) ? 'easy' : r; }); return; }
@@ -2148,6 +2164,17 @@ function buildWeek(w, idx, weeks, prof, method, others, lastLongs) {
       days[d].parts = days[d].parts.filter(function (p) { return p.type === 'strength' || p.type === 'cross'; });
       days[d].parts.unshift({ type: 'race', role: 'race', tuneup: true, title: e.name || dd.label, mi: dd.mi, goal: e.goal, steps: [S('run', { mi: dd.mi, z: 'F', label: 'Race or tune-up effort' })], note: 'Tune-up race (' + (e.priority || 'B') + ' priority). Race it if you feel good, or run it at steady effort as a workout.' });
       if (d + 1 < 7) days[d + 1].parts = days[d + 1].parts.filter(function (p) { return p.type !== 'speed'; });
+      /* sharpen, don't tire: no hard running in the two days before, no heavy legs the day before, an easy shakeout after */
+      [d - 1, d - 2].forEach(function (k) {
+        if (k < 0) return;
+        days[k].parts = days[k].parts.map(function (p) {
+          if (p.type === 'speed') return easyPart('Easy run', Math.max(2, Math.round((p.mi || 4) * 0.6)), 'easy', zz, 'Easy, because of your ' + (e.name || dd.label) + ' on ' + DOW_LONG[d] + '.');
+          if (p.type === 'long' && k === d - 1) return easyPart('Easy run', Math.max(2, Math.round((p.mi || 6) * 0.5)), 'easy', zz, 'Shortened: race on ' + DOW_LONG[d] + '.');
+          return p;
+        }).filter(function (p) { return !(k === d - 1 && p.type === 'strength' && p.key !== 'UB'); });
+        if (!days[k].parts.length) days[k].parts.push(restPart());
+      });
+      if (d + 1 < 7) days[d + 1].parts = days[d + 1].parts.map(function (p) { return p.type === 'easy' ? Object.assign(easyPart('Recovery run', Math.max(2, Math.round((p.mi || 3) * 0.7)), 'recovery', zz, 'Shake out the race legs. Truly easy.'), { role: p.role }) : p; });
     });
     /* lifts */
     var mods = liftRotation(lifts + gymDays.length, runs);
@@ -2842,7 +2869,8 @@ function analyze(plan, st, garmin) {
   function note(level, title, body) { res.notes.push({ level: level, title: title, body: body }); }
   /* 1. the latest fitness anchor: a race or time trial, a lactate threshold test, or a VO2max reading */
   var anchors = [];
-  runs.forEach(function (r) { if (r.seg && r.seg.race && r.seg.mi >= 1 && r.seg.sec > 0) anchors.push({ date: r.date, src: 'race', v: vdotOf(r.seg.mi, r.seg.sec), w: 1, mi: r.seg.mi, sec: r.seg.sec }); });
+  var skipA = st.anchorSkip || {};
+  runs.forEach(function (r) { if (r.seg && r.seg.race && r.seg.mi >= 1 && r.seg.sec > 0 && !skipA[r.date]) anchors.push({ date: r.date, src: 'race', v: vdotOf(r.seg.mi, r.seg.sec), w: 1, mi: r.seg.mi, sec: r.seg.sec }); });
   var fr = fitnessReadings(st, garmin);
   res.readings = fr;
   /* one anchor per source per day; a Garmin threshold reading repeats daily, so only changes count */
@@ -2910,6 +2938,10 @@ function analyze(plan, st, garmin) {
     if (rp - RPE_T[z] >= 1.5) note('warn', 'Slow down your ' + (z === 'T' ? 'tempo' : 'interval') + ' work', 'Your last ' + g.length + ' sessions averaged RPE ' + rp.toFixed(1) + ' against a target of ' + RPE_T[z] + '. Those paces are ' + res.off[z] + ' s/mi slower for now.');
     else if (RPE_T[z] - rp >= 1) note('good', 'You can push your ' + (z === 'T' ? 'tempo' : 'interval') + ' work', 'Recent sessions averaged RPE ' + rp.toFixed(1) + '. Paces move ' + Math.abs(res.off[z]) + ' s/mi faster.');
   });
+  /* 2b. your accepted pace calibration from workout execution (st.paceCal {T, I, TAt, IAt}); a newer race or time trial supersedes it */
+  var pc = st.paceCal || {};
+  ['T', 'I'].forEach(function (z) { if (pc[z] && (!res.anchor || !res.anchor.date || (pc[z + 'At'] || '') >= res.anchor.date)) res.off[z] = r5(clamp((res.off[z] || 0) + pc[z], -30, 40)); });
+  res.paceCal = pc;
   /* 3. easy runs: effort and heart rate */
   var er = runs.filter(function (r) { return (r.ptype === 'easy' || r.ptype === 'recovery' || r.ptype === 'long') && r.pace; }).slice(-5);
   var easyAdj = 0;
@@ -10162,6 +10194,137 @@ function ASK(o, fn, self, args) {
   askUI(o).then(function (ok) { if (!ok) return; ASKS.pass = fn; try { fn.apply(self, args); } finally { ASKS.pass = null; } });
   return false;
 }
+
+/* ================= Phase 1: close the loop =================
+   - workout execution feeds a pace suggestion you accept or keep
+   - Today's one-line insight from yesterday's (or today's) key session
+   - a new race or time-trial result shows what it changed, and you can keep your old paces
+   - simple or full display ================= */
+
+/* ---------- execution history for key sessions ---------- */
+function keyExecutions(daysBack) {
+  var out = [], t = App.today;
+  for (var i = 0; i <= daysBack; i++) {
+    var d = E.addD(t, -i), l = logOf(d), gid = l.run && l.run.gid; if (!gid) continue;
+    var laps = lapsFor(gid); if (!laps) continue;
+    var day = dayOf(d), p = day && day.parts.filter(function (x) { return (x.type === 'speed' || x.type === 'long') && x.steps; })[0];
+    if (!p) continue;
+    var ex = null; try { ex = E.execution(p, _zonesAt7(d), laps); } catch (e) { ex = null; }
+    if (!ex) continue;
+    var byZ = {}, hrZ = {}, zz = _zonesAt7(d) || {};
+    ex.rows.forEach(function (r) {
+      if (!r.target || !r.pace || /WARMUP|COOLDOWN|RECOVERY|REST/.test(r.type) || (r.zone !== 'T' && r.zone !== 'I')) return;
+      var dz = r.pace < r.target[0] ? r.pace - r.target[0] : r.pace > r.target[1] ? r.pace - r.target[1] : 0;
+      (byZ[r.zone] = byZ[r.zone] || []).push(dz);
+      if (r.hr) (hrZ[r.zone] = hrZ[r.zone] || []).push(r.hr);
+    });
+    /* faster than the range but with heart rate above the zone isn't fitness, it's over-reaching */
+    var hot = {}; Object.keys(hrZ).forEach(function (z) { var top = zz.hr && zz.hr[z] && zz.hr[z][1], m = hrZ[z].reduce(function (a, b) { return a + b; }, 0) / hrZ[z].length; hot[z] = !!(top && m > top + 2); });
+    out.push({ date: d, p: p, ex: ex, byZ: byZ, hot: hot, tt: !!p.tt });
+  }
+  return out;   /* newest first */
+}
+var ZNAME = { T: 'threshold', I: 'interval' };
+/* two recent sessions in a zone that agree: both clearly faster than the range and mostly on target, or both clearly slower and mostly off */
+function paceSuggestion() {
+  var pc = st().paceCal || {}, seen = st().seen || {}, xs = keyExecutions(28).filter(function (x) { return !x.tt; });
+  var out = null;
+  ['T', 'I'].forEach(function (z) {
+    if (out) return;
+    var got = xs.filter(function (x) { return x.byZ[z] && x.byZ[z].length >= 2 && (!pc[z + 'At'] || x.date > pc[z + 'At']); }).slice(0, 2);
+    if (got.length < 2) return;
+    var avg = got.map(function (x) { return x.byZ[z].reduce(function (a, b) { return a + b; }, 0) / x.byZ[z].length; });
+    var key = 'pcal:' + z + ':' + got[0].date; if (seen[key]) return;
+    var fast = avg.every(function (v) { return v <= -3; }) && got.every(function (x) { return !x.hot[z]; });
+    var slow = avg.every(function (v) { return v >= 5; }) && got.every(function (x) { return (x.ex.score || 0) < 70; });
+    if (!fast && !slow) return;
+    var m = Math.abs((avg[0] + avg[1]) / 2), step = Math.min(10, Math.max(5, Math.round(m / 5) * 5));
+    out = { z: z, delta: fast ? -step : step, fast: fast, key: key, last: got[0].date, avg: Math.round(m), titles: got.map(function (x) { return fmtD(x.date, { month: 'short', day: 'numeric' }); }) };
+  });
+  return out;
+}
+function paceSuggestionCard() {
+  var s = paceSuggestion(); if (!s) return '';
+  var zz = zonesAt(App.today), cur = zz && zz[s.z], nxt = cur ? [cur[0] + s.delta, cur[1] + s.delta] : null;
+  return '<section class="card offer pcal"><div class="eyebrow">' + (s.fast ? 'You\'re ahead of your paces' : 'Your paces look too quick') + '</div>' +
+    '<h3>' + (s.fast ? 'Speed up' : 'Ease') + ' your ' + ZNAME[s.z] + ' paces by ' + Math.abs(s.delta) + '&nbsp;s/mi?</h3>' +
+    '<p class="small muted">Your last two ' + ZNAME[s.z] + ' sessions (' + esc(s.titles[1]) + ' and ' + esc(s.titles[0]) + ') ran about ' + s.avg + ' s/mi ' + (s.fast ? 'faster than the fast end of the range, with heart rate in the zone.' : 'slower than the range, with most reps off target.') + '</p>' +
+    (cur ? '<div class="pcal-row"><span>' + pace(cur[0]) + '–' + pace(cur[1]) + '</span><i aria-hidden="true">→</i><b>' + pace(nxt[0]) + '–' + pace(nxt[1]) + '</b><em>/mi</em></div>' : '') +
+    '<div class="btns"><button class="btn primary sm" data-act="pcal-yes" data-arg="' + jattr(s) + '">Update paces</button><button class="btn sm ghost" data-act="pcal-no" data-arg="' + jattr({ key: s.key }) + '">Keep my paces</button></div></section>';
+}
+ACTIONS['pcal-yes'] = function (a) {
+  Store.editMany([['paceCal'], ['seen', a.key]], function (S) { S.paceCal = Object.assign({}, S.paceCal || {}); S.paceCal[a.z] = (S.paceCal[a.z] || 0) + a.delta; S.paceCal[a.z + 'At'] = a.last; S.seen = S.seen || {}; S.seen[a.key] = 'yes'; });
+  toast((a.delta < 0 ? 'Faster ' : 'Easier ') + ZNAME[a.z] + ' paces from your next session'); if (watchOn && watchOn()) try { watchSoon(); } catch (e) {}
+};
+ACTIONS['pcal-no'] = function (a) { Store.edit('seen', a.key, function (S) { S.seen = S.seen || {}; S.seen[a.key] = 'kept'; }); toast('Paces kept'); };
+ACTIONS['pcal-reset'] = function () { Store.edit('paceCal', null, function (S) { S.paceCal = {}; }); toast('Pace adjustments cleared'); };
+
+/* ---------- one-line insight from the latest key session ---------- */
+function insightCard() {
+  var xs = keyExecutions(1); if (!xs.length) return '';
+  var x = xs[0], ex = x.ex, when = x.date === App.today ? 'Today\'s' : 'Yesterday\'s';
+  if (st().seen && st().seen['ins:' + x.date]) return '';
+  var line = ex.of ? ex.hit + ' of ' + ex.of + ' work laps on target' + (ex.score != null ? ' (' + ex.score + '%)' : '') : 'splits are in';
+  var all = []; Object.keys(x.byZ).forEach(function (z) { all = all.concat(x.byZ[z]); });
+  var dzm = all.length ? Math.round(all.reduce(function (a, b) { return a + b; }, 0) / all.length) : 0;
+  if (ex.of && dzm <= -4) line = ex.hit + ' of ' + ex.of + ' work laps in range: about ' + (-dzm) + ' s/mi faster than planned';
+  else if (ex.of && dzm >= 5) line = ex.hit + ' of ' + ex.of + ' work laps in range: about ' + dzm + ' s/mi slower than planned';
+  var extra = dzm <= -4 ? (x.hot && Object.keys(x.hot).some(function (z) { return x.hot[z]; }) ? 'Heart rate ran above the zone, so hold the planned pace next time.' : 'Heart rate stayed in the zone, a sign of new fitness.') : ex.fade != null && ex.fade > 8 ? 'The second half faded ' + ex.fade + ' s/mi: start the first reps a touch slower next time.' : ex.fade != null && ex.fade < -5 ? 'You finished stronger than you started. Well paced.' : (ex.score != null && ex.score >= 80 ? 'Right where it should be.' : ex.score != null && ex.score < 50 ? 'Off target. Heat, hills or tired legs? Check the laps.' : '');
+  if (x.tt) extra = 'Your time trial result updates your paces. See below.';
+  return '<section class="card offer insight"><a class="ins-main" href="#/day/' + x.date + '"><span class="ins-dot ' + (dzm <= -4 ? 'ok' : ex.score == null ? '' : ex.score >= 80 ? 'ok' : ex.score >= 50 ? 'mid' : 'low') + '" aria-hidden="true"></span><span><b>' + when + ' ' + esc(x.p.title) + ':</b> ' + line + '. ' + extra + '</span></a>' +
+    '<button class="ins-x" data-act="ins-hide" data-arg="' + jattr({ d: x.date }) + '" aria-label="Hide">×</button></section>';
+}
+ACTIONS['ins-hide'] = function (a) { Store.edit('seen', 'ins:' + a.d, function (S) { S.seen = S.seen || {}; S.seen['ins:' + a.d] = 1; }); };
+
+/* ---------- a new race or time trial: show what changed, you decide ---------- */
+function anchorCard() {
+  var an = App.an, r = an && an.result; if (!r || r.src !== 'race' || !r.date) return '';
+  if (E.diffD(r.date, App.today) > 10 || (st().seen || {})['anc:' + r.date]) return '';
+  var alt = null;
+  try { var s2 = JSON.parse(JSON.stringify(st())); s2.anchorSkip = Object.assign({}, s2.anchorSkip || {}); s2.anchorSkip[r.date] = 1; alt = E.analyze(App.plan, s2, Store.garmin); } catch (e) { alt = null; }
+  var w = E.weekOf(App.plan, App.today) || App.plan.weeks[0];
+  var zNew = E.zonesFor(App.plan, w, an), zOld = alt ? E.zonesFor(App.plan, w, alt) : null;
+  var row = function (k, lab) { return zOld && zOld[k] && zNew[k] ? '<tr><td>' + lab + '</td><td class="num">' + pace(zOld[k][0]) + '</td><td class="num"><b>' + pace(zNew[k][0]) + '</b></td></tr>' : ''; };
+  var faster = zOld && zNew.T && zOld.T ? zNew.T[0] < zOld.T[0] : true;
+  return '<section class="card offer anc"><div class="eyebrow">New fitness reading</div><h3>' + (r.sec ? E.clock(r.sec) : '') + ' ' + (r.mi ? (Math.round(r.mi * 10) / 10) + ' mi ' : '') + 'on ' + fmtD(r.date, { weekday: 'short', month: 'short', day: 'numeric' }) + (faster ? ' moved your paces faster' : ' moved your paces slower') + '</h3>' +
+    (zOld ? '<div class="scroll"><table class="t fit" style="margin-top:6px"><thead><tr><th>Pace</th><th class="num">Before</th><th class="num">Now</th></tr></thead><tbody>' + row('E', 'Easy (fast end)') + row('T', 'Threshold') + row('I', 'Interval') + '</tbody></table></div>' : '') +
+    '<p class="small muted">Races and time trials are the best guide to your fitness, so the new paces are already in use. If the conditions were unusual (heat, hills, sick, a short course), keep the old ones.</p>' +
+    '<div class="btns"><button class="btn primary sm" data-act="anc-yes" data-arg="' + jattr({ d: r.date }) + '">Use new paces</button><button class="btn sm ghost" data-act="anc-no" data-arg="' + jattr({ d: r.date }) + '">Keep my old paces</button></div></section>';
+}
+ACTIONS['anc-yes'] = function (a) { Store.edit('seen', 'anc:' + a.d, function (S) { S.seen = S.seen || {}; S.seen['anc:' + a.d] = 1; }); toast('New paces in use'); };
+ACTIONS['anc-no'] = function (a) { Store.editMany([['anchorSkip', a.d], ['seen', 'anc:' + a.d]], function (S) { S.anchorSkip = S.anchorSkip || {}; S.anchorSkip[a.d] = 1; S.seen = S.seen || {}; S.seen['anc:' + a.d] = 1; }); toast('Old paces kept. The result stays in your log.'); };
+
+var _today12 = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today12(), add = '';
+  try { add = anchorCard() + paceSuggestionCard() + insightCard(); } catch (e) { console.warn(e); }
+  if (!add) return h;
+  var i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + add + h.slice(i) : h + add;
+};
+/* the same suggestion on the day page of the session it came from */
+var _day12 = VIEWS.day;
+VIEWS.day = function () {
+  var h = _day12(), d = App.args[0] || App.today, s = null; try { s = paceSuggestion(); } catch (e) { s = null; }
+  return s && s.last === d ? h + paceSuggestionCard() : h;
+};
+
+/* ---------- simple or full display ---------- */
+function displayMode() { var p = st().prefs || {}; return p.display || ((st().profile || {}).level === 'new' ? 'simple' : 'full'); }
+var _render12 = render;
+render = function () { try { document.body.classList.toggle('simple', displayMode() === 'simple'); } catch (e) {} return _render12.apply(this, arguments); };
+var _tsh12 = trainingStatusHTML;
+trainingStatusHTML = function (date) {
+  var h = _tsh12(date); if (!h) return h;
+  var simple = displayMode() === 'simple';
+  var t = '<button class="linkbtn dispt" data-act="display-toggle">' + (simple ? 'Show all numbers' : 'Simple view') + '</button>';
+  return h.replace(/<\/div>$/, t + '</div>');
+};
+ACTIONS['display-toggle'] = function () {
+  var nx = displayMode() === 'simple' ? 'full' : 'simple';
+  Store.edit('prefs', 'display', function (S) { S.prefs = S.prefs || {}; S.prefs.display = nx; });
+  toast(nx === 'simple' ? 'Simple view: the essentials only' : 'Showing all numbers');
+};
+App.p12 = { keyExecutions: keyExecutions, paceSuggestion: paceSuggestion };
 
 
 /* ---------------- Garmin polling ---------------- */

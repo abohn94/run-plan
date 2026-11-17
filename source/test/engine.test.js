@@ -133,7 +133,7 @@ console.log(bad ? 'FAILURES ' + bad : 'ALL OK (week tools)');
   // overrides
   const s5 = JSON.parse(JSON.stringify(seed)); const q5 = E.generate(s5); const w5 = q5.weeks[6]; const ed5 = w5.days.find(d => d.parts.some(p => p.type === 'easy'));
   const rd5 = w5.days.find(d => d.parts.every(p => p.type === 'rest'));
-  s5.overrides = { [ed5.date]: { action: 'add', mi: 1.5 } }; if (rd5) s5.overrides[rd5.date] = { action: 'addday', add: { run: 3, lift: 'UB' } };
+  s5.prefs = Object.assign({}, s5.prefs, { shinCap: false }); s5.overrides = { [ed5.date]: { action: 'add', mi: 1.5 } }; if (rd5) s5.overrides[rd5.date] = { action: 'addday', add: { run: 3, lift: 'UB' } };
   E.adapt(q5, s5, E.analyze(q5, s5, null));
   ok(q5.weeks[6].days[ed5.i].parts.some(p => p.note && /Longer/.test(p.note)), 'add miles override');
   if (rd5) ok(q5.weeks[6].days[rd5.i].parts.filter(p => p.added).length === 2, 'addday adds run+lift');

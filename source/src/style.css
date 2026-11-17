@@ -1106,3 +1106,16 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .tsstrip { display: flex; gap: 3px; height: 10px; margin-top: 10px; }
 .tsstrip i { display: block; border-radius: 999px; min-width: 6px; }
 .tsaxis { display: flex; justify-content: space-between; gap: 8px; font-size: .7rem; color: var(--muted); }
+/* Phase 1: pace suggestion, insight line, new fitness reading, simple view */
+.pcal-row { display: flex; align-items: baseline; gap: 10px; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.pcal-row span { color: var(--muted); font-weight: 700; text-decoration: line-through; text-decoration-color: var(--line2); }
+.pcal-row i { font-style: normal; color: var(--muted); }
+.pcal-row b { font-size: 1.15rem; font-weight: 800; color: var(--green); }
+.pcal-row em { font-style: normal; font-size: .8rem; color: var(--muted); }
+.card.insight { display: flex; align-items: flex-start; gap: 6px; padding: 12px 10px 12px 14px; }
+.ins-main { flex: 1; display: flex; gap: 10px; align-items: flex-start; color: inherit; text-decoration: none; font-size: .9rem; line-height: 1.4; min-width: 0; }
+.ins-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--line2); flex: none; margin-top: 6px; }
+.ins-dot.ok { background: var(--green); } .ins-dot.mid { background: var(--gold); } .ins-dot.low { background: var(--red); }
+.ins-x { border: 0; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; padding: 2px 6px; min-width: 32px; min-height: 32px; }
+.dispt { justify-self: start; font-size: .78rem; margin-top: 6px; }
+.simple .tsbox .ts3, .simple .tsbox .tsstrip, .simple .tsbox .tsaxis, .simple details.infold[data-fold="today-live"] { display: none; }
