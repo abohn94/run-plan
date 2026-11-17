@@ -212,8 +212,8 @@ function seriesFor(id, cb) {
 /* series from laps when there's no chart data: one point per lap, drawn as steps */
 function seriesFromLaps(laps) {
   if (!laps || laps.length < 2) return null;
-  var d = 0, s = { d: [], sp: [], hr: [], cad: [], gct: [], vo: [], vr: [], sl: [], pw: [] };
-  laps.forEach(function (l) { if (!(l.d > 0)) return; d += l.d; s.d.push(d); s.sp.push(l.sp || null); s.hr.push(l.hr || null); s.cad.push(l.cad || null); s.gct.push(l.gct || null); s.vo.push(l.vo || null); s.vr.push(l.vr || null); s.sl.push(l.sl || null); s.pw.push(l.pw || null); });
+  var d = 0, t = 0, s = { d: [], t: [], sp: [], hr: [], cad: [], gct: [], vo: [], vr: [], sl: [], pw: [] };
+  laps.forEach(function (l) { if (!(l.d > 0)) return; d += l.d; t += l.t || 0; s.d.push(d); s.t.push(t); s.sp.push(l.sp || null); s.hr.push(l.hr || null); s.cad.push(l.cad || null); s.gct.push(l.gct || null); s.vo.push(l.vo || null); s.vr.push(l.vr || null); s.sl.push(l.sl || null); s.pw.push(l.pw || null); });
   return { s: s, laps: true };
 }
 var RCH = {};
@@ -227,15 +227,21 @@ var RCH_DEF = [
   ['vo', 'Vertical oscillation', function (v) { return inch(v); }, 'in', 'var(--green)'],
   ['vr', 'Vertical ratio', function (v) { return v.toFixed(1); }, '%', 'var(--green)'],
   ['pw', 'Power', function (v) { return Math.round(v); }, 'W', 'var(--gold)'],
-  ['stam', 'Stamina', function (v) { return Math.round(v); }, '%', 'var(--blue)']
+  ['stam', 'Stamina', function (v) { return Math.round(v); }, '%', 'var(--blue)'],
+  ['tmp', 'Temperature', function (v) { return Math.round(v * 9 / 5 + 32); }, '°F', 'var(--red)']
 ];
+function clockS(sec) { sec = Math.round(sec); var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); }
 function smooth(a, n) { return a.map(function (_, i) { var t = 0, c = 0; for (var j = Math.max(0, i - n); j <= Math.min(a.length - 1, i + n); j++) if (a[j] != null) { t += a[j]; c++; } return c ? t / c : null; }); }
-function runChartsHTML(id, ser) {
+/* opt: { axis: 'd' (miles) or 't' (moving time), targets: [{ a, b, lo, hi }] pace bands in axis units, band: function (k) -> [lo, hi] for coloring form points, only: [keys] } */
+function runChartsHTML(id, ser, opt) {
   if (!ser || !ser.s || !ser.s.d) return '';
-  var s = ser.s, xs = s.d.map(function (m) { return m / E.MI_M; }), tot = xs[xs.length - 1] || 1, W = 340, H = 78, step = !!ser.laps;
-  RCH[id] = { x: xs, tot: tot, k: {} };
+  opt = opt || {};
+  var s = ser.s, byT = opt.axis === 't' && s.t && s.t.length === s.d.length, xs = byT ? s.t.slice() : s.d.map(function (m) { return m / E.MI_M; }), tot = xs[xs.length - 1] || 1, W = 340, H = 78, step = !!ser.laps;
+  var fx = byT ? function (v) { return clockS(v); } : function (v) { return mi(v) + ' mi'; };
+  RCH[id] = { x: xs, tot: tot, k: {}, fx: fx };
   var out = '';
   RCH_DEF.forEach(function (def) {
+    if (opt.only && opt.only.indexOf(def[0]) < 0) return;
     var k = def[0], raw = s[k]; if (!raw || raw.filter(function (v) { return v != null; }).length < 2) return;
     var v = k === 'sp' ? raw.map(function (x) { return x != null && x > 0.8 ? x : null; }) : raw.slice();
     if (!step && k !== 'el' && k !== 'stam') v = smooth(v, k === 'sp' ? 3 : 2);
@@ -254,18 +260,24 @@ function runChartsHTML(id, ser) {
       else path += (pen ? 'L' : 'M') + Xe(i).toFixed(1) + ' ' + Y(val).toFixed(1);
       pen = true;
     });
-    var area = k === 'el' ? path + 'L' + W + ' ' + H + 'L0 ' + H + 'Z' : '';
+    var area = k === 'el' || k === 'stam' ? path + 'L' + W + ' ' + H + 'L0 ' + H + 'Z' : '';
+    /* the planned pace band on the pace chart */
+    var tg = k === 'sp' && opt.targets ? opt.targets.map(function (r) { var y1 = Y(E.MI_M / r.lo), y2 = Y(E.MI_M / r.hi); return '<rect x="' + (r.a / tot * W).toFixed(1) + '" y="' + Math.min(y1, y2).toFixed(1) + '" width="' + Math.max(1, (r.b - r.a) / tot * W).toFixed(1) + '" height="' + Math.max(1.5, Math.abs(y2 - y1)).toFixed(1) + '" fill="var(--ink)" opacity=".13"/>'; }).join('') : '';
+    /* form points colored against what's typical for your body: green inside, amber outside, red well outside */
+    var band = opt.band && !step && /^(cad|gct|vo|vr|sl)$/.test(k) ? opt.band(k) : null, dots = '';
+    if (band) { var bw = band[1] - band[0]; v.forEach(function (val, i) { if (val == null) return; var c = val >= band[0] && val <= band[1] ? 'var(--green)' : (val < band[0] - bw * 0.5 || val > band[1] + bw * 0.5) ? 'var(--red)' : 'var(--amber)'; dots += '<circle cx="' + Xe(i).toFixed(1) + '" cy="' + Y(val).toFixed(1) + '" r="1.7" fill="' + c + '"/>'; }); }
+    var mx = /^(hr|cad|pw|sp)$/.test(k) ? Math.max.apply(null, (k === 'sp' ? raw.filter(function (x) { return x != null && x > 0.8; }) : raw.filter(function (x) { return x != null; }))) : null;
     RCH[id].k[k] = v;
-    var sumH = k === 'el' ? '+' + Math.round(v.reduce(function (t, x, i2) { return i2 && x != null && v[i2 - 1] != null && x > v[i2 - 1] ? t + x - v[i2 - 1] : t; }, 0) * 3.28084) + ' <small>ft gain</small>' : k === 'stam' ? 'end ' + esc(def[2](ok[ok.length - 1])) + ' <small>' + def[3] + '</small>' : 'avg ' + esc(def[2](avg)) + ' <small>' + def[3] + '</small>';
+    var sumH = opt.over && opt.over[k] ? opt.over[k] : k === 'el' ? '+' + Math.round(v.reduce(function (t, x, i2) { return i2 && x != null && v[i2 - 1] != null && x > v[i2 - 1] ? t + x - v[i2 - 1] : t; }, 0) * 3.28084) + ' <small>ft gain</small>' : k === 'stam' ? 'end ' + esc(def[2](ok[ok.length - 1])) + ' <small>' + def[3] + '</small>' : 'avg ' + esc(def[2](avg)) + ' <small>' + def[3] + (mx ? ' · ' + (k === 'sp' ? 'best ' : 'max ') + esc(def[2](mx)) : '') + '</small>';
     out += '<div class="rch" data-k="' + k + '"><div class="rch-h"><span>' + def[1] + '</span><span class="rch-v" data-sum="' + esc(sumH) + '">' + sumH + '</span></div>' +
       '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" class="rch-svg" aria-label="' + def[1] + ' over the run">' +
-      (area ? '<path d="' + area + '" fill="' + def[4] + '" opacity=".18"/>' : '') +
+      tg + (area ? '<path d="' + area + '" fill="' + def[4] + '" opacity=".18"/>' : '') +
       (k !== 'el' && k !== 'stam' ? '<line x1="0" x2="' + W + '" y1="' + Y(avg).toFixed(1) + '" y2="' + Y(avg).toFixed(1) + '" stroke="var(--line2)" stroke-dasharray="3 3"/>' : '') +
-      '<path d="' + path + '" fill="none" stroke="' + def[4] + '" stroke-width="1.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+      '<path d="' + path + '" fill="none" stroke="' + (dots ? 'var(--line2)' : def[4]) + '" stroke-width="' + (dots ? 1 : 1.8) + '" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' + dots +
       '<line class="rch-cur" x1="-5" x2="-5" y1="0" y2="' + H + '" stroke="var(--ink)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg></div>';
   });
   if (!out) return '';
-  var ticks = [0, 0.25, 0.5, 0.75, 1].map(function (f) { return '<span>' + (f ? mi(tot * f) : '0') + '</span>'; }).join('');
+  var ticks = [0, 0.25, 0.5, 0.75, 1].map(function (f) { return '<span>' + (byT ? clockS(tot * f) : f ? mi(tot * f) : '0') + '</span>'; }).join('');
   return '<div class="rcharts" data-id="' + esc(id) + '">' + out + '<div class="rch-x">' + ticks + '</div><p class="tiny muted rch-at">' + (step ? 'Per lap. Second-by-second charts appear within the hour for new runs.' : 'Drag across a chart to read every line at that point.') + '</p></div>';
 }
 /* drag across any chart: every chart shows its value at that distance */
@@ -280,7 +292,7 @@ function rchMove(e) {
     var ln = c.querySelector('.rch-cur'); ln.setAttribute('x1', (f * 340).toFixed(1)); ln.setAttribute('x2', (f * 340).toFixed(1));
     c.querySelector('.rch-v').innerHTML = v != null ? esc(def[2](v)) + ' <small>' + def[3] + '</small>' : '–';
   });
-  var t = box.querySelector('.rch-at'); if (t) t.textContent = 'At ' + mi(at) + ' mi';
+  var t = box.querySelector('.rch-at'); if (t) t.textContent = 'At ' + (R.fx ? R.fx(R.x[i]) : mi(at) + ' mi');
 }
 function rchEnd(e) {
   var box = e.target && e.target.classList && e.target.classList.contains('rcharts') ? e.target : null; if (!box) return;
@@ -384,8 +396,8 @@ VIEWS.activity = function () {
     var cached = SERIES[String(id)], ser = cached || seriesFromLaps(lapsFor(id));
     ch = '<section class="card rchcard" id="rch-' + esc(id) + '"><h3>Charts</h3>' + (runChartsHTML(String(id), ser) || '<p class="small muted">Charts appear once Garmin sends this run\'s details (usually within the hour).</p>') + '</section>';
     if (cached === undefined) seriesFor(id, function (s) {
-      if (!s) return; var el = document.getElementById('rch-' + id); if (!el) return;
-      el.innerHTML = '<h3>Charts</h3>' + runChartsHTML(String(id), s);
+      if (!s || App.view !== 'activity' || App.args[0] !== a.key) return;
+      if ($('#sheet').hidden) render();
     });
   }
   /* review at the very top (under the title), then the tiles, charts and form; Garmin's full stats table stays below */

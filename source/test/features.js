@@ -45,7 +45,7 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   await shot('06-shoes'); log('shoes:', (await text()).replace(/\n/g, ' ').slice(0, 600));
   await pg.click('.shoecard'); await pg.waitForTimeout(300); await shot('07-shoe', true);
   // assign 'none' on the first run in shoe page
-  const runHref = await pg.$eval('.actrow', a => a.getAttribute('href')); await go(runHref, 500); await pg.click('[data-act=set-gear] >> text=None'); await pg.waitForTimeout(300); log('gear set:', JSON.stringify(await pg.evaluate(() => window.Store.state.gear)).slice(0, 80));
+  const runHref = await pg.$eval('.actrow', a => a.getAttribute('href')); await go(runHref + '/gear', 500); await pg.click('[data-act=set-gear] >> text=None'); await pg.waitForTimeout(300); log('gear set:', JSON.stringify(await pg.evaluate(() => window.Store.state.gear)).slice(0, 80));
   // fitness page + metrics sheet
   await go('#/fitness'); await shot('11-fitness', true);
   await pg.click('text=Update readings'); await pg.fill('#m-vo2', '55'); await pg.fill('#m-lthr', '178'); await pg.fill('#m-lt', '7:16'); await pg.fill('#m-pw', '465'); await pg.fill('#m-wkg', '5.16'); await pg.click('[data-act=sheet-save]'); await pg.waitForTimeout(600);

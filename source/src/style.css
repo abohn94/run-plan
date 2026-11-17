@@ -1224,3 +1224,23 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .rch-x { display: flex; justify-content: space-between; font-size: .7rem; color: var(--dim); margin-top: 4px; font-variant-numeric: tabular-nums; }
 .rch-at { margin-top: 6px; min-height: 1.2em; }
 .fform td:last-child { width: 14px; } .fdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; } .fdot.ok { background: var(--green); } .fdot.mid { background: var(--amber); }
+/* run page tabs */
+.runtabs { margin: 0 0 12px; } .runtabs button { font-size: .8rem; padding: 9px 2px; }
+.runtab > * + * { margin-top: 12px; }
+.stats .stsec + .stsec { margin-top: 14px; }
+.stsec h4 { margin: 0 0 4px; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.strow { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+.strow span { color: var(--muted); } .strow b { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.lapf { margin: 8px 0 4px; }
+.laptab td, .laptab th { padding: 8px 4px; } .laptab th:first-child, .laptab td:first-child { width: 22px; }
+.laprow { cursor: pointer; } .laprow.lother td { color: var(--muted); } .laprow.lother td b { color: var(--muted); font-weight: 600; }
+.laprow.open td { background: var(--card2); } .lapdet td { background: var(--card2); padding-top: 0; }
+.lapgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 4px 0 8px; } .lapgrid span { display: grid; } .lapgrid small { color: var(--muted); font-size: .7rem; } .lapgrid b { font-size: .86rem; }
+.lok { color: var(--green); font-style: normal; margin-left: 4px; font-size: .75rem; } .loff { color: var(--amber); font-style: normal; margin-left: 4px; }
+.laptot td { border-top: 1px solid var(--line2); }
+.rchx { margin-bottom: 12px; }
+.zsec + .zsec { margin-top: 16px; } .zsec h4 { margin: 0 0 8px; font-size: .95rem; }
+.zrow { margin-top: 8px; } .zbar { height: 8px; background: var(--card2); border-radius: 99px; margin-top: 4px; overflow: hidden; } .zbar i { display: block; height: 100%; border-radius: 99px; }
+.te { margin-top: 10px; } .tebar { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 6px; }
+.tebar i { height: 6px; border-radius: 3px; } .tebar b { position: absolute; top: -4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--ink); border: 3px solid var(--card); }
+.rwbar { display: flex; height: 12px; border-radius: 99px; overflow: hidden; margin-top: 8px; background: var(--card2); } .rwbar i { display: block; height: 100%; }
