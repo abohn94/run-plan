@@ -376,7 +376,7 @@ function partDetail(x, date, w, zz, l, idx) {
   var t = x.type === 'recovery' ? 'recovery' : x.type;
   var head = '<div class="spread"><div><div class="eyebrow" style="color:var(--c)">' + (TYPE_LABEL[x.type] || x.type) + '</div><h2 style="margin-top:2px">' + esc(x.title) + '</h2></div><div style="text-align:right">' +
     (E.isRun(x) ? '<b style="font-size:1.8rem;font-weight:800">' + mi(x.mi) + '</b><span class="muted small"> mi</span>' : x.min ? '<b style="font-size:1.8rem;font-weight:800">' + x.min + '</b><span class="muted small"> min</span>' : '') +
-    (estText(x, zz) && E.isRun(x) ? '<div class="tiny muted mono">≈ ' + estText(x, zz) + '</div>' : '') + '</div></div>';
+    (estText(x, zz) && E.isRun(x) ? '<div class="tiny muted mono">' + (x.type === 'race' || x.timed ? '' : '≈ ') + estText(x, zz) + '</div>' : '') + '</div></div>';
   var body = '';
   if (x.moved) body += '<div class="banner info small">Moved here from ' + E.fmtDate(x.moved, { weekday: 'long' }) + '.</div>';
   if (x.changed && x.from) body += '<div class="banner warn small">Adjusted from: ' + esc(x.from) + '.</div>';

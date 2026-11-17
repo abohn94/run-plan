@@ -62,7 +62,7 @@ VIEWS.progress = function () {
 function formLine() {
   var w = App.week; if (!w || !/taper|race/.test(w.phase.key)) return '';
   var s = ffSeries(30); if (!s.length) return ''; var x = s[s.length - 1]; if (x.ctl < 1) return '';
-  return '<section class="card offer insight"><a class="ins-main" href="#/progress/performance"><span class="ins-dot ' + (x.tsb >= 0 ? 'ok' : 'mid') + '" aria-hidden="true"></span><span><b>Form ' + (x.tsb >= 0 ? '+' : '') + Math.round(x.tsb) + ':</b> ' + formWord(x.tsb, x.ctl) + '. The taper turns fatigue into freshness.</span></a></section>';
+  return '<section class="card offer insight"><a class="ins-main" href="#/progress/performance"><span class="ins-dot ' + (x.tsb >= 0 ? 'ok' : 'mid') + '" aria-hidden="true"></span><span><b>Form ' + (x.tsb >= 0 ? '+' : '') + Math.round(x.tsb) + ':</b> ' + (x.tsb < 0 ? 'freshness is still building. Keep these last runs short and easy and it rises every day.' : formWord(x.tsb, x.ctl) + '. The taper did its job.') + '</span></a></section>';
 }
 var _today15b = VIEWS.today;
 VIEWS.today = function () { var h = _today15b(), c = ''; try { c = formLine(); } catch (e) { c = ''; } if (!c) return h; var i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c; };

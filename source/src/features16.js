@@ -10,7 +10,7 @@ function raceFuel(ev, rp) {
     var mile = rp ? (rp.segs.filter(function (s) { return s.cum <= t; }).length) : Math.round(t / total * d.mi);
     out.push({ t: t, mile: Math.max(1, mile) });
   }
-  return { list: out, gHr: gHr, gels: out.length, carbs: out.length * gel };
+  return { list: out, gHr: Math.round(out.length * gel / (total / 3600)), aim: gHr, gels: out.length, carbs: out.length * gel };
 }
 function carbLoad(ev) {
   var d = E.distOf(ev), kg = +(st().profile || {}).weightKg || 0; if (d.mi < 13 || !kg) return null;
@@ -26,7 +26,7 @@ function raceMorning(ev) {
     [start - 120, 'Last big drink', '400–600 ml of water or a sports drink, then sips.'],
     [start - 75, 'Arrive', 'Bag check, bathroom line, pin the bib.'],
     [start - 15 - wu, 'Warm up', short ? '10–15 min easy jog, drills, then 4 × 20 s strides at race pace.' : d.key === 'full' ? '5–10 min of easy jogging and a few short strides. Save everything else.' : '10 min easy jog, then 3 × 20 s strides.'],
-    [start - 15, 'Corral', 'Gel or chews now for a half or full. Stay warm in a throwaway layer.'],
+    [start - 15, 'Corral', (short ? '' : 'A gel or chews now. ') + 'Stay warm in a throwaway layer.'],
     [start, 'Start', 'Settle in. The first mile should feel easy.']
   ];
   return rows.map(function (r) { return { t: r[0], what: r[1], how: r[2] }; });
@@ -34,14 +34,14 @@ function raceMorning(ev) {
 function raceShoe() { return shoes().filter(function (s) { return !s.retired && s.role === 'race'; })[0] || null; }
 function raceExtrasHTML(ev, rp) {
   var h = '', f = raceFuel(ev, rp), cl = carbLoad(ev), rm = raceMorning(ev), rs = raceShoe();
-  if (f) h += '<section class="card"><h3>Fueling</h3><p class="small muted" style="margin-top:4px">About ' + f.gHr + ' g of carbs an hour: ' + f.gels + (f.gels === 1 ? ' gel (' : ' gels (') + f.carbs + ' g), taken a little before the aid stations so you can wash them down. Practice this exact plan on your long runs.</p>' +
+  if (f) h += '<section class="card" id="rp-fuel"><h3>Fueling</h3><p class="small muted" style="margin-top:4px">' + f.gels + (f.gels === 1 ? ' gel (' : ' gels (') + f.carbs + ' g), about ' + f.gHr + ' g of carbs an hour. Take each a little before an aid station and wash it down with water.' + (f.gHr < f.aim - 5 ? ' Sports drink at the stations tops you up toward ' + f.aim + ' g an hour if your stomach handles it.' : '') + ' Practice this exact plan on your long runs.</p>' +
     '<div class="scroll"><table class="t fit" style="margin-top:8px"><thead><tr><th>Gel</th><th class="num">Race clock</th><th class="num">Near mile</th></tr></thead><tbody>' + f.list.map(function (g, i) { return '<tr><td>' + (i + 1) + '</td><td class="num">' + E.clock(g.t) + '</td><td class="num">' + g.mile + '</td></tr>'; }).join('') + '</tbody></table></div></section>';
-  if (cl) h += '<section class="card"><h3>Carb loading</h3><p class="small muted" style="margin-top:4px">About ' + cl.gkg + ' g of carbs per kg of body weight for the last ' + cl.days.length + ' days, with runs short and easy. Lower the fiber and fat so it sits well.</p><div class="cl-days">' +
+  if (cl) h += '<section class="card" id="rp-carb"><h3>Carb loading</h3><p class="small muted" style="margin-top:4px">About ' + cl.gkg + ' g of carbs per kg of body weight for the last ' + cl.days.length + ' days, with runs short and easy. Lower the fiber and fat so it sits well.</p><div class="cl-days">' +
     cl.days.map(function (x) { return '<div><span>' + fmtD(x.date, { weekday: 'short', month: 'short', day: 'numeric' }) + '</span><b>' + x.g + ' g</b><em>carbs</em></div>'; }).join('') + '</div><p class="tiny muted" style="margin-top:6px">For ' + Math.round(cl.kg * 2.2046) + ' lb. A bagel is about 50 g, a cup of rice 45 g, a sports drink 30 g.</p></section>';
-  h += '<section class="card"><h3>Race morning</h3><div class="rm-list">' + rm.map(function (r) { return '<div class="rm"><b>' + clockOf(((r.t % 1440) + 1440) % 1440) + '</b><div><span>' + esc(r.what) + '</span><small>' + esc(r.how) + '</small></div></div>'; }).join('') + '</div></section>';
+  h += '<section class="card" id="rp-morning"><h3>Race morning</h3><div class="rm-list">' + rm.map(function (r) { return '<div class="rm"><b>' + clockOf(((r.t % 1440) + 1440) % 1440) + '</b><div><span>' + esc(r.what) + '</span><small>' + esc(r.how) + '</small></div></div>'; }).join('') + '</div></section>';
   var items = ['Bib and safety pins (or race belt)', 'Timing chip, if it is separate', (rs ? shoeName(rs) : 'Race shoes') + ', already run in at least twice', 'Gels for the plan above, plus one spare', 'Anti-chafe on feet, thighs and anywhere straps rub', 'Throwaway layer for the start', 'Watch charged, race workout loaded'];
   var done = ((st().prefs || {}).raceCheck || {})[ev.id] || {};
-  h += '<section class="card"><h3>Checklist</h3><div class="stack tight" style="margin-top:6px">' + items.map(function (it, i) { return '<label class="check"><input type="checkbox" data-rcheck="' + esc(ev.id) + '|' + i + '"' + (done[i] ? ' checked' : '') + '> ' + esc(it) + '</label>'; }).join('') + '</div></section>';
+  h += '<section class="card" id="rp-check"><h3>Checklist</h3><div class="stack tight" style="margin-top:6px">' + items.map(function (it, i) { return '<label class="check"><input type="checkbox" data-rcheck="' + esc(ev.id) + '|' + i + '"' + (done[i] ? ' checked' : '') + '> ' + esc(it) + '</label>'; }).join('') + '</div></section>';
   return h;
 }
 document.addEventListener('change', function (e) {
@@ -54,7 +54,12 @@ VIEWS.racepace = function () {
   var h = _racepace16(), ev = evById(App.args[0]); if (!ev || !(E.parseClock(ev.goal) > 0)) return h;
   var rp = null; try { rp = E.racePacing(E.distOf(ev).mi, E.parseClock(ev.goal), ev.course && ev.course.elev, raceHeat(ev).pct); } catch (e) { rp = null; }
   var add = raceExtrasHTML(ev, rp), i = h.indexOf('<div class="band" id="paceBand">');
-  return i > 0 ? h.slice(0, i) + add + h.slice(i) : h + add;
+  h = i > 0 ? h.slice(0, i) + add + h.slice(i) : h + add;
+  /* quick links to each part of the plan, under the headline numbers */
+  var nav = '<div class="rp-nav" role="navigation" aria-label="Race plan sections"><button class="chip" data-act="rp-go" data-arg="' + jattr({ id: 'rp-miles' }) + '">Mile by mile</button>' + (/id="rp-fuel"/.test(add) ? '<button class="chip" data-act="rp-go" data-arg="' + jattr({ id: 'rp-fuel' }) + '">Fueling</button>' : '') + (/id="rp-carb"/.test(add) ? '<button class="chip" data-act="rp-go" data-arg="' + jattr({ id: 'rp-carb' }) + '">Carb loading</button>' : '') + '<button class="chip" data-act="rp-go" data-arg="' + jattr({ id: 'rp-morning' }) + '">Race morning</button><button class="chip" data-act="rp-go" data-arg="' + jattr({ id: 'rp-check' }) + '">Checklist</button></div>';
+  h = h.replace('<div class="sechead"><h2>Mile by mile</h2>', '<div class="sechead" id="rp-miles"><h2>Mile by mile</h2>');
+  var at = h.indexOf('<div class="odds');
+  return at > 0 ? h.slice(0, at) + nav + h.slice(at) : nav + h;
 };
 /* race week: a countdown on Today with what matters that day */
 function raceWeekCard() {
@@ -132,6 +137,7 @@ ACTIONS['reset-no'] = function (a) { Store.edit('seen', a.k, function (S) { S.se
 var _painBanner16 = painBanner;
 painBanner = function () {
   if (st().ladder) return '';   /* the ladder card takes over */
+  var done = (st().prefs || {}).ladderDone; if (done && E.diffD(done, App.today) < 10) return '';
   var h = _painBanner16(); if (!h) return h;
   var f = painFlags(10);
   return h.replace(/<\/div><\/section>$/, '<button class="btn sm" data-act="ladder-start" data-arg="' + jattr({ k: f.shin ? 'shin' : 'other' }) + '">Start a return ladder</button></div></section>');
@@ -149,14 +155,14 @@ function ladderCard() {
     '<div class="btns"><button class="btn sm ghost" data-act="ladder-stop">End the ladder</button></div></section>';
 }
 ACTIONS['ladder-ans'] = function (a) {
-  Store.edit('ladder', null, function (S) {
+  Store.editMany([['ladder'], ['prefs', 'ladderDone']], function (S) {
     var L = S.ladder; if (!L) return; L.ans = L.ans || {}; L.ans[a.d] = a.ok ? 'ok' : 'pain';
     L.step = a.ok ? Math.max(L.step, a.r) : Math.max(0, a.r - 2); L.start = E.addD(a.d, 1);
-    if (L.step >= E.LADDER.length) S.ladder = null;
+    if (L.step >= E.LADDER.length) { S.ladder = null; S.prefs = S.prefs || {}; S.prefs.ladderDone = App.today; }
   });
   toast(a.ok ? (a.r >= E.LADDER.length ? 'Ladder done. Back to the plan.' : 'Moving up a step') : 'Back a step. Give it a day or two.');
 };
-ACTIONS['ladder-stop'] = function () { Store.edit('ladder', null, function (S) { S.ladder = null; }); toast('Ladder ended. Your normal plan is back.'); };
+ACTIONS['ladder-stop'] = function () { Store.editMany([['ladder'], ['prefs', 'ladderDone']], function (S) { S.ladder = null; S.prefs = S.prefs || {}; S.prefs.ladderDone = App.today; }); toast('Ladder ended. Your normal plan is back.'); };
 
 /* Today: race week, the ladder, the reset offer. Progress: the streak. */
 var _today16 = VIEWS.today;
@@ -172,3 +178,4 @@ recordsHTML = function () {
   return h.replace('<section class="card stack">', '<section class="card stack">' + tile);
 };
 App.p16 = { missedRunDays: missedRunDays, resetWeekCard: resetWeekCard, onPlanStreak: onPlanStreak, raceFuel: raceFuel, shoeForPart: shoeForPart };
+ACTIONS['rp-go'] = function (a) { var el = document.getElementById(a.id); if (el) el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); };

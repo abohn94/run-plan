@@ -1174,3 +1174,4 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .streak > b { font-size: 2.2rem; font-weight: 800; color: var(--green); line-height: 1; min-width: 44px; text-align: center; }
 .streak div { display: grid; min-width: 0; } .streak span { font-weight: 800; } .streak small { color: var(--muted); font-size: .76rem; line-height: 1.35; }
 .cbdots.lad i.cur { background: var(--gold); }
+.rp-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 4px 0 10px; } .rp-nav .chip { flex: none; } #rp-miles, #rp-fuel, #rp-carb, #rp-morning, #rp-check { scroll-margin-top: 80px; }
