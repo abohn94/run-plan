@@ -948,7 +948,7 @@ VIEWS.setup = function () {
       '<div class="card stack"><div class="grid2"><label class="f">Miles per week now<input class="i" type="number" name="mpw" min="0" max="150" inputmode="decimal" value="' + esc(p.mpw) + '"></label><label class="f">Longest recent run (mi)<input class="i" type="number" name="longest" min="0" max="40" inputmode="decimal" value="' + esc(p.longest) + '"></label>' +
       '<label class="f">Typical easy pace (m:ss)<input class="i" name="easyPace" placeholder="10:00" value="' + esc(p.easyPace || '') + '"></label><label class="f">Body weight (lb, optional)<input class="i" type="number" name="weightLb" inputmode="decimal" value="' + (p.weightKg ? Math.round(p.weightKg * 2.2046) : '') + '"></label></div>' +
       '<label class="f">A recent race or time trial (optional, sets your paces)<div class="grid2"><select class="i" name="rdist"><option value="">None</option>' + ['5k', '10k', 'half', 'full'].map(function (k) { return '<option value="' + k + '"' + (p.recent && p.recent.dist === k ? ' selected' : '') + '>' + E.DIST[k].label + '</option>'; }).join('') + '</select><input class="i" name="rtime" placeholder="h:mm:ss" value="' + esc(p.recent && p.recent.time || '') + '"></div></label>' +
-      '<div><b class="small">About you</b><p class="tiny muted" style="margin:2px 0 6px">So your times are judged fairly for your age and sex' + (GX().who ? ' (filled in from Garmin)' : '') + '. Optional.</p>' + aboutYouFields(p, 'wz') + '</div>' +
+      '<div><b class="small">About you</b><p class="tiny muted" style="margin:2px 0 6px">So your times are judged fairly for your age and sex' + (GX().who ? ' (filled in from Garmin)' : '') + '. Optional.</p>' + aboutYouFields(p, 'wz') + bodyFields('wzb', true) + '</div>' +
       '<label class="check"><input type="checkbox" name="injuryProne"' + (p.injuryProne ? ' checked' : '') + '> I get shin splints or other running injuries</label>' +
       '<label class="check"><input type="checkbox" name="hrTrainer"' + (p.hrTrainer ? ' checked' : '') + '> I like to train by heart rate</label></div><p class="err" id="wizErr"></p>' + wizFoot('Continue', true, true) + '</form>';
   } else if (name === 'days') {
@@ -1333,6 +1333,7 @@ document.addEventListener('submit', function (e) {
       p.recent = el.rdist.value && E.parseClock(el.rtime.value) > 0 ? { dist: el.rdist.value, time: el.rtime.value.trim() } : null;
       p.injuryProne = el.injuryProne.checked; p.hrTrainer = el.hrTrainer.checked;
       var ab = readAboutYou('wz'); p.sex = ab.sex; p.birthYear = ab.birthYear;
+      var bh = readBody('wzb'); if (bh && bh.heightCm) p.heightCm = bh.heightCm;
     } else if (name === 'days') {
       p.avail = [0, 1, 2, 3, 4, 5, 6].map(function (i) { return $('[data-toggle="avail"][data-i="' + i + '"]', f).getAttribute('aria-pressed') === 'true'; });
       if (p.avail.filter(Boolean).length < 2) { werr.textContent = 'Pick at least two days.'; return; }
