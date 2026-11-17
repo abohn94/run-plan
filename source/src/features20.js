@@ -324,11 +324,16 @@ function runReview(a) {
   var all = laps || [], hasRec = all.some(function (l) { return /RECOVERY|REST/.test(l.type || ''); });
   var reps = hasRec ? all.filter(function (l) { return /ACTIVE|INTERVAL/.test(l.type || '') && l.d >= 100 && l.t >= 20 && (l.gap || l.sp); }) : [];
   if (kind === 'speed' && reps.length >= 3) {
-    var rp = reps.map(function (l) { return E.MI_M / (l.gap || l.sp); }), avgR = rp.reduce(function (x2, y) { return x2 + y; }, 0) / rp.length;
-    var first = (rp[0] + rp[1]) / 2, lastR = rp[rp.length - 1], fade = (lastR - first) / first;
-    add(good, 5, 'reps', reps.length + ' fast segments averaging ' + pace(avgR) + '/mi.');
-    if (fade <= 0.015) add(good, 7, 'hold', 'Held it together: your last rep was as fast as the first.');
-    else if (fade > 0.05) add(fix, 6 + Math.min(2, fade * 20), 'fade', 'Your last rep was ' + Math.round(lastR - first) + ' s/mi slower than your first two.', 'Start the first reps a touch slower (about 5 s/mi) so the last one is the fastest. A workout is won in the second half, and steady reps train the pace you want on race day.');
+    /* each rep's pace adjusted for its own grade (about 3.3% slower per 1% uphill, 1.8% faster per 1% downhill), from the lap's climb and descent */
+    var grd = function (l) { return ((l.up || 0) - (l.down || 0)) / l.d * 100; }, hilly = reps.some(function (l) { return Math.abs(grd(l)) >= 1.5; });
+    var raw = reps.map(function (l) { return E.MI_M / l.sp; }), rp = reps.map(function (l, n) { var gr = grd(l); return raw[n] / (1 + (gr > 0 ? 0.033 : 0.018) * gr); });
+    var avgR = raw.reduce(function (x2, y) { return x2 + y; }, 0) / raw.length;
+    var f0 = (rp[0] + rp[1]) / 2, lastR = rp[rp.length - 1], fade = (lastR - f0) / f0, rawFade = (raw[raw.length - 1] - (raw[0] + raw[1]) / 2) / ((raw[0] + raw[1]) / 2);
+    var hillTip = hilly ? ' On the climbs, run by effort, not pace: shorter, quicker steps, a slight lean from the ankles, and drive the arms. Ease into the first uphill rep; it sets the heart rate for the rest.' : '';
+    add(good, 5, 'reps', reps.length + ' fast segments averaging ' + pace(avgR) + '/mi' + (hilly ? ' on rolling ground' : '') + '.');
+    if (fade <= 0.015) add(good, 7, 'hold', hilly && rawFade > 0.05 ? 'Your slower reps were on the climbs. Adjusted for the grade, you held steady.' : 'Held it together: your last rep was as fast as the first.');
+    else if (fade > 0.05) add(fix, 6 + Math.min(2, fade * 20), 'fade', 'Your last rep was ' + Math.round(lastR - f0) + ' s/mi slower than your first two' + (hilly ? ', even after adjusting for the hills' : '') + '.', 'Start the first reps a touch slower (about 5 s/mi, or by effort on a climb) so the last one is the fastest. A workout is won in the second half.' + hillTip);
+    else if (hilly) add(fix, 3, 'hill', 'Rolling terrain makes pace hard to read.', hillTip.trim());
   }
   /* planned distance */
   if (p && p.mi && a.mi) { if (a.mi >= p.mi * 0.95) add(good, 4, 'dist', 'Did the full ' + mi(p.mi) + ' mi planned.'); else if (a.mi < p.mi * 0.8 && !p.timed) add(fix, 4, 'dist', 'Ran ' + mi(a.mi) + ' of ' + mi(p.mi) + ' planned miles.', 'If it was time, plan the route before you start. If something hurt or felt off, stopping was the right call; tell the app with "How are your legs?" on Today.'); }
