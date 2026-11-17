@@ -1175,3 +1175,9 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .streak div { display: grid; min-width: 0; } .streak span { font-weight: 800; } .streak small { color: var(--muted); font-size: .76rem; line-height: 1.35; }
 .cbdots.lad i.cur { background: var(--gold); }
 .rp-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 4px 0 10px; } .rp-nav .chip { flex: none; } #rp-miles, #rp-fuel, #rp-carb, #rp-morning, #rp-check { scroll-margin-top: 80px; }
+/* tester requests: what to wear, glossary */
+.dress { display: flex; gap: 8px; align-items: flex-start; font-size: .84rem; line-height: 1.4; margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: var(--card2); }
+.dresscard { padding: 4px; margin-bottom: 10px; } .dresscard .dress { margin-top: 0; }
+.gloss { margin: 0; display: grid; gap: 4px; }
+.gloss dt { font-weight: 800; margin-top: 10px; } .gloss dt:first-child { margin-top: 0; }
+.gloss dd { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }

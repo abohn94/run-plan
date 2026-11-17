@@ -806,7 +806,9 @@ VIEWS.settings = function () {
     '<label class="f">Long run day<select class="i" name="longDay">' + E.DOW_LONG.map(function (d, i) { return '<option value="' + i + '"' + (+p.longDay === i ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></label></div>' +
     '<div class="grid2"><label class="f">Lifting days per week<select class="i" name="liftDays">' + [0, 1, 2, 3, 4].map(function (n) { return '<option' + (+p.liftDays === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label>' +
     '<label class="f">Extra gym days (lift + treadmill run)<select class="i" name="crossDays">' + [0, 1, 2, 3].map(function (n) { return '<option' + (+p.crossDays === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label></div>' +
-    '<label class="check"><input type="checkbox" name="doubles"' + (p.doubles !== false ? ' checked' : '') + '> Lift on run days (run first). Turn off to keep lifting on separate days; runs per week drop to fit.</label></section>' +
+    '<label class="check"><input type="checkbox" name="doubles"' + (p.doubles !== false ? ' checked' : '') + '> Lift on run days (run first). Turn off to keep lifting on separate days; runs per week drop to fit.</label>' +
+    '<label class="f">Longest weekday run<select class="i" name="weekdayMin">' + [[0, 'No limit'], [40, '40 minutes'], [50, '50 minutes'], [60, '1 hour'], [75, '1 hour 15'], [90, '1 hour 30']].map(function (o) { return '<option value="' + o[0] + '"' + ((+p.weekdayMin || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><span class="tiny muted" style="font-weight:500">Easy runs Monday to Friday fit inside it. Weekends and workouts are left alone.</span></label>' +
+    '<label class="check"><input type="checkbox" name="masters"' + (p.masters ? ' checked' : '') + '> Masters runner (40+): a lighter week every third week instead of every fourth</label></section>' +
     '<section class="card stack"><h3>Fitness</h3><div class="grid2">' +
     '<label class="f">Plan start<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"><span class="tiny muted" style="font-weight:500">A Friday to Sunday start adds those days to week 1.</span></label>' +
     '<label class="f">Weekly miles at start<input class="i" type="number" min="0" max="120" name="mpw" value="' + esc(p.mpw) + '"></label>' +
@@ -828,6 +830,8 @@ function readSettings(form) {
   p.avail = [0, 1, 2, 3, 4, 5, 6].map(function (i) { var b = $('[data-toggle="avail"][data-i="' + i + '"]', form); return b ? b.getAttribute('aria-pressed') === 'true' : true; });
   p.runDays = +f('runDays').value; p.longDay = +f('longDay').value; p.liftDays = +f('liftDays').value; p.crossDays = +f('crossDays').value;
   p.doubles = f('doubles').checked;
+  if (f('weekdayMin')) p.weekdayMin = +f('weekdayMin').value || 0;
+  if (f('masters')) p.masters = f('masters').checked;
   if (f('startDate').value) p.startDate = E.dow(f('startDate').value) >= 4 ? f('startDate').value : E.monday(f('startDate').value);
   p.mpw = +f('mpw').value || 0; p.longest = +f('longest').value || 0; p.easyPace = f('easyPace').value.trim();
   p.weightKg = +f('weightLb').value ? Math.round(+f('weightLb').value / 2.2046 * 10) / 10 : null;
