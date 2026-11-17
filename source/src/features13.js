@@ -40,7 +40,7 @@ function recapData(date, slot) {
     var wk0 = App.plan && E.weekOf(App.plan, date), cbw = wk0 && wk0.comeback;
     verdict = (cbw ? 'Comeback week ' + cbw.week + ' of ' + cbw.of + ': ' : '') + (r.sec >= (p.min || 0) * 60 * 0.9 ? 'done, all ' + Math.round(r.sec / 60) + ' minutes. That\'s the whole job.' : Math.round(r.sec / 60) + ' of ' + p.min + ' minutes. Stopping early is fine when something feels off.');
     tone = r.sec >= (p.min || 0) * 60 * 0.9 ? 'ok' : 'mid';
-  } else if (kind === 'speed') { verdict = 'Workout done. The lap-by-lap check appears once your laps sync from Garmin.'; tone = 'mid';
+  } else if (kind === 'speed') { verdict = laps ? 'Workout done. Every lap, with pace, heart rate and form, is on the run\'s Laps tab.' : 'Workout done. The lap-by-lap check appears once your laps sync from Garmin.'; tone = laps ? 'ok' : 'mid';
   } else if (kind === 'race') { verdict = 'Race done: ' + mi(r.mi) + ' mi in ' + E.clock(r.sec) + '.'; }
   else {
     var e = zz.E, hrz = zz.hr && zz.hr.E;

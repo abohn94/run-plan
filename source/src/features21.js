@@ -161,3 +161,31 @@ VIEWS.activity = function () {
   return head + seg + '<div class="runtab">' + body + '</div>';
 };
 App.p21 = { runSum: runSum, lapRows: lapRows };
+
+/* ---------- getting there: a finished run opens its own page from Today, the session page and the recap ---------- */
+function runActsOn(date) { if (date > App.today) return []; return activities().filter(function (a) { return a.kind === 'run' && a.date === date && (a.mi > 0); }); }
+function runLinkCard(a) {
+  var k = encodeURIComponent(a.key), p = function (t, l) { return '<a class="chip" href="#/activity/' + k + (t ? '/' + t : '') + '">' + l + '</a>'; };
+  return '<section class="card runlink"><a class="rl-main" href="#/activity/' + k + '"><div><span class="eyebrow">Your run' + (a.g ? ' · Garmin' : '') + '</span><b>' + esc(a.name || 'Run') + '</b><span class="rl-stats"><span><b>' + mi(a.mi) + '</b> mi</span>' + (a.sec ? '<span><b>' + E.clock(a.sec) + '</b></span><span><b>' + pace(a.sec / a.mi) + '</b> /mi</span>' : '') + (a.hr || (a.g && a.g.avgHR) ? '<span><b>' + (a.hr || a.g.avgHR) + '</b> bpm</span>' : '') + '</span></div><span class="chev">›</span></a>' +
+    '<div class="chips rl-tabs">' + p('stats', 'Stats') + p('laps', 'Laps') + p('charts', 'Charts') + p('gear', 'Gear') + '</div></section>';
+}
+var _day21 = VIEWS.day;
+VIEWS.day = function () {
+  var h = _day21(), d = App.args[0] || App.today, acts = []; try { acts = runActsOn(d); } catch (e) { acts = []; }
+  if (!acts.length) return h;
+  var c = acts.map(runLinkCard).join(''), i = h.indexOf('<section class="card recap"'); if (i < 0) i = h.indexOf('<section');
+  return i >= 0 ? h.slice(0, i) + c + h.slice(i) : h + c;
+};
+/* Today's card: once the run is done, it opens the run itself */
+var _hero21 = heroHTML;
+heroHTML = function (x, date, zz) {
+  var h = _hero21(x, date, zz); if (!E.isRun(x) || !partDone(date, x)) return h;
+  var a = null; try { a = runActsOn(date)[0]; } catch (e) { a = null; } if (!a) return h;
+  return h.replace('href="#/day/' + date + '"', 'href="#/activity/' + encodeURIComponent(a.key) + '"').replace('>View workout</span></a>', '>See your run</span></a>');
+};
+/* the recap sheet's main button goes to the run's page */
+var _recapSheet21 = SHEETS.recap;
+SHEETS.recap = function (a) {
+  var h = _recapSheet21(a), r = null; try { r = runActsOn(a.date)[0]; } catch (e) { r = null; } if (!r) return h;
+  return h.replace(/<a class="btn primary" href="#\/day\/[^"]*" data-act="sheet-close-go" data-arg="[^"]*">See the laps<\/a>/, '<a class="btn primary" href="#/activity/' + encodeURIComponent(r.key) + '" data-act="sheet-close-go" data-arg="' + jattr({ h: '#/activity/' + encodeURIComponent(r.key) }) + '">Stats &amp; charts</a>');
+};

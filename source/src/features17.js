@@ -13,7 +13,7 @@ comebackCard = function () {
 
 /* ---------- what to wear, from the forecast at your run time ---------- */
 function dressFor(date) {
-  var p = dayOf(date), run = p && p.parts.filter(function (x) { return E.isRun(x) && !x.treadmill; })[0]; if (!run) return null;
+  var p = dayOf(date), run = p && p.parts.filter(function (x) { return E.isRun(x) && !x.treadmill; })[0]; if (!run || partDone(date, run)) return null;
   var w = wxAt(date, runHour()); if (!w || w.feels == null) return null;
   var f = w.feels, out = [];
   if (f >= 65) out.push('singlet or light tee, shorts');

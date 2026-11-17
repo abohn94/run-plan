@@ -1265,6 +1265,10 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .te { margin-top: 10px; } .tebar { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin-top: 6px; }
 .tebar i { height: 6px; border-radius: 3px; } .tebar b { position: absolute; top: -4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--ink); border: 3px solid var(--card); }
 .rwbar { display: flex; height: 12px; border-radius: 99px; overflow: hidden; margin-top: 8px; background: var(--card2); } .rwbar i { display: block; height: 100%; }
+.runlink .rl-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: inherit; text-decoration: none; }
+.runlink .rl-main > div { display: grid; gap: 2px; min-width: 0; } .runlink .rl-main > div > b { font-size: 1.05rem; }
+.rl-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .82rem; color: var(--muted); } .rl-stats b { color: var(--ink); font-size: .95rem; }
+.runlink .chev { color: var(--dim); font-size: 1.4rem; } .rl-tabs { margin-top: 10px; } .rl-tabs .chip { text-decoration: none; }
 
 </style>
 </head>
@@ -10674,7 +10678,7 @@ function recapData(date, slot) {
     var wk0 = App.plan && E.weekOf(App.plan, date), cbw = wk0 && wk0.comeback;
     verdict = (cbw ? 'Comeback week ' + cbw.week + ' of ' + cbw.of + ': ' : '') + (r.sec >= (p.min || 0) * 60 * 0.9 ? 'done, all ' + Math.round(r.sec / 60) + ' minutes. That\'s the whole job.' : Math.round(r.sec / 60) + ' of ' + p.min + ' minutes. Stopping early is fine when something feels off.');
     tone = r.sec >= (p.min || 0) * 60 * 0.9 ? 'ok' : 'mid';
-  } else if (kind === 'speed') { verdict = 'Workout done. The lap-by-lap check appears once your laps sync from Garmin.'; tone = 'mid';
+  } else if (kind === 'speed') { verdict = laps ? 'Workout done. Every lap, with pace, heart rate and form, is on the run\'s Laps tab.' : 'Workout done. The lap-by-lap check appears once your laps sync from Garmin.'; tone = laps ? 'ok' : 'mid';
   } else if (kind === 'race') { verdict = 'Race done: ' + mi(r.mi) + ' mi in ' + E.clock(r.sec) + '.'; }
   else {
     var e = zz.E, hrz = zz.hr && zz.hr.E;
@@ -11185,7 +11189,7 @@ comebackCard = function () {
 
 /* ---------- what to wear, from the forecast at your run time ---------- */
 function dressFor(date) {
-  var p = dayOf(date), run = p && p.parts.filter(function (x) { return E.isRun(x) && !x.treadmill; })[0]; if (!run) return null;
+  var p = dayOf(date), run = p && p.parts.filter(function (x) { return E.isRun(x) && !x.treadmill; })[0]; if (!run || partDone(date, run)) return null;
   var w = wxAt(date, runHour()); if (!w || w.feels == null) return null;
   var f = w.feels, out = [];
   if (f >= 65) out.push('singlet or light tee, shorts');
@@ -12097,6 +12101,34 @@ VIEWS.activity = function () {
   return head + seg + '<div class="runtab">' + body + '</div>';
 };
 App.p21 = { runSum: runSum, lapRows: lapRows };
+
+/* ---------- getting there: a finished run opens its own page from Today, the session page and the recap ---------- */
+function runActsOn(date) { if (date > App.today) return []; return activities().filter(function (a) { return a.kind === 'run' && a.date === date && (a.mi > 0); }); }
+function runLinkCard(a) {
+  var k = encodeURIComponent(a.key), p = function (t, l) { return '<a class="chip" href="#/activity/' + k + (t ? '/' + t : '') + '">' + l + '</a>'; };
+  return '<section class="card runlink"><a class="rl-main" href="#/activity/' + k + '"><div><span class="eyebrow">Your run' + (a.g ? ' · Garmin' : '') + '</span><b>' + esc(a.name || 'Run') + '</b><span class="rl-stats"><span><b>' + mi(a.mi) + '</b> mi</span>' + (a.sec ? '<span><b>' + E.clock(a.sec) + '</b></span><span><b>' + pace(a.sec / a.mi) + '</b> /mi</span>' : '') + (a.hr || (a.g && a.g.avgHR) ? '<span><b>' + (a.hr || a.g.avgHR) + '</b> bpm</span>' : '') + '</span></div><span class="chev">›</span></a>' +
+    '<div class="chips rl-tabs">' + p('stats', 'Stats') + p('laps', 'Laps') + p('charts', 'Charts') + p('gear', 'Gear') + '</div></section>';
+}
+var _day21 = VIEWS.day;
+VIEWS.day = function () {
+  var h = _day21(), d = App.args[0] || App.today, acts = []; try { acts = runActsOn(d); } catch (e) { acts = []; }
+  if (!acts.length) return h;
+  var c = acts.map(runLinkCard).join(''), i = h.indexOf('<section class="card recap"'); if (i < 0) i = h.indexOf('<section');
+  return i >= 0 ? h.slice(0, i) + c + h.slice(i) : h + c;
+};
+/* Today's card: once the run is done, it opens the run itself */
+var _hero21 = heroHTML;
+heroHTML = function (x, date, zz) {
+  var h = _hero21(x, date, zz); if (!E.isRun(x) || !partDone(date, x)) return h;
+  var a = null; try { a = runActsOn(date)[0]; } catch (e) { a = null; } if (!a) return h;
+  return h.replace('href="#/day/' + date + '"', 'href="#/activity/' + encodeURIComponent(a.key) + '"').replace('>View workout</span></a>', '>See your run</span></a>');
+};
+/* the recap sheet's main button goes to the run's page */
+var _recapSheet21 = SHEETS.recap;
+SHEETS.recap = function (a) {
+  var h = _recapSheet21(a), r = null; try { r = runActsOn(a.date)[0]; } catch (e) { r = null; } if (!r) return h;
+  return h.replace(/<a class="btn primary" href="#\/day\/[^"]*" data-act="sheet-close-go" data-arg="[^"]*">See the laps<\/a>/, '<a class="btn primary" href="#/activity/' + encodeURIComponent(r.key) + '" data-act="sheet-close-go" data-arg="' + jattr({ h: '#/activity/' + encodeURIComponent(r.key) }) + '">Stats &amp; charts</a>');
+};
 
 
 /* ---------------- Garmin polling ---------------- */
