@@ -1119,3 +1119,43 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .ins-x { border: 0; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; padding: 2px 6px; min-width: 32px; min-height: 32px; }
 .dispt { justify-self: start; font-size: .78rem; margin-top: 6px; }
 .simple .tsbox .ts3, .simple .tsbox .tsstrip, .simple .tsbox .tsaxis, .simple details.infold[data-fold="today-live"] { display: none; }
+/* run recap */
+.recap { display: grid; gap: 10px; }
+.recap.insheet { gap: 12px; }
+.rc-title { font-size: 1.35rem; font-weight: 800; margin-top: -2px; }
+.rc-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rc-stats b { color: var(--ink); font-size: 1.05rem; font-weight: 800; }
+.rc-lines { display: grid; gap: 8px; padding: 12px; border-radius: 16px; background: var(--card2); }
+.rc-line { display: flex; gap: 10px; align-items: flex-start; }
+.rc-line p { margin: 0; font-size: .92rem; line-height: 1.4; min-width: 0; }
+.rc-dot { width: 10px; height: 10px; border-radius: 999px; flex: none; margin-top: 6px; background: var(--green); }
+.rc-dot.mid { background: var(--gold); } .rc-dot.low { background: var(--red); }
+.rc-ic { width: 10px; flex: none; text-align: center; color: var(--muted); font-weight: 800; line-height: 1.4; }
+.rc-recs { display: flex; flex-wrap: wrap; gap: 6px; }
+.rc-rec { background: color-mix(in srgb, var(--gold) 20%, transparent); color: var(--gold); box-shadow: none; animation: pop .4s ease both; }
+.rc-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.rc-bar i { display: block; height: 100%; background: var(--green); border-radius: 999px; transform-origin: left; animation: growx .6s ease both; }
+.rc-check { display: grid; gap: 4px; }
+.rc-rpe { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.rc-rpe .chip { padding: 0; min-height: 36px; justify-content: center; }
+.rc-tips { margin: 0; display: grid; gap: 4px; }
+.rc-more summary { cursor: pointer; font-size: .82rem; font-weight: 700; color: var(--muted); }
+.rc-more table { margin-top: 6px; }
+.rc-now td { font-weight: 800; }
+.simple .promptcard { display: none; }
+/* records and milestones */
+.msrow { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.ms { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--card2); min-width: 0; }
+.ms span { color: var(--gold); font-size: .9rem; }
+.ms b { font-size: .86rem; line-height: 1.25; }
+.ms small { color: var(--muted); font-size: .72rem; }
+.card.mscard { display: flex; gap: 12px; align-items: flex-start; }
+.card.mscard > div { flex: 1; min-width: 0; }
+.ms-star { width: 40px; height: 40px; border-radius: 999px; flex: none; display: grid; place-items: center; font-size: 1.3rem; color: var(--gold); background: color-mix(in srgb, var(--gold) 18%, transparent); animation: pop .5s ease both; }
+.cmpb td.up { color: var(--green); } .cmpb td.down { color: var(--amber); }
+/* comeback + form */
+.cbdots { display: flex; gap: 6px; margin-top: 10px; }
+.cbdots i { flex: 1; height: 6px; border-radius: 999px; background: var(--line2); }
+.cbdots i.on { background: var(--green); }
+.ffchart text { font-size: 9px; fill: var(--muted); }
+.wrec a.list-item { text-decoration: none; color: inherit; }

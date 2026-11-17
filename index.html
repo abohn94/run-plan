@@ -1140,6 +1140,46 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .ins-x { border: 0; background: none; color: var(--muted); font-size: 1.2rem; line-height: 1; padding: 2px 6px; min-width: 32px; min-height: 32px; }
 .dispt { justify-self: start; font-size: .78rem; margin-top: 6px; }
 .simple .tsbox .ts3, .simple .tsbox .tsstrip, .simple .tsbox .tsaxis, .simple details.infold[data-fold="today-live"] { display: none; }
+/* run recap */
+.recap { display: grid; gap: 10px; }
+.recap.insheet { gap: 12px; }
+.rc-title { font-size: 1.35rem; font-weight: 800; margin-top: -2px; }
+.rc-stats { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rc-stats b { color: var(--ink); font-size: 1.05rem; font-weight: 800; }
+.rc-lines { display: grid; gap: 8px; padding: 12px; border-radius: 16px; background: var(--card2); }
+.rc-line { display: flex; gap: 10px; align-items: flex-start; }
+.rc-line p { margin: 0; font-size: .92rem; line-height: 1.4; min-width: 0; }
+.rc-dot { width: 10px; height: 10px; border-radius: 999px; flex: none; margin-top: 6px; background: var(--green); }
+.rc-dot.mid { background: var(--gold); } .rc-dot.low { background: var(--red); }
+.rc-ic { width: 10px; flex: none; text-align: center; color: var(--muted); font-weight: 800; line-height: 1.4; }
+.rc-recs { display: flex; flex-wrap: wrap; gap: 6px; }
+.rc-rec { background: color-mix(in srgb, var(--gold) 20%, transparent); color: var(--gold); box-shadow: none; animation: pop .4s ease both; }
+.rc-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.rc-bar i { display: block; height: 100%; background: var(--green); border-radius: 999px; transform-origin: left; animation: growx .6s ease both; }
+.rc-check { display: grid; gap: 4px; }
+.rc-rpe { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.rc-rpe .chip { padding: 0; min-height: 36px; justify-content: center; }
+.rc-tips { margin: 0; display: grid; gap: 4px; }
+.rc-more summary { cursor: pointer; font-size: .82rem; font-weight: 700; color: var(--muted); }
+.rc-more table { margin-top: 6px; }
+.rc-now td { font-weight: 800; }
+.simple .promptcard { display: none; }
+/* records and milestones */
+.msrow { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.ms { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--card2); min-width: 0; }
+.ms span { color: var(--gold); font-size: .9rem; }
+.ms b { font-size: .86rem; line-height: 1.25; }
+.ms small { color: var(--muted); font-size: .72rem; }
+.card.mscard { display: flex; gap: 12px; align-items: flex-start; }
+.card.mscard > div { flex: 1; min-width: 0; }
+.ms-star { width: 40px; height: 40px; border-radius: 999px; flex: none; display: grid; place-items: center; font-size: 1.3rem; color: var(--gold); background: color-mix(in srgb, var(--gold) 18%, transparent); animation: pop .5s ease both; }
+.cmpb td.up { color: var(--green); } .cmpb td.down { color: var(--amber); }
+/* comeback + form */
+.cbdots { display: flex; gap: 6px; margin-top: 10px; }
+.cbdots i { flex: 1; height: 6px; border-radius: 999px; background: var(--line2); }
+.cbdots i.on { background: var(--green); }
+.ffchart text { font-size: 9px; fill: var(--muted); }
+.wrec a.list-item { text-decoration: none; color: inherit; }
 
 </style>
 </head>
@@ -1787,6 +1827,10 @@ function longFor(ctx, mi) {
         easy('Your biggest runs. Keep it truly easy and practice fueling: 30–60 g of carbs per hour.'),
         { title: 'Dress rehearsal', steps: [run(mi - 8, 'E'), run(8, 'M')], note: 'Race shoes, race kit, race breakfast and race fueling. The most important long run of the block.' }
       ];
+      /* bigger runners get the sub-elite staples: a progression long run and alternating marathon-pace miles */
+      if (mi >= 16 && ctx.method && ctx.method.key !== 'beginner' && ctx.method.key !== 'runwalk') opts.splice(2, 0,
+        { title: 'Progression long run', steps: [run(Math.round(mi * 0.5), 'E'), run(Math.round(mi * 0.3), 'S'), run(mi - Math.round(mi * 0.5) - Math.round(mi * 0.3), 'M')], note: 'Easy, then steady, then marathon pace for the last part. Teaches you to run fast on tired legs. Fuel every 30–40 minutes.' },
+        { title: 'Long run, alternating miles', steps: [run(3, 'E'), rep(Math.max(3, Math.floor((mi - 5) / 2)), { mi: 1 }, 'M', { mi: 1 }, 'steady, not easy'), run(Math.max(1, mi - 3 - 2 * Math.max(3, Math.floor((mi - 5) / 2))), 'E')], note: 'Marathon pace, then a steady mile, repeated. The steady miles are the point: no jogging. Take a gel every 30 minutes.' });
       return opts[i % opts.length];
     }
     if (d === 'half') {
@@ -1961,6 +2005,9 @@ function generate(state) {
     if (rt > 0) v0 = vdotOf(rmi, rt);
   }
   if (!v0 && parseClock(prof.easyPace) > 0) v0 = vdotFromEasy(parseClock(prof.easyPace));
+  /* comeback: a race from before the break overstates today's fitness. Detraining costs roughly 3% after a few weeks off, up to 15% after a long layoff. */
+  var cb = prof.comeback && +prof.comeback.off ? prof.comeback : null;
+  if (cb && v0 && prof.recent && prof.recent.time) v0 = v0 * (1 - (cb.off <= 4 ? 0.03 : cb.off <= 8 ? 0.06 : cb.off <= 16 ? 0.1 : 0.15));
   var gv = aEvents.length ? goalVdot(aEvents[0]) : null;
   if (!v0) v0 = gv ? gv - 3 : 38;
 
@@ -1993,6 +2040,8 @@ function generate(state) {
     var growth = Math.min(0.11 * L, Math.max(gvB ? gvB - vStart : 0, 0.045 * L));
 
     var m = firstBlock ? Math.max(6, +prof.mpw || 10) : Math.max(8, Math.round((prevPeak || 20) * 0.35));
+    /* comeback: start from a share of what you ran before the break (more time off, a smaller share), never below what you run now */
+    if (firstBlock && cb && cb.before) m = Math.max(6, +prof.mpw || 0, Math.round(cb.before * (cb.off <= 4 ? 0.7 : cb.off <= 8 ? 0.5 : cb.off <= 16 ? 0.35 : cb.off <= 52 ? 0.25 : 0.2)));
     var lastBuild = m, buildIdx = 0, lastLong = firstBlock ? Math.max(3, +prof.longest || 4) : 6;
     var phaseCounter = {};
     var qi = 0, li = 0, peakReached = m;
@@ -2044,7 +2093,47 @@ function generate(state) {
     if (!w.cut) { counters[bk].q++; counters[bk].l++; }
   });
   weeks.forEach(function (w, idx) { buildWeek(w, idx, weeks, prof, method, otherEvents, lastLongs); });
-  return { start: lead[0] || start, weekStart: start, lead: lead, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
+  var cbInfo = cb ? applyComeback(weeks, prof, cb) : null;
+  return { comeback: cbInfo, start: lead[0] || start, weekStart: start, lead: lead, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
+}
+
+/* Comeback weeks: runs by time, not distance; walk breaks after a long layoff (or if you asked for them);
+   no hard sessions in the first two weeks; a 5K check in the week after the timed block. */
+function applyComeback(weeks, prof, cb) {
+  var from = monday(cb.from || today()), timedN = cb.off >= 9 ? 4 : 3, walk = cb.off >= 9 || prof.runWalk || prof.level === 'new';
+  var ratios = [[3, 1], [4, 1], [6, 1], [9, 1]], first = null, n = 0;
+  weeks.forEach(function (w) {
+    if (w.end < from) return;
+    var k = Math.floor(diffD(from, w.start) / 7); if (k < 0) k = 0;
+    if (first == null) first = w.n;
+    if (k >= timedN) { if (k === timedN && !w.cut) w.days.some(function (d) { var i = d.parts.findIndex(function (p) { return p.type === 'speed'; }); if (i < 0) return false; var t = SESS.tt(); d.parts[i] = { type: 'speed', role: 'speed', key: 'tt', tt: true, title: '5K fitness check', mi: d.parts[i].mi, steps: t.steps(d.parts[i].mi), purpose: 'Your first fitness check since coming back. The result resets your paces from here.' }; return true; }); return; }
+    n++;
+    var zz = w.zones, ep = zz && zz.E ? (zz.E[0] + zz.E[1]) / 2 : 600, ratio = ratios[Math.min(k, ratios.length - 1)];
+    w.comeback = { week: k + 1, of: timedN, walk: walk };
+    w.days.forEach(function (d) {
+      d.parts = d.parts.map(function (p) {
+        if (!isRun(p) || p.type === 'race') return p;
+        var easyMin = Math.max(15, Math.round((p.mi || 2) * ep / 60 / 5) * 5);
+        if (p.type === 'speed' && k < 2) p = Object.assign({}, p, { type: 'easy', role: 'easy', key: null, title: 'Easy run' });
+        if (p.type === 'speed') return p;   /* week 3+: light quality is back (strides, fartlek), still by feel */
+        var min = p.type === 'long' ? Math.min(easyMin, 30 + 10 * k) : Math.min(easyMin, 20 + 5 * k);
+        var q = Object.assign({}, p, { min: min, mi: round1(min * 60 / ep), timed: true });
+        if (walk) {
+          var set = ratio[0] + ratio[1], reps = Math.max(2, Math.round(min / set));
+          q.title = 'Run-walk ' + reps * set + ' min';
+          q.steps = [{ k: 'rep', n: reps, work: { min: ratio[0] }, z: 'E', rec: { min: ratio[1], walk: true }, effort: 'easy running, then a brisk walk' }];
+          q.note = 'Comeback week ' + (k + 1) + ' of ' + timedN + ': run ' + ratio[0] + ' min, walk ' + ratio[1] + ' min, ' + reps + ' times. Time, not distance or pace, is the goal.';
+        } else {
+          q.title = (p.type === 'long' ? 'Long run ' : 'Easy run ') + min + ' min';
+          q.steps = [{ k: 'run', min: min, z: 'E' }];
+          q.note = 'Comeback week ' + (k + 1) + ' of ' + timedN + ': run by time at an easy, chatty effort. Walk breaks are fine.';
+        }
+        return q;
+      });
+    });
+    w.tot = totals(w.days);
+  });
+  return { from: from, weeks: timedN, walk: walk, firstWeek: first };
 }
 
 function longMilesFor(w, prev) {
@@ -2410,7 +2499,7 @@ function adapt(plan, st, analysis) {
       d.parts = d.parts.map(function (p) {
         if (!mod || mod.m >= 1) return p;
         if (p.type === 'strength') return modLift(p, mod);
-        if (p.type === 'cross' || p.type === 'rest') return p;
+        if (p.type === 'cross' || p.type === 'rest' || p.timed) return p;   /* comeback runs are already short and timed */
         return modRun(p, mod, zz);
       });
     }); };
@@ -3010,6 +3099,14 @@ function matchGarmin(st, plan, garmin) {
     var slots = [];
     if (!l.run) slots.push('run');
     if (!l.xrun) slots.push('xrun');
+    /* the same run must never count twice: skip a watch activity already linked to a log, or one that matches a run you logged by hand */
+    var linked = {}; ['run', 'xrun', 'lift', 'cross'].forEach(function (k) { if (l[k] && l[k].gid) linked[l[k].gid] = 1; });
+    var manual = ['run', 'xrun'].filter(function (k) { return l[k] && !l[k].gid && !l[k].skip && +l[k].mi > 0; }).map(function (k) { return +l[k].mi; });
+    list = list.filter(function (a) {
+      if (linked[a.id]) return false;
+      if (a.run && manual.length) { var ami = (a.distM || 0) / MI_M, j = -1; manual.forEach(function (m, k) { if (j < 0 && Math.abs(m - ami) <= Math.max(0.5, m * 0.2)) j = k; }); if (j >= 0) { manual.splice(j, 1); return false; } }
+      return true;
+    });
     list.forEach(function (a) {
       if (a.run) {
         var slot = slots.shift();
@@ -3470,7 +3567,7 @@ function capWeek(w, ceiling, zz) {
   w.tot = totals(w.days);
   var mine = 0; w.days.forEach(function (d) { d.parts.forEach(function (p) { if (p.userAdded && isRun(p)) mine += p.mi || 0; }); });
   var over = w.tot.mi - mine - ceiling; if (over <= 0.5) return false;   /* runs you add yourself don't squeeze the others */
-  var flex = []; w.days.forEach(function (d) { d.parts.forEach(function (p, i) { if (isRun(p) && !p.userAdded && (p.type === 'easy' || p.type === 'recovery' || p.type === 'long') && d.date > today()) flex.push({ d: d, i: i, p: p }); }); });
+  var flex = []; w.days.forEach(function (d) { d.parts.forEach(function (p, i) { if (isRun(p) && !p.userAdded && !p.timed && (p.type === 'easy' || p.type === 'recovery' || p.type === 'long') && d.date > today()) flex.push({ d: d, i: i, p: p }); }); });
   var tot = flex.reduce(function (a, x) { return a + (x.p.mi || 0); }, 0); if (tot < 1) return false;
   var f = Math.max(0.6, (tot - over) / tot);
   flex.forEach(function (x) { var p = scaleRun(x.p, f, zz); p.mi = half(Math.max(1.5, (x.p.mi || 0) * f)); if (x.p.type !== 'long') p.steps = [run(p.mi, x.p.type === 'recovery' ? 'REC' : 'E')]; p.changed = true; p.shin = true; p.note = 'Shortened to stay under your shin-load ceiling of ' + ceiling + ' mi this week.'; x.d.parts[x.i] = p; });
@@ -4242,6 +4339,7 @@ function structHTML(p, zz, lg) {
   }).join('') + '</div>';
 }
 function estText(p, zz) {
+  if (E.isRun(p) && p.timed && p.min) return '≈ ' + mi(p.mi) + ' mi';
   if (E.isRun(p)) { var m = E.estMinutes(p, zz); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; }
   if (p.min) return p.min + ' min';
   return '';
@@ -4269,7 +4367,7 @@ function sessHTML(p, date, zz, opts) {
   opts = opts || {};
   var t = p.type === 'recovery' ? 'recovery' : p.type;
   var done = partDone(date, p);
-  var big = E.isRun(p) ? '<b>' + mi(p.mi) + '</b><small>mi</small>' : p.min ? '<b>' + p.min + '</b><small>min</small>' : '';
+  var big = E.isRun(p) && p.timed && p.min ? '<b>' + p.min + '</b><small>min</small>' : E.isRun(p) ? '<b>' + mi(p.mi) + '</b><small>mi</small>' : p.min ? '<b>' + p.min + '</b><small>min</small>' : '';
   var flag = p.moved ? 'Moved from ' + E.fmtDate(p.moved, { weekday: 'short' }) : p.changed ? 'Adjusted' : '';
   var meta = [];
   if (estText(p, zz) && E.isRun(p)) meta.push(estText(p, zz));
@@ -4285,7 +4383,8 @@ function sessHTML(p, date, zz, opts) {
 }
 function mainPace(p, zz) {
   var z = null;
-  (p.steps || []).forEach(function (s) { if (!z && (s.k === 'run' || s.k === 'rep') && s.z !== 'F' && s.z !== 'E' && s.z !== 'REC') z = s.z; });
+  /* an easy run with strides is still an easy run: show the easy pace, not the strides */
+  if (p.type !== 'easy' && p.type !== 'recovery') (p.steps || []).forEach(function (s) { if (!z && (s.k === 'run' || s.k === 'rep') && s.z !== 'F' && s.z !== 'E' && s.z !== 'REC') z = s.z; });
   if (!z) z = p.type === 'recovery' ? 'REC' : 'E';
   var r = zz && zz[z];
   return r ? pace(r[0]) + '–' + pace(r[1]) + ' ' + E.ZONE_NAME[z] : '';
@@ -4925,10 +5024,12 @@ VIEWS.settings = function () {
     '<label class="f">Extra gym days (lift + treadmill run)<select class="i" name="crossDays">' + [0, 1, 2, 3].map(function (n) { return '<option' + (+p.crossDays === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label></div>' +
     '<label class="check"><input type="checkbox" name="doubles"' + (p.doubles !== false ? ' checked' : '') + '> Lift on run days (run first). Turn off to keep lifting on separate days; runs per week drop to fit.</label></section>' +
     '<section class="card stack"><h3>Fitness</h3><div class="grid2">' +
-    '<label class="f">Plan start<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"></label<p class="tiny muted">Start on a Friday, Saturday or Sunday and those days join week 1, so your weeks still begin on your usual day.</p>' +
+    '<label class="f">Plan start<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"><span class="tiny muted" style="font-weight:500">A Friday to Sunday start adds those days to week 1.</span></label>' +
     '<label class="f">Weekly miles at start<input class="i" type="number" min="0" max="120" name="mpw" value="' + esc(p.mpw) + '"></label>' +
     '<label class="f">Longest recent run (mi)<input class="i" type="number" min="0" max="30" name="longest" value="' + esc(p.longest) + '"></label>' +
     '<label class="f">Typical easy pace (m:ss)<input class="i" name="easyPace" placeholder="10:00" value="' + esc(p.easyPace || '') + '"></label>' +
+    '<label class="f">Coming back from a break?<select class="i" name="cbOff"><option value="0">No break</option>' + [[3, '2 to 4 weeks off'], [6, '5 to 8 weeks off'], [12, '2 to 4 months off'], [30, '4 months to a year off'], [60, 'More than a year off']].map(function (o) { return '<option value="' + o[0] + '"' + (p.comeback && +p.comeback.off === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
+    '<label class="f">Miles a week before the break<input class="i" type="number" min="0" max="150" name="cbBefore" value="' + esc(p.comeback ? p.comeback.before || '' : '') + '" placeholder="e.g. 25"></label>' +
     '<label class="f">Body weight (lb)<input class="i" type="number" min="60" max="400" name="weightLb" value="' + (p.weightKg ? Math.round(p.weightKg * 2.2046) : '') + '"></label>' +
     '<label class="f">Mileage level<select class="i" name="volume">' + [[0.8, 'Lighter (−20%)'], [0.9, 'Slightly lighter'], [1, 'Standard'], [1.1, 'Slightly more'], [1.2, 'More (+20%)']].map(function (o) { return '<option value="' + o[0] + '"' + (Math.abs((+p.volume || 1) - o[0]) < 0.05 ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label></div>' +
     '<label class="check"><input type="checkbox" name="injuryProne"' + (p.injuryProne ? ' checked' : '') + '> I\'m prone to shin splints or other running injuries</label>' +
@@ -4947,6 +5048,8 @@ function readSettings(form) {
   p.mpw = +f('mpw').value || 0; p.longest = +f('longest').value || 0; p.easyPace = f('easyPace').value.trim();
   p.weightKg = +f('weightLb').value ? Math.round(+f('weightLb').value / 2.2046 * 10) / 10 : null;
   p.volume = +f('volume').value || 1; p.injuryProne = f('injuryProne').checked; p.runWalk = f('runWalk').checked;
+  /* comeback mode: how long you were off and what you ran before; it starts from the plan start (or today, if that's later) */
+  if (f('cbOff') && +f('cbOff').value) { var cbFrom = (p.comeback && p.comeback.from) || (p.startDate > App.today ? p.startDate : App.today); p.comeback = { off: +f('cbOff').value, before: +f('cbBefore').value || 0, from: cbFrom }; } else if (f('cbOff')) delete p.comeback;
   if (!p.avail[p.longDay]) p.avail[p.longDay] = true;
   return p;
 }
@@ -8213,12 +8316,12 @@ function loadExtra() {
   loadExtra.busy = Date.now();
   Store.getFile('garmin/extra.json').then(function (f) {
     loadExtra.busy = 0;
-    if (!f || !f.text) return;
+    if (!f || !f.text) { loadExtra.at = loadExtra.at || Date.now(); return; }
     var changed = f.text !== loadExtra.last;
     loadExtra.last = f.text; loadExtra.at = Date.now();
     App.extra = JSON.parse(f.text); LS.set('rp-gextra', f.text);
     if (changed) { recompute(); if ($('#sheet').hidden) render(); else loadExtra.last = null; /* redraw on the next check once the sheet is closed */ }
-  }, function () { loadExtra.busy = 0; });
+  }, function () { loadExtra.busy = 0; loadExtra.at = loadExtra.at || Date.now(); });
 }
 /* fold Garmin's threshold and load balance into the data the engine already reads */
 function mergeExtra() {
@@ -10325,6 +10428,357 @@ ACTIONS['display-toggle'] = function () {
   toast(nx === 'simple' ? 'Simple view: the essentials only' : 'Showing all numbers');
 };
 App.p12 = { keyExecutions: keyExecutions, paceSuggestion: paceSuggestion };
+
+/* ================= Run recap: what you see right after a run syncs =================
+   verdict · compared with similar runs (grade-adjusted, at the same heart rate) · records · what it means for
+   tomorrow · the week so far · a 10-second check-in · recovery prompts. Opens once by itself after a new run
+   syncs, and stays at the top of that day's page. ================= */
+
+function actById(id) { var g = Store.garmin; if (!g || !g.activities || !id) return null; for (var i = g.activities.length - 1; i >= 0; i--) if (String(g.activities[i].id) === String(id)) return g.activities[i]; return null; }
+/* the kind of run, for finding similar ones */
+function runClass(ptype, title) {
+  if (ptype === 'race') return 'race';
+  if (ptype === 'long') return 'long';
+  if (ptype === 'speed') return 'speed:' + String(title || '').toLowerCase().replace(/\d+(\.\d+)?\s*(mi|×|x|k|m|min|s)?/g, '').replace(/[^a-z]+/g, ' ').trim();
+  return 'easy';
+}
+/* treadmill pace and heart rate don't compare with the road, so they're matched separately */
+function isTread(a, p) { return /treadmill|indoor/i.test((a && (a.type + ' ' + a.name)) || '') || !!(p && p.treadmill); }
+function speedOf(a) { return a && a.gapSpd > 0 ? a.gapSpd : a && a.distM > 0 && (a.movS || a.durS) ? a.distM / (a.movS || a.durS) : null; }
+/* every run you've logged that has a watch activity, with its class */
+function classedRuns() {
+  var logs = st().logs || {}, out = [];
+  Object.keys(logs).forEach(function (d) { ['run', 'xrun'].forEach(function (k) { var r = logs[d][k]; if (!r || r.skip || !r.gid) return; var a = actById(r.gid); if (!a) return; var pp = dayOf(d) && dayOf(d).parts.filter(E.isRun)[0]; out.push({ date: d, slot: k, r: r, a: a, cls: runClass(r.ptype, (pp || {}).title || r.name) + (isTread(a, pp) ? ':tm' : '') }); }); });
+  return out.sort(function (x, y) { return x.date < y.date ? -1 : 1; });
+}
+function recapData(date, slot) {
+  slot = slot || 'run';
+  var r0 = logOf(date)[slot]; if (!r0 || r0.skip || !(+r0.mi > 0)) return null;
+  var a = actById(r0.gid), r = Object.assign({}, r0, { hr: r0.hr || (a && a.avgHR) || null }), day = dayOf(date), p = day && day.parts.filter(function (x) { return E.isRun(x); })[0];
+  var kind = r.ptype || (p && p.type) || 'easy', cls = runClass(kind, (p && p.title) || r.name) + (isTread(a, p) ? ':tm' : '');
+  var laps = r.gid ? lapsFor(r.gid) : null, zz = _zonesAt7(date) || {};
+  var ex = null, du = null; try { if (laps && p && p.steps) ex = E.execution(p, zz, laps); if (laps) du = E.durability(laps); } catch (e) { ex = null; }
+  var paceS = r.sec && r.mi ? r.sec / r.mi : null;
+  /* verdict */
+  var verdict = '', tone = 'ok';
+  if (kind === 'speed' && ex && ex.of) {
+    var all = []; ex.rows.forEach(function (x) { if (x.target && x.pace && x.ok === false && !/WARMUP|COOLDOWN|RECOVERY|REST/.test(x.type)) all.push(x.pace < x.target[0] ? x.pace - x.target[0] : x.pace - x.target[1]); });
+    var m = all.length ? Math.round(all.reduce(function (s, v) { return s + v; }, 0) / all.length) : 0;
+    verdict = ex.hit === ex.of ? 'Nailed it: every work lap on target.' : ex.hit / ex.of >= 0.7 ? 'On target: ' + ex.hit + ' of ' + ex.of + ' work laps in range.' : m < 0 ? 'Faster than planned: ' + ex.hit + ' of ' + ex.of + ' laps in range, the rest about ' + (-m) + ' s/mi quick.' : 'Tough day: ' + ex.hit + ' of ' + ex.of + ' laps in range, the rest about ' + m + ' s/mi slow.';
+    tone = ex.hit / ex.of >= 0.7 ? 'ok' : m < 0 ? 'mid' : 'low';
+  } else if (kind === 'speed') { verdict = 'Workout done. The lap-by-lap check appears once your laps sync from Garmin.'; tone = 'mid';
+  } else if (kind === 'race') { verdict = 'Race done: ' + mi(r.mi) + ' mi in ' + E.clock(r.sec) + '.'; }
+  else {
+    var e = zz.E, hrz = zz.hr && zz.hr.E;
+    var hotHr = r.hr && hrz && r.hr > hrz[1] + 3, fastE = paceS && e && paceS < e[0] - 15;
+    verdict = kind === 'long' ? (du && du.decouple > 8 ? 'Long run done, but heart rate drifted ' + du.decouple + '% late. Fuel and pace the first half easier next time.' : 'Long run done' + (du ? ', and you held steady to the end (drift ' + du.decouple + '%).' : '.')) :
+      hotHr ? 'Easy run, but heart rate ran high (' + r.hr + ' avg). Slow down a little next time.' : fastE && r.hr && hrz && r.hr <= hrz[1] ? 'Quicker than the easy range, but your heart rate stayed easy (' + r.hr + '). That\'s fitness showing.' : fastE ? 'A bit quick for an easy day. Easy days make the hard days work.' : 'Easy, as planned.';
+    tone = hotHr || (fastE && !(r.hr && hrz && r.hr <= hrz[1])) || (du && du.decouple > 8) ? 'mid' : 'ok';
+  }
+  /* similar runs: the same kind, a similar distance, the last 120 days */
+  var sim = [], cmp = null;
+  if (a && r.hr) {
+    sim = classedRuns().filter(function (x) { return x.date < date && E.diffD(x.date, date) <= 120 && x.cls === cls && x.a.avgHR && Math.abs(x.r.mi - r.mi) <= Math.max(1, r.mi * 0.35); }).slice(-3);
+    var me = speedOf(a);
+    if (sim.length && me) {
+      var effNow = me / a.avgHR, effThen = sim.reduce(function (s, x) { return s + speedOf(x.a) / x.a.avgHR; }, 0) / sim.length;
+      var paceNow = E.MI_M / me, paceThenSameHr = E.MI_M / (effThen * a.avgHR), dPace = Math.round(paceNow - paceThenSameHr);
+      var tNow = a.tMax, tThen = sim.reduce(function (s, x) { return s + (x.a.tMax || 0); }, 0) / sim.length;
+      cmp = { n: sim.length, d: dPace, pct: Math.round((effNow / effThen - 1) * 1000) / 10, gap: !!a.gapSpd, warmer: tNow && tThen && tNow - tThen >= 5, cooler: tNow && tThen && tThen - tNow >= 5,
+        last: sim[sim.length - 1], rows: sim.map(function (x) { return { date: x.date, mi: x.r.mi, pace: x.r.sec / x.r.mi, hr: x.a.avgHR }; }) };
+    }
+  }
+  /* records */
+  var recs = [], runs = classedRuns(), prior = runs.filter(function (x) { return x.date < date; });
+  var longest90 = prior.filter(function (x) { return E.diffD(x.date, date) <= 90; }).reduce(function (s, x) { return Math.max(s, +x.r.mi || 0); }, 0);
+  if (r.mi >= 3 && prior.length >= 4 && r.mi > longest90 + 0.05) recs.push('Longest run in 90 days');
+  if (App.plan && r.mi >= 3 && prior.filter(function (x) { return x.date >= App.plan.start; }).length >= 3 && r.mi > prior.filter(function (x) { return x.date >= App.plan.start; }).reduce(function (s, x) { return Math.max(s, +x.r.mi || 0); }, 0) + 0.05 && recs.indexOf('Longest run in 90 days') < 0) recs.push('Longest run of this plan');
+  if (a && a.best) [['1mi', 'mile'], ['5k', '5K'], ['10k', '10K'], ['half', 'half marathon']].forEach(function (k) {
+    var v = +a.best[k[0]]; if (!(v > 0)) return;
+    var older = ((Store.garmin || {}).activities || []).filter(function (x) { return x.run && x.best && +x.best[k[0]] > 0 && x.date < date && E.diffD(x.date, date) <= 365; });
+    if (older.length >= 3 && older.every(function (x) { return v < +x.best[k[0]]; })) recs.push('Fastest ' + k[1] + ' in a year (' + E.clock(Math.round(v)) + ')');
+  });
+  if (kind === 'speed' && cmp && cmp.d <= -5) recs.push('Best ' + (p ? p.title.toLowerCase() : 'session') + ' at this heart rate');
+  /* the week so far */
+  var w = App.plan && E.weekOf(App.plan, date), wk = null;
+  if (w) {
+    var plannedMi = w.days.reduce(function (s, d) { return s + d.parts.filter(E.isRun).reduce(function (t, x) { return t + (x.mi || 0); }, 0); }, 0);
+    var done = w.days.reduce(function (s, d) { return s + dayRun(d); }, 0);
+    var keyLeft = w.days.filter(function (d) { return d.date > date && d.parts.some(function (x) { return x.type === 'long' || x.type === 'speed'; }); }).map(function (d) { return d.parts.filter(function (x) { return x.type === 'long' || x.type === 'speed'; })[0].title; });
+    wk = { done: done, planned: plannedMi, keyLeft: keyLeft };
+  }
+  /* tomorrow, with Garmin's recovery time */
+  var tmr = null, td = dayOf(E.addD(date, 1));
+  if (td) {
+    var real = td.parts.filter(function (x) { return x.type !== 'rest'; }), hard = real.some(function (x) { return x.type === 'speed' || x.type === 'long' || x.type === 'race'; });
+    var rv = null; try { rv = date === App.today ? recoveryLeft(App.today) : null; } catch (e) { rv = null; }
+    var line = real.length ? real.map(function (x) { return x.title + (E.isRun(x) && x.mi ? ' ' + mi(x.mi) + ' mi' : ''); }).join(' + ') : 'Rest';
+    var note = '';
+    if (rv && rv.left > 0 && rv.end) { var hrsToRun = 24; note = hard ? (rv.left > hrsToRun ? 'Garmin has you recovering until ' + rv.untilTxt.replace(/^until /, '') + ', so take the start easy or swap it in the morning.' : 'Garmin recovery ends ' + rv.untilTxt.replace(/^until /, '') + ', in time for it.') : 'Garmin recovery: ' + Math.ceil(rv.left) + ' h. An easy day fits.'; }
+    else if (hard) note = 'Sleep and fuel tonight set it up.';
+    tmr = { line: line, note: note, hard: hard };
+  }
+  /* recovery prompts */
+  var kg = +(st().profile || {}).weightKg || 0, hardRun = kind === 'speed' || kind === 'long' || kind === 'race' || (r.sec || 0) >= 75 * 60;
+  var fuel = kg ? { carb: Math.round(kg * (hardRun ? 1.0 : 0.6) / 5) * 5, pro: Math.round(kg * 0.3 / 5) * 5 } : null;
+  var sw = ((st().prefs || {}).sweat || []).slice(-1)[0], fluid = sw && r.sec ? Math.round(sw.ozh * r.sec / 3600 * 1.25) : null;
+  var shin = hardRun && (st().profile || {}).injuryProne;
+  return { date: date, slot: slot, r: r, a: a, p: p, kind: kind, ex: ex, du: du, verdict: verdict, tone: tone, cmp: cmp, recs: recs, wk: wk, tmr: tmr, fuel: fuel, fluid: fluid, shin: shin, long: kind === 'long' || r.mi >= 10 };
+}
+function rchip(arg, label, on) { return '<button type="button" class="chip" data-act="rcp" data-arg="' + jattr(arg) + '" aria-pressed="' + (!!on) + '">' + label + '</button>'; }
+function recapHTML(date, slot, inSheet) {
+  var R = recapData(date, slot); if (!R) return '';
+  var r = R.r, ar = { date: R.date, slot: R.slot };
+  var head = '<div class="eyebrow">Run recap · ' + fmtD(date, { weekday: 'short', month: 'short', day: 'numeric' }) + '</div>' +
+    '<h3 class="rc-title">' + esc((R.p && R.p.title) || r.name || 'Run') + '</h3>' +
+    '<div class="rc-stats"><span><b>' + mi(r.mi) + '</b> mi</span><span><b>' + (r.sec ? E.clock(r.sec) : '–') + '</b></span><span><b>' + (r.sec ? pace(r.sec / r.mi) : '–') + '</b> /mi</span>' + (r.hr ? '<span><b>' + r.hr + '</b> bpm</span>' : '') + '</div>';
+  var lines = '<div class="rc-lines">';
+  lines += '<div class="rc-line"><span class="rc-dot ' + R.tone + '" aria-hidden="true"></span><p>' + esc(R.verdict) + '</p></div>';
+  if (R.cmp) {
+    var c = R.cmp, better = c.d < -2, worse = c.d > 2;
+    lines += '<div class="rc-line"><span class="rc-ic" aria-hidden="true">≈</span><p>' + (better ? '<b>' + (-c.d) + ' s/mi faster</b>' : worse ? '<b>' + c.d + ' s/mi slower</b>' : '<b>About the same pace</b>') + ' at the same heart rate ' + (better || worse ? 'than' : 'as') + ' your last ' + (c.n === 1 ? 'similar run' : c.n + ' similar runs') + (c.gap ? ' (hills evened out)' : '') + '.' +
+      (c.warmer ? ' It was warmer today, so this undersells you.' : c.cooler ? ' It was cooler today, which helps.' : '') + '</p></div>';
+  }
+  if (R.tmr) lines += '<div class="rc-line"><span class="rc-ic" aria-hidden="true">→</span><p><b>Tomorrow:</b> ' + esc(R.tmr.line) + (R.tmr.note ? '. ' + esc(R.tmr.note) : '') + '</p></div>';
+  lines += '</div>';
+  var recs = R.recs.length ? '<div class="rc-recs">' + R.recs.map(function (x) { return '<span class="pill solid rc-rec">★ ' + esc(x) + '</span>'; }).join('') + '</div>' : '';
+  var wk = R.wk ? '<div class="rc-week"><div class="spread"><span class="tiny muted">This week</span><span class="tiny"><b>' + mi(R.wk.done) + '</b> of ' + mi(R.wk.planned) + ' mi' + (R.wk.keyLeft.length ? ' · ' + esc(R.wk.keyLeft.join(', ').toLowerCase()) + ' to go' : '') + '</span></div><div class="rc-bar"><i style="width:' + Math.min(100, R.wk.planned ? R.wk.done / R.wk.planned * 100 : 0) + '%"></i></div></div>' : '';
+  var rr = logOf(date)[R.slot] || {};
+  var chk = '<div class="rc-check"><div class="tiny muted">How hard was it? (Garmin scale)</div><div class="rc-rpe">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (n) { return rchip(Object.assign({ k: 'rpe', v: n }, ar), n, +r.rpe === n); }).join('') + '</div>' +
+    '<div class="tiny muted" style="margin-top:8px">Legs</div><div class="chips">' + [['fresh', 'Fresh'], ['ok', 'Normal'], ['heavy', 'Heavy'], ['sore', 'Sore']].map(function (o) { return rchip(Object.assign({ k: 'legs', v: o[0] }, ar), o[1], r.legs === o[0]); }).join('') + rchip(Object.assign({ k: 'pain', v: 'shin' }, ar), 'Shin pain', r.pain === 'shin') + rchip(Object.assign({ k: 'pain', v: 'other' }, ar), 'Other pain', r.pain === 'other') + '</div>' +
+    (R.long ? '<div class="tiny muted" style="margin-top:8px">Gels or fuel taken</div><div class="chips">' + [0, 1, 2, 3, 4, 5].map(function (n) { return rchip(Object.assign({ k: 'gels', v: n }, ar), n === 5 ? '5+' : n, r.gels === n); }).join('') + '</div>' : '') + '</div>';
+  var tips = [];
+  if (R.fuel) tips.push('Eat within an hour: about <b>' + R.fuel.carb + ' g carbs</b> and <b>' + R.fuel.pro + ' g protein</b>.');
+  if (R.fluid && R.fluid >= 12) tips.push('Drink about <b>' + R.fluid + ' oz</b> over the next few hours (from your sweat rate).');
+  if (R.shin) tips.push('Do the <a href="#/shins">shin routine</a> tonight.');
+  var tipH = tips.length ? '<ul class="plain small rc-tips">' + tips.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>' : '';
+  var more = (R.cmp ? '<details class="rc-more"><summary>Similar runs</summary><table class="t fit"><thead><tr><th>Date</th><th class="num">Miles</th><th class="num">Pace</th><th class="num">HR</th></tr></thead><tbody>' + R.cmp.rows.slice().reverse().map(function (x) { return '<tr><td>' + fmtD(x.date, { month: 'short', day: 'numeric' }) + '</td><td class="num">' + mi(x.mi) + '</td><td class="num">' + pace(x.pace) + '</td><td class="num">' + x.hr + '</td></tr>'; }).join('') + '<tr class="rc-now"><td>This run</td><td class="num">' + mi(r.mi) + '</td><td class="num">' + pace(r.sec / r.mi) + '</td><td class="num">' + (r.hr || '–') + '</td></tr></tbody></table></details>' : '') +
+    (inSheet ? '<div class="btns"><a class="btn primary" href="#/day/' + date + '" data-act="sheet-close-go" data-arg="' + jattr({ h: '#/day/' + date }) + '">See the laps</a><button class="btn ghost" data-act="sheet-close">Done</button></div>' : '');
+  return (inSheet ? '' : '<section class="card recap">') + head + lines + recs + wk + chk + tipH + more + (inSheet ? '' : '</section>');
+}
+ACTIONS.rcp = function (a, el) {
+  var cur = (logOf(a.date)[a.slot] || {})[a.k], v = cur === a.v ? null : a.v;
+  Store.edit('logs', a.date, function (S) { var r = S.logs[a.date] && S.logs[a.date][a.slot]; if (r) { if (v == null) delete r[a.k]; else r[a.k] = v; } });
+  $$('[data-act="rcp"]').forEach(function (b) { var x = JSON.parse(b.dataset.arg); if (x.k === a.k && x.date === a.date && x.slot === a.slot) b.setAttribute('aria-pressed', String(v != null && x.v === v)); });
+};
+ACTIONS['sheet-close-go'] = function (a) { closeSheet(); setTimeout(function () { go(a.h); }, 60); };
+SHEETS.recap = function (a) { return '<div class="recap insheet">' + recapHTML(a.date, a.slot, true) + '</div>'; };
+
+/* open the recap once, by itself, after a new run from today or yesterday syncs */
+function newRunToRecap() {
+  var seen = st().seen || {}, out = null;
+  [App.today, E.addD(App.today, -1)].forEach(function (d) { if (out) return; ['xrun', 'run'].forEach(function (k) { var r = logOf(d)[k]; if (!out && r && r.gid && !r.skip && +r.mi > 0 && !seen['recap:' + r.gid]) out = { date: d, slot: k, gid: r.gid }; }); });
+  return out;
+}
+var _render13 = render;
+render = function () {
+  var res = _render13.apply(this, arguments);
+  try {
+    if (App.view === 'today' && $('#sheet').hidden && Store.mode === 'github' && !render.recapBusy && loadExtra.at) {
+      var n = newRunToRecap();
+      if (n && recapData(n.date, n.slot)) {
+        render.recapBusy = true;
+        Store.edit('seen', 'recap:' + n.gid, function (S) { S.seen = S.seen || {}; S.seen['recap:' + n.gid] = 1; });
+        setTimeout(function () { render.recapBusy = false; if ($('#sheet').hidden && App.view === 'today') openSheet('recap', n); }, 350);
+      }
+    }
+  } catch (e) { console.warn(e); render.recapBusy = false; }
+  return res;
+};
+/* always at the top of that day's page */
+var _day13 = VIEWS.day;
+VIEWS.day = function () {
+  var h = _day13(), d = App.args[0] || App.today, l = logOf(d), add = '';
+  ['run', 'xrun'].forEach(function (k) { if (l[k] && !l[k].skip && +l[k].mi > 0) add += recapHTML(d, k, false); });
+  if (!add) return h;
+  var i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + add + h.slice(i) : add + h;
+};
+App.p13 = { recapData: recapData, newRunToRecap: newRunToRecap };
+
+/* ================= Phase 2: records that come from training, a few milestones that mean something,
+   and this build against your last one ================= */
+
+/* ---------- workout records: your best run of each kind of key session, judged at the same heart rate ---------- */
+function workoutRecords() {
+  var by = {};
+  classedRuns().forEach(function (x) {
+    if (!/^speed:|^long$/.test(x.cls) || !x.a.avgHR) return;
+    var s = speedOf(x.a); if (!s) return;
+    var title = x.cls === 'long' ? 'Long run' : ((dayOf(x.date) && (dayOf(x.date).parts.filter(E.isRun)[0] || {}).title) || x.r.name || 'Workout');
+    var key = x.cls === 'long' ? 'long' : x.cls, eff = s / x.a.avgHR;
+    var b = by[key] = by[key] || { title: title, n: 0, best: null };
+    b.n++; if (!b.best || eff > b.best.eff) b.best = { eff: eff, date: x.date, pace: x.r.sec / x.r.mi, hr: x.a.avgHR, mi: x.r.mi };
+  });
+  return Object.keys(by).map(function (k) { return by[k]; }).filter(function (b) { return b.n >= 2; }).sort(function (a, b) { return a.best.date < b.best.date ? 1 : -1; });
+}
+
+/* ---------- milestones: few, earned, and the comeback ones for anyone returning ---------- */
+function milestones() {
+  var logs = st().logs || {}, out = [], dates = Object.keys(logs).sort(), since = (st().profile || {}).comeback && st().profile.comeback.from;
+  /* all your running, Garmin history included, so a "first" is really a first */
+  var runs = allRuns().map(function (r) { return { date: r.date, mi: +r.mi, sec: +r.sec || 0 }; });
+  if (since) runs = runs.filter(function (r) { return r.date >= since; });
+  var starter = since || (st().profile || {}).level === 'new';
+  var first = function (f) { for (var i = 0; i < runs.length; i++) if (f(runs[i])) return runs[i].date; return null; };
+  var add = function (k, label, date, note) { if (date) out.push({ k: k, label: label, date: date, note: note || '' }); };
+  if (starter) { add('30min', 'First 30 minutes non-stop', first(function (r) { return r.sec >= 1800; })); add('60min', 'First hour on your feet', first(function (r) { return r.sec >= 3600; })); }
+  [[starter ? 6.2 : 99, 'First 10K distance'], [10, 'First 10-mile run'], [13.1, 'First half-marathon distance'], [20, 'First 20-miler']].forEach(function (m) { add('d' + m[0], m[1], first(function (r) { return r.mi >= m[0] - 0.05; })); });
+  /* weeks */
+  var wk = {}; runs.forEach(function (r) { var k = E.monday(r.date); wk[k] = (wk[k] || 0) + r.mi; });
+  var wks = Object.keys(wk).sort();
+  (starter ? [[10, 'First 10-mile week'], [25, 'First 25-mile week'], [50, 'First 50-mile week']] : [[25, 'First 25-mile week'], [50, 'First 50-mile week'], [70, 'First 70-mile week']]).forEach(function (m) { var k = wks.filter(function (x) { return wk[x] >= m[0]; })[0]; add('w' + m[0], m[1], k ? E.addD(k, 6) : null); });
+  /* months */
+  var mo = {}; runs.forEach(function (r) { var k = r.date.slice(0, 7); mo[k] = (mo[k] || 0) + r.mi; });
+  var m100 = Object.keys(mo).sort().filter(function (k) { return mo[k] >= 100; })[0]; add('m100', 'First 100-mile month', m100 ? m100 + '-28' : null);
+  /* consistency: 4 and 10 weeks in a row with every long run done */
+  if (App.plan) {
+    var streak = 0, best4 = null, best10 = null;
+    App.plan.weeks.forEach(function (w) {
+      if (w.end >= App.today) return;
+      var longs = []; w.days.forEach(function (d) { d.parts.forEach(function (p) { if (p.type === 'long') longs.push(d.date); }); });
+      if (!longs.length) return;
+      var ok = longs.every(function (d) { var r = logs[d] && logs[d].run; return r && !r.skip && +r.mi > 0; });
+      streak = ok ? streak + 1 : 0;
+      if (streak === 4 && !best4) best4 = w.end; if (streak === 10 && !best10) best10 = w.end;
+    });
+    add('lr4', '4 weeks of long runs in a row', best4); add('lr10', '10 weeks of long runs in a row', best10);
+  }
+  /* the first two weeks of your history can't hold a real "first": that's just where the records begin */
+  var hist0 = runs.length ? runs[0].date : null;
+  if (hist0 && !since) out = out.filter(function (m) { return E.diffD(hist0, m.date) > 14; });
+  return out.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+}
+/* a new milestone gets one card on Today */
+function milestoneCard() {
+  var seen = st().seen || {}, m = milestones().filter(function (x) { return !seen['ms:' + x.k] && E.diffD(x.date, App.today) <= 7; })[0];
+  if (!m) return '';
+  return '<section class="card offer mscard"><span class="ms-star" aria-hidden="true">★</span><div><div class="eyebrow">Milestone</div><h3>' + esc(m.label) + '</h3><p class="small muted">' + fmtD(m.date, { weekday: 'long', month: 'short', day: 'numeric' }) + '. Every one of these is proof the plan is working.</p></div><button class="ins-x" data-act="ms-seen" data-arg="' + jattr({ k: m.k }) + '" aria-label="Dismiss">×</button></section>';
+}
+ACTIONS['ms-seen'] = function (a) { Store.edit('seen', 'ms:' + a.k, function (S) { S.seen = S.seen || {}; S.seen['ms:' + a.k] = 1; }); };
+/* milestones older than a week are just history: mark them seen once so they never pop up late */
+function settleOldMilestones() {
+  var seen = st().seen || {}, old = milestones().filter(function (x) { return !seen['ms:' + x.k] && E.diffD(x.date, App.today) > 7; });
+  if (old.length) Store.editMany(old.map(function (x) { return ['seen', 'ms:' + x.k]; }), function (S) { S.seen = S.seen || {}; old.forEach(function (x) { S.seen['ms:' + x.k] = 1; }); });
+}
+
+/* ---------- this build vs your last build for the same distance ---------- */
+function buildCompare() {
+  var p = App.plan; if (!p) return null;
+  var next = (p.aEvents || []).filter(function (e) { return e.date >= App.today; })[0]; if (!next) return null;
+  var dist = E.distOf(next).key, past = (st().events || []).filter(function (e) { return e.date < App.today && E.distOf(e).key === dist; }).sort(function (a, b) { return a.date < b.date ? 1 : -1; })[0];
+  if (!past) return null;
+  var wTo = Math.ceil(E.diffD(App.today, next.date) / 7);   /* weeks to go */
+  var logs = st().logs || {};
+  var block = function (raceDate, weeksOut) {
+    var end = E.addD(raceDate, -7 * weeksOut), start = E.addD(end, -27), mi = 0, longest = 0, runs = 0, key = 0;
+    for (var d = start; d <= end; d = E.addD(d, 1)) { ['run', 'xrun'].forEach(function (k) { var r = logs[d] && logs[d][k]; if (r && !r.skip && +r.mi > 0) { mi += +r.mi; runs++; longest = Math.max(longest, +r.mi); if (r.ptype === 'speed') key++; } }); }
+    return { mi: mi, wk: mi / 4, longest: longest, runs: runs, key: key, start: start, end: end };
+  };
+  var now = block(next.date, wTo), then = block(past.date, wTo);
+  if (!then.runs) return null;
+  return { next: next, past: past, wTo: wTo, now: now, then: then, vNow: App.an && App.an.vdot };
+}
+function buildCompareHTML() {
+  var b = buildCompare(); if (!b) return '';
+  var row = function (lab, a, c, unit) { var d = a - c; return '<tr><td>' + lab + '</td><td class="num">' + (Math.round(c * 10) / 10) + unit + '</td><td class="num"><b>' + (Math.round(a * 10) / 10) + unit + '</b></td><td class="num ' + (d > 0.05 ? 'up' : d < -0.05 ? 'down' : '') + '">' + (d > 0 ? '+' : '') + (Math.round(d * 10) / 10) + '</td></tr>'; };
+  return '<section class="card"><h3>This build vs your last ' + esc(E.distOf(b.next).label.toLowerCase()) + '</h3><p class="small muted" style="margin-top:4px">The 4 weeks ending ' + b.wTo + ' weeks out from ' + esc(b.next.name || 'your race') + ', against the same 4 weeks before ' + esc(b.past.name || 'your last one') + ' (' + fmtD(b.past.date, { month: 'short', year: 'numeric' }) + ').</p>' +
+    '<div class="scroll"><table class="t fit cmpb" style="margin-top:8px"><thead><tr><th></th><th class="num">Then</th><th class="num">Now</th><th class="num">Δ</th></tr></thead><tbody>' +
+    row('Miles a week', b.now.wk, b.then.wk, '') + row('Longest run', b.now.longest, b.then.longest, ' mi') + row('Runs', b.now.runs, b.then.runs, '') + row('Key sessions', b.now.key, b.then.key, '') + '</tbody></table></div></section>';
+}
+
+/* ---------- Progress → Overview: records and milestones; Today: a new milestone ---------- */
+function recordsHTML() {
+  var ms = milestones(), wr = workoutRecords();
+  if (!ms.length && !wr.length) return '';
+  var since = (st().profile || {}).comeback && st().profile.comeback.from;
+  var h = '<div class="sechead"><h2>Records and milestones</h2></div><section class="card stack">';
+  if (ms.length) h += '<div><h4 class="tiny muted" style="margin:0 0 6px">Milestones' + (since ? ' since your comeback' : '') + '</h4><div class="msrow">' + ms.slice(0, 8).map(function (m) { return '<div class="ms"><span aria-hidden="true">★</span><b>' + esc(m.label) + '</b><small>' + fmtD(m.date, { month: 'short', day: 'numeric', year: 'numeric' }) + '</small></div>'; }).join('') + '</div></div>';
+  if (wr.length) h += '<div><h4 class="tiny muted" style="margin:0 0 6px">Best sessions at the same effort</h4><div class="list wrec">' + wr.slice(0, 6).map(function (b) { return '<a class="list-item" href="#/day/' + b.best.date + '"><div class="n small"><b>' + esc(b.title) + '</b></div><div class="d tiny muted">' + fmtD(b.best.date, { month: 'short', day: 'numeric' }) + ' · best of ' + b.n + '</div><div class="c small">' + pace(b.best.pace) + '/mi at ' + b.best.hr + ' bpm</div></a>'; }).join('') + '</div><p class="tiny muted" style="margin-top:6px">Ranked by pace per heartbeat (hills evened out), so a hot or hilly day doesn\'t hide a good session.</p></div>';
+  return h + '</section>';
+}
+var _progress14 = VIEWS.progress;
+VIEWS.progress = function () {
+  var h = _progress14(); if ((App.args[0] || 'overview') !== 'overview') return h;
+  var add = ''; try { add = buildCompareHTML() + recordsHTML(); } catch (e) { console.warn(e); }
+  if (!add) return h;
+  var i = h.indexOf('<div class="sechead">'); return i > 0 ? h.slice(0, i) + add + h.slice(i) : h + add;
+};
+var _today14 = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today14(), c = ''; try { settleOldMilestones(); c = milestoneCard(); } catch (e) { c = ''; }
+  if (!c) return h; var i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c;
+};
+App.p14 = { milestones: milestones, workoutRecords: workoutRecords, buildCompare: buildCompare };
+
+/* ================= Phase 2: comeback banner, and fitness · fatigue · form ================= */
+
+/* ---------- comeback: one line on Today while the timed weeks run ---------- */
+function comebackCard() {
+  var w = App.week, cb = w && w.comeback; if (!cb) return '';
+  var info = App.plan && App.plan.comeback;
+  return '<section class="card offer cbcard"><div class="eyebrow">Comeback week ' + cb.week + ' of ' + cb.of + '</div><p class="small" style="margin:2px 0 0">' +
+    (cb.walk ? 'Runs are by time with walk breaks, building toward continuous running.' : 'Runs are by time at an easy, chatty effort.') + ' Tendons and bones come back slower than your lungs, so the plan holds you back on purpose. ' +
+    (cb.week === cb.of ? 'Next week: a 5K fitness check resets your paces.' : '') + '</p><div class="cbdots" aria-hidden="true">' + Array.from({ length: cb.of }, function (_, i) { return '<i class="' + (i < cb.week ? 'on' : '') + '"></i>'; }).join('') + '</div></section>';
+}
+var _today15 = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today15(), c = ''; try { c = comebackCard(); } catch (e) { c = ''; }
+  if (!c) return h; var i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c;
+};
+
+/* ---------- fitness (42-day load), fatigue (7-day load), form (fitness minus fatigue) ---------- */
+function ffSeries(days) {
+  var t = App.today, by = {};
+  activities().forEach(function (a) { if (E.diffD(a.date, t) > days + 120 || a.date > t) return; var l = a.g && a.g.load ? a.g.load : a.kind === 'run' ? a.mi * 10 : a.kind === 'lift' ? 30 : 0; by[a.date] = (by[a.date] || 0) + l; });
+  var out = [], ctl = 0, atl = 0;
+  for (var i = days + 119; i >= 0; i--) { var d = E.addD(t, -i), l = by[d] || 0; ctl += (l - ctl) / 42; atl += (l - atl) / 7; if (i < days) out.push({ d: d, ctl: ctl, atl: atl, tsb: ctl - atl }); }
+  return out;
+}
+function formWord(tsb, ctl) { var p = ctl > 1 ? tsb / ctl : 0; return p > 0.25 ? 'Very fresh (losing fitness if it lasts)' : p > 0.05 ? 'Fresh: race-ready' : p > -0.1 ? 'Neutral' : p > -0.4 ? 'Training hard: productive fatigue' : 'Very tired: ease off'; }
+function ffChartHTML() {
+  var s = ffSeries(90); if (s.length < 20 || !s.some(function (x) { return x.ctl > 1; })) return '';
+  var W = 340, H = 168, pl = 26, top = 18, mid = 104, bot = 160;
+  var hi = Math.max.apply(null, s.map(function (x) { return Math.max(x.ctl, x.atl); })) * 1.1 || 1;
+  var tmax = Math.max.apply(null, s.map(function (x) { return Math.abs(x.tsb); })) || 1;
+  var X = function (i) { return pl + i * (W - pl - 6) / (s.length - 1); }, Y = function (v) { return top + (mid - 14 - top) * (1 - v / hi); }, Z = (bot + mid) / 2 + 2, YT = function (v) { return Z - v / tmax * (bot - mid) / 2; };
+  var line = function (k) { return s.map(function (x, i) { return (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(x[k]).toFixed(1); }).join(' '); };
+  var bars = s.map(function (x, i) { var y = YT(x.tsb); return '<rect x="' + (X(i) - 1.1).toFixed(1) + '" y="' + Math.min(y, Z).toFixed(1) + '" width="2.2" height="' + Math.max(0.6, Math.abs(y - Z)).toFixed(1) + '" fill="' + (x.tsb >= 0 ? 'var(--green)' : 'var(--amber)') + '" opacity=".85"/>'; }).join('');
+  var last = s[s.length - 1], ago = s[Math.max(0, s.length - 29)];
+  /* a % change only means something once there are 10+ weeks of history behind the 6-week average */
+  var longHist = activities().some(function (a) { return a.date <= E.addD(App.today, -70); });
+  var dFit = Math.round((last.ctl / Math.max(1, ago.ctl) - 1) * 100);
+  /* race-ready band on the form strip: +5% to +25% of fitness */
+  var bandTop = YT(last.ctl * 0.25), bandBot = YT(last.ctl * 0.05);
+  var svg = '<svg class="chart ffchart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Fitness, fatigue and form, last 90 days">' +
+    '<text x="' + pl + '" y="11" style="fill:var(--ink);font-weight:700">Fitness and fatigue</text>' +
+    '<path d="' + line('atl') + '" fill="none" stroke="var(--amber)" stroke-width="1.6" stroke-dasharray="3 3" opacity=".9"/>' +
+    '<path d="' + line('ctl') + '" fill="none" stroke="var(--green)" stroke-width="2.4" stroke-linejoin="round"/>' +
+    '<text x="' + Math.min(W - 4, X(s.length - 1)) + '" y="' + (Y(last.ctl) - 5).toFixed(1) + '" text-anchor="end" style="fill:var(--green);font-weight:700">' + Math.round(last.ctl) + '</text>' +
+    '<text x="' + pl + '" y="' + (mid + 6) + '" style="fill:var(--ink);font-weight:700">Form</text>' +
+    (bandTop < bandBot ? '<rect x="' + pl + '" y="' + bandTop.toFixed(1) + '" width="' + (W - pl - 6) + '" height="' + (bandBot - bandTop).toFixed(1) + '" fill="var(--green)" opacity=".1"/><text x="' + (W - 6) + '" y="' + (bandTop + 9).toFixed(1) + '" text-anchor="end" style="font-size:8px">race-ready</text>' : '') +
+    '<line x1="' + pl + '" x2="' + (W - 6) + '" y1="' + Z + '" y2="' + Z + '" stroke="var(--line2)"/>' + bars +
+    '<text x="0" y="' + (Z + 3) + '">0</text><text x="' + pl + '" y="' + H + '">' + E.fmtDate(s[0].d) + '</text><text x="' + W + '" y="' + H + '" text-anchor="end">Today</text></svg>';
+  return '<section class="card"><h3>Fitness, fatigue and form</h3><p class="small muted" style="margin-top:4px">Fitness is your training load averaged over 6 weeks, fatigue over 1 week. Form is the gap between them: below zero while you build, above zero when you\'re fresh. Aim to arrive at a race in the shaded band.</p>' + svg +
+    '<div class="legend"><span><i class="dot" style="background:var(--green)"></i>Fitness ' + Math.round(last.ctl) + (ago.ctl > 1 && longHist ? ' (' + (dFit >= 0 ? '+' : '') + dFit + '% in 4 weeks)' : '') + '</span><span><i class="dot" style="background:var(--amber)"></i>Fatigue ' + Math.round(last.atl) + '</span></div>' +
+    '<p class="small" style="margin-top:6px"><b>Form ' + (last.tsb >= 0 ? '+' : '') + Math.round(last.tsb) + ':</b> ' + formWord(last.tsb, last.ctl) + '.</p></section>';
+}
+var _progress15 = VIEWS.progress;
+VIEWS.progress = function () {
+  var h = _progress15(); if ((App.args[0] || 'overview') !== 'performance') return h;
+  var c = ''; try { c = ffChartHTML(); } catch (e) { c = ''; }
+  if (!c) return h;
+  var t = h.indexOf('class="tabs"'), i = t > 0 ? h.indexOf('</div>', t) : -1;
+  return i > 0 ? h.slice(0, i + 6) + c + h.slice(i + 6) : h + c;
+};
+/* in taper and race weeks, one line on Today about form */
+function formLine() {
+  var w = App.week; if (!w || !/taper|race/.test(w.phase.key)) return '';
+  var s = ffSeries(30); if (!s.length) return ''; var x = s[s.length - 1]; if (x.ctl < 1) return '';
+  return '<section class="card offer insight"><a class="ins-main" href="#/progress/performance"><span class="ins-dot ' + (x.tsb >= 0 ? 'ok' : 'mid') + '" aria-hidden="true"></span><span><b>Form ' + (x.tsb >= 0 ? '+' : '') + Math.round(x.tsb) + ':</b> ' + formWord(x.tsb, x.ctl) + '. The taper turns fatigue into freshness.</span></a></section>';
+}
+var _today15b = VIEWS.today;
+VIEWS.today = function () { var h = _today15b(), c = ''; try { c = formLine(); } catch (e) { c = ''; } if (!c) return h; var i = h.indexOf('<section'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c; };
+App.p15 = { ffSeries: ffSeries };
 
 
 /* ---------------- Garmin polling ---------------- */

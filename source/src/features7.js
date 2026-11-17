@@ -10,12 +10,12 @@ function loadExtra() {
   loadExtra.busy = Date.now();
   Store.getFile('garmin/extra.json').then(function (f) {
     loadExtra.busy = 0;
-    if (!f || !f.text) return;
+    if (!f || !f.text) { loadExtra.at = loadExtra.at || Date.now(); return; }
     var changed = f.text !== loadExtra.last;
     loadExtra.last = f.text; loadExtra.at = Date.now();
     App.extra = JSON.parse(f.text); LS.set('rp-gextra', f.text);
     if (changed) { recompute(); if ($('#sheet').hidden) render(); else loadExtra.last = null; /* redraw on the next check once the sheet is closed */ }
-  }, function () { loadExtra.busy = 0; });
+  }, function () { loadExtra.busy = 0; loadExtra.at = loadExtra.at || Date.now(); });
 }
 /* fold Garmin's threshold and load balance into the data the engine already reads */
 function mergeExtra() {

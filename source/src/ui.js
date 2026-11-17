@@ -122,6 +122,7 @@ function structHTML(p, zz, lg) {
   }).join('') + '</div>';
 }
 function estText(p, zz) {
+  if (E.isRun(p) && p.timed && p.min) return '≈ ' + mi(p.mi) + ' mi';
   if (E.isRun(p)) { var m = E.estMinutes(p, zz); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; }
   if (p.min) return p.min + ' min';
   return '';
@@ -149,7 +150,7 @@ function sessHTML(p, date, zz, opts) {
   opts = opts || {};
   var t = p.type === 'recovery' ? 'recovery' : p.type;
   var done = partDone(date, p);
-  var big = E.isRun(p) ? '<b>' + mi(p.mi) + '</b><small>mi</small>' : p.min ? '<b>' + p.min + '</b><small>min</small>' : '';
+  var big = E.isRun(p) && p.timed && p.min ? '<b>' + p.min + '</b><small>min</small>' : E.isRun(p) ? '<b>' + mi(p.mi) + '</b><small>mi</small>' : p.min ? '<b>' + p.min + '</b><small>min</small>' : '';
   var flag = p.moved ? 'Moved from ' + E.fmtDate(p.moved, { weekday: 'short' }) : p.changed ? 'Adjusted' : '';
   var meta = [];
   if (estText(p, zz) && E.isRun(p)) meta.push(estText(p, zz));
@@ -165,7 +166,8 @@ function sessHTML(p, date, zz, opts) {
 }
 function mainPace(p, zz) {
   var z = null;
-  (p.steps || []).forEach(function (s) { if (!z && (s.k === 'run' || s.k === 'rep') && s.z !== 'F' && s.z !== 'E' && s.z !== 'REC') z = s.z; });
+  /* an easy run with strides is still an easy run: show the easy pace, not the strides */
+  if (p.type !== 'easy' && p.type !== 'recovery') (p.steps || []).forEach(function (s) { if (!z && (s.k === 'run' || s.k === 'rep') && s.z !== 'F' && s.z !== 'E' && s.z !== 'REC') z = s.z; });
   if (!z) z = p.type === 'recovery' ? 'REC' : 'E';
   var r = zz && zz[z];
   return r ? pace(r[0]) + '–' + pace(r[1]) + ' ' + E.ZONE_NAME[z] : '';
@@ -805,10 +807,12 @@ VIEWS.settings = function () {
     '<label class="f">Extra gym days (lift + treadmill run)<select class="i" name="crossDays">' + [0, 1, 2, 3].map(function (n) { return '<option' + (+p.crossDays === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label></div>' +
     '<label class="check"><input type="checkbox" name="doubles"' + (p.doubles !== false ? ' checked' : '') + '> Lift on run days (run first). Turn off to keep lifting on separate days; runs per week drop to fit.</label></section>' +
     '<section class="card stack"><h3>Fitness</h3><div class="grid2">' +
-    '<label class="f">Plan start<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"></label<p class="tiny muted">Start on a Friday, Saturday or Sunday and those days join week 1, so your weeks still begin on your usual day.</p>' +
+    '<label class="f">Plan start<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"><span class="tiny muted" style="font-weight:500">A Friday to Sunday start adds those days to week 1.</span></label>' +
     '<label class="f">Weekly miles at start<input class="i" type="number" min="0" max="120" name="mpw" value="' + esc(p.mpw) + '"></label>' +
     '<label class="f">Longest recent run (mi)<input class="i" type="number" min="0" max="30" name="longest" value="' + esc(p.longest) + '"></label>' +
     '<label class="f">Typical easy pace (m:ss)<input class="i" name="easyPace" placeholder="10:00" value="' + esc(p.easyPace || '') + '"></label>' +
+    '<label class="f">Coming back from a break?<select class="i" name="cbOff"><option value="0">No break</option>' + [[3, '2 to 4 weeks off'], [6, '5 to 8 weeks off'], [12, '2 to 4 months off'], [30, '4 months to a year off'], [60, 'More than a year off']].map(function (o) { return '<option value="' + o[0] + '"' + (p.comeback && +p.comeback.off === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
+    '<label class="f">Miles a week before the break<input class="i" type="number" min="0" max="150" name="cbBefore" value="' + esc(p.comeback ? p.comeback.before || '' : '') + '" placeholder="e.g. 25"></label>' +
     '<label class="f">Body weight (lb)<input class="i" type="number" min="60" max="400" name="weightLb" value="' + (p.weightKg ? Math.round(p.weightKg * 2.2046) : '') + '"></label>' +
     '<label class="f">Mileage level<select class="i" name="volume">' + [[0.8, 'Lighter (−20%)'], [0.9, 'Slightly lighter'], [1, 'Standard'], [1.1, 'Slightly more'], [1.2, 'More (+20%)']].map(function (o) { return '<option value="' + o[0] + '"' + (Math.abs((+p.volume || 1) - o[0]) < 0.05 ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label></div>' +
     '<label class="check"><input type="checkbox" name="injuryProne"' + (p.injuryProne ? ' checked' : '') + '> I\'m prone to shin splints or other running injuries</label>' +
@@ -827,6 +831,8 @@ function readSettings(form) {
   p.mpw = +f('mpw').value || 0; p.longest = +f('longest').value || 0; p.easyPace = f('easyPace').value.trim();
   p.weightKg = +f('weightLb').value ? Math.round(+f('weightLb').value / 2.2046 * 10) / 10 : null;
   p.volume = +f('volume').value || 1; p.injuryProne = f('injuryProne').checked; p.runWalk = f('runWalk').checked;
+  /* comeback mode: how long you were off and what you ran before; it starts from the plan start (or today, if that's later) */
+  if (f('cbOff') && +f('cbOff').value) { var cbFrom = (p.comeback && p.comeback.from) || (p.startDate > App.today ? p.startDate : App.today); p.comeback = { off: +f('cbOff').value, before: +f('cbBefore').value || 0, from: cbFrom }; } else if (f('cbOff')) delete p.comeback;
   if (!p.avail[p.longDay]) p.avail[p.longDay] = true;
   return p;
 }

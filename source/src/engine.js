@@ -446,6 +446,10 @@ function longFor(ctx, mi) {
         easy('Your biggest runs. Keep it truly easy and practice fueling: 30–60 g of carbs per hour.'),
         { title: 'Dress rehearsal', steps: [run(mi - 8, 'E'), run(8, 'M')], note: 'Race shoes, race kit, race breakfast and race fueling. The most important long run of the block.' }
       ];
+      /* bigger runners get the sub-elite staples: a progression long run and alternating marathon-pace miles */
+      if (mi >= 16 && ctx.method && ctx.method.key !== 'beginner' && ctx.method.key !== 'runwalk') opts.splice(2, 0,
+        { title: 'Progression long run', steps: [run(Math.round(mi * 0.5), 'E'), run(Math.round(mi * 0.3), 'S'), run(mi - Math.round(mi * 0.5) - Math.round(mi * 0.3), 'M')], note: 'Easy, then steady, then marathon pace for the last part. Teaches you to run fast on tired legs. Fuel every 30–40 minutes.' },
+        { title: 'Long run, alternating miles', steps: [run(3, 'E'), rep(Math.max(3, Math.floor((mi - 5) / 2)), { mi: 1 }, 'M', { mi: 1 }, 'steady, not easy'), run(Math.max(1, mi - 3 - 2 * Math.max(3, Math.floor((mi - 5) / 2))), 'E')], note: 'Marathon pace, then a steady mile, repeated. The steady miles are the point: no jogging. Take a gel every 30 minutes.' });
       return opts[i % opts.length];
     }
     if (d === 'half') {
@@ -620,6 +624,9 @@ function generate(state) {
     if (rt > 0) v0 = vdotOf(rmi, rt);
   }
   if (!v0 && parseClock(prof.easyPace) > 0) v0 = vdotFromEasy(parseClock(prof.easyPace));
+  /* comeback: a race from before the break overstates today's fitness. Detraining costs roughly 3% after a few weeks off, up to 15% after a long layoff. */
+  var cb = prof.comeback && +prof.comeback.off ? prof.comeback : null;
+  if (cb && v0 && prof.recent && prof.recent.time) v0 = v0 * (1 - (cb.off <= 4 ? 0.03 : cb.off <= 8 ? 0.06 : cb.off <= 16 ? 0.1 : 0.15));
   var gv = aEvents.length ? goalVdot(aEvents[0]) : null;
   if (!v0) v0 = gv ? gv - 3 : 38;
 
@@ -652,6 +659,8 @@ function generate(state) {
     var growth = Math.min(0.11 * L, Math.max(gvB ? gvB - vStart : 0, 0.045 * L));
 
     var m = firstBlock ? Math.max(6, +prof.mpw || 10) : Math.max(8, Math.round((prevPeak || 20) * 0.35));
+    /* comeback: start from a share of what you ran before the break (more time off, a smaller share), never below what you run now */
+    if (firstBlock && cb && cb.before) m = Math.max(6, +prof.mpw || 0, Math.round(cb.before * (cb.off <= 4 ? 0.7 : cb.off <= 8 ? 0.5 : cb.off <= 16 ? 0.35 : cb.off <= 52 ? 0.25 : 0.2)));
     var lastBuild = m, buildIdx = 0, lastLong = firstBlock ? Math.max(3, +prof.longest || 4) : 6;
     var phaseCounter = {};
     var qi = 0, li = 0, peakReached = m;
@@ -703,7 +712,47 @@ function generate(state) {
     if (!w.cut) { counters[bk].q++; counters[bk].l++; }
   });
   weeks.forEach(function (w, idx) { buildWeek(w, idx, weeks, prof, method, otherEvents, lastLongs); });
-  return { start: lead[0] || start, weekStart: start, lead: lead, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
+  var cbInfo = cb ? applyComeback(weeks, prof, cb) : null;
+  return { comeback: cbInfo, start: lead[0] || start, weekStart: start, lead: lead, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
+}
+
+/* Comeback weeks: runs by time, not distance; walk breaks after a long layoff (or if you asked for them);
+   no hard sessions in the first two weeks; a 5K check in the week after the timed block. */
+function applyComeback(weeks, prof, cb) {
+  var from = monday(cb.from || today()), timedN = cb.off >= 9 ? 4 : 3, walk = cb.off >= 9 || prof.runWalk || prof.level === 'new';
+  var ratios = [[3, 1], [4, 1], [6, 1], [9, 1]], first = null, n = 0;
+  weeks.forEach(function (w) {
+    if (w.end < from) return;
+    var k = Math.floor(diffD(from, w.start) / 7); if (k < 0) k = 0;
+    if (first == null) first = w.n;
+    if (k >= timedN) { if (k === timedN && !w.cut) w.days.some(function (d) { var i = d.parts.findIndex(function (p) { return p.type === 'speed'; }); if (i < 0) return false; var t = SESS.tt(); d.parts[i] = { type: 'speed', role: 'speed', key: 'tt', tt: true, title: '5K fitness check', mi: d.parts[i].mi, steps: t.steps(d.parts[i].mi), purpose: 'Your first fitness check since coming back. The result resets your paces from here.' }; return true; }); return; }
+    n++;
+    var zz = w.zones, ep = zz && zz.E ? (zz.E[0] + zz.E[1]) / 2 : 600, ratio = ratios[Math.min(k, ratios.length - 1)];
+    w.comeback = { week: k + 1, of: timedN, walk: walk };
+    w.days.forEach(function (d) {
+      d.parts = d.parts.map(function (p) {
+        if (!isRun(p) || p.type === 'race') return p;
+        var easyMin = Math.max(15, Math.round((p.mi || 2) * ep / 60 / 5) * 5);
+        if (p.type === 'speed' && k < 2) p = Object.assign({}, p, { type: 'easy', role: 'easy', key: null, title: 'Easy run' });
+        if (p.type === 'speed') return p;   /* week 3+: light quality is back (strides, fartlek), still by feel */
+        var min = p.type === 'long' ? Math.min(easyMin, 30 + 10 * k) : Math.min(easyMin, 20 + 5 * k);
+        var q = Object.assign({}, p, { min: min, mi: round1(min * 60 / ep), timed: true });
+        if (walk) {
+          var set = ratio[0] + ratio[1], reps = Math.max(2, Math.round(min / set));
+          q.title = 'Run-walk ' + reps * set + ' min';
+          q.steps = [{ k: 'rep', n: reps, work: { min: ratio[0] }, z: 'E', rec: { min: ratio[1], walk: true }, effort: 'easy running, then a brisk walk' }];
+          q.note = 'Comeback week ' + (k + 1) + ' of ' + timedN + ': run ' + ratio[0] + ' min, walk ' + ratio[1] + ' min, ' + reps + ' times. Time, not distance or pace, is the goal.';
+        } else {
+          q.title = (p.type === 'long' ? 'Long run ' : 'Easy run ') + min + ' min';
+          q.steps = [{ k: 'run', min: min, z: 'E' }];
+          q.note = 'Comeback week ' + (k + 1) + ' of ' + timedN + ': run by time at an easy, chatty effort. Walk breaks are fine.';
+        }
+        return q;
+      });
+    });
+    w.tot = totals(w.days);
+  });
+  return { from: from, weeks: timedN, walk: walk, firstWeek: first };
 }
 
 function longMilesFor(w, prev) {
@@ -1069,7 +1118,7 @@ function adapt(plan, st, analysis) {
       d.parts = d.parts.map(function (p) {
         if (!mod || mod.m >= 1) return p;
         if (p.type === 'strength') return modLift(p, mod);
-        if (p.type === 'cross' || p.type === 'rest') return p;
+        if (p.type === 'cross' || p.type === 'rest' || p.timed) return p;   /* comeback runs are already short and timed */
         return modRun(p, mod, zz);
       });
     }); };
@@ -1669,6 +1718,14 @@ function matchGarmin(st, plan, garmin) {
     var slots = [];
     if (!l.run) slots.push('run');
     if (!l.xrun) slots.push('xrun');
+    /* the same run must never count twice: skip a watch activity already linked to a log, or one that matches a run you logged by hand */
+    var linked = {}; ['run', 'xrun', 'lift', 'cross'].forEach(function (k) { if (l[k] && l[k].gid) linked[l[k].gid] = 1; });
+    var manual = ['run', 'xrun'].filter(function (k) { return l[k] && !l[k].gid && !l[k].skip && +l[k].mi > 0; }).map(function (k) { return +l[k].mi; });
+    list = list.filter(function (a) {
+      if (linked[a.id]) return false;
+      if (a.run && manual.length) { var ami = (a.distM || 0) / MI_M, j = -1; manual.forEach(function (m, k) { if (j < 0 && Math.abs(m - ami) <= Math.max(0.5, m * 0.2)) j = k; }); if (j >= 0) { manual.splice(j, 1); return false; } }
+      return true;
+    });
     list.forEach(function (a) {
       if (a.run) {
         var slot = slots.shift();
@@ -2026,7 +2083,7 @@ function capWeek(w, ceiling, zz) {
   w.tot = totals(w.days);
   var mine = 0; w.days.forEach(function (d) { d.parts.forEach(function (p) { if (p.userAdded && isRun(p)) mine += p.mi || 0; }); });
   var over = w.tot.mi - mine - ceiling; if (over <= 0.5) return false;   /* runs you add yourself don't squeeze the others */
-  var flex = []; w.days.forEach(function (d) { d.parts.forEach(function (p, i) { if (isRun(p) && !p.userAdded && (p.type === 'easy' || p.type === 'recovery' || p.type === 'long') && d.date > today()) flex.push({ d: d, i: i, p: p }); }); });
+  var flex = []; w.days.forEach(function (d) { d.parts.forEach(function (p, i) { if (isRun(p) && !p.userAdded && !p.timed && (p.type === 'easy' || p.type === 'recovery' || p.type === 'long') && d.date > today()) flex.push({ d: d, i: i, p: p }); }); });
   var tot = flex.reduce(function (a, x) { return a + (x.p.mi || 0); }, 0); if (tot < 1) return false;
   var f = Math.max(0.6, (tot - over) / tot);
   flex.forEach(function (x) { var p = scaleRun(x.p, f, zz); p.mi = half(Math.max(1.5, (x.p.mi || 0) * f)); if (x.p.type !== 'long') p.steps = [run(p.mi, x.p.type === 'recovery' ? 'REC' : 'E')]; p.changed = true; p.shin = true; p.note = 'Shortened to stay under your shin-load ceiling of ' + ceiling + ' mi this week.'; x.d.parts[x.i] = p; });
