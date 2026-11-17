@@ -1181,3 +1181,4 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .gloss { margin: 0; display: grid; gap: 4px; }
 .gloss dt { font-weight: 800; margin-top: 10px; } .gloss dt:first-child { margin-top: 0; }
 .gloss dd { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
+#set-volume .check { align-items: flex-start; } #set-volume .check input { margin-top: 2px; }

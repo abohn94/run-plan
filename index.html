@@ -1202,6 +1202,7 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .gloss { margin: 0; display: grid; gap: 4px; }
 .gloss dt { font-weight: 800; margin-top: 10px; } .gloss dt:first-child { margin-top: 0; }
 .gloss dd { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
+#set-volume .check { align-items: flex-start; } #set-volume .check input { margin-top: 2px; }
 
 </style>
 </head>
@@ -2913,6 +2914,7 @@ function partKey(date, p) { return date + '|' + (p.role || p.type) + (p.type ===
 function isRunType(t) { return t === 'easy' || t === 'recovery' || t === 'long' || t === 'speed' || t === 'race'; }
 /* How well recent weeks were followed. If you ran much less than planned, this week is capped so the jump back is not too big. */
 function compliance(plan, st) {
+  if ((st.prefs || {}).matchRecent === false) return null;   /* switched off in Plan settings */
   var t = today(), cur = weekOf(plan, t);
   if (!cur || cur.n < 2) return null;
   var logs = st.logs || {}, marks = weekStatuses(plan, st), weeks = [];
@@ -5138,6 +5140,9 @@ VIEWS.settings = function () {
     '<label class="check"><input type="checkbox" name="injuryProne"' + (p.injuryProne ? ' checked' : '') + '> I\'m prone to shin splints or other running injuries</label>' +
     '<label class="check"><input type="checkbox" name="runWalk"' + (p.runWalk ? ' checked' : '') + '> Suggest run-walk on long runs</label></section>' +
     '<section class="card stack"><h3>Training style</h3><p class="small">' + esc((E.METHODS[p.method] || E.METHODS.balanced).name) + ' — <a href="#/style">compare styles</a></p></section>' +
+    '<section class="card stack" id="set-volume"><h3>Adjust to your recent running</h3><p class="small muted">Two safety checks that compare the plan with what you have actually been running. Turning them off keeps the plan exactly as written.</p>' +
+    '<label class="check"><input type="checkbox" data-shincap' + ((Store.state.prefs || {}).shinCap !== false ? ' checked' : '') + '> <span><b>Shin-load ceiling</b><br><span class="small muted">Trims easy and long runs when a week would jump past what your legs have handled lately.' + (App.an && App.an.shin ? ' Your ceiling right now: ' + Math.round(App.an.shin.ceiling) + ' mi a week.' : '') + '</span></span></label>' +
+    '<label class="check"><input type="checkbox" data-matchrecent' + ((Store.state.prefs || {}).matchRecent !== false ? ' checked' : '') + '> <span><b>Match the plan to recent weeks</b><br><span class="small muted">If you ran well under the plan for a couple of weeks, the next week is capped so the step back up is safe.</span></span></label></section>' +
     '<section class="card stack"><h3>App</h3><label class="f">Theme<select class="i" name="theme"><option value="dark"' + (LS.get('rp-theme') !== 'light' ? ' selected' : '') + '>Dark</option><option value="light"' + (LS.get('rp-theme') === 'light' ? ' selected' : '') + '>Light</option></select></label></section>' +
     '<div class="btns"><button class="btn primary" type="submit">Save & rebuild plan</button><a class="btn ghost" href="#/today">Cancel</a></div><p class="err" id="setErr"></p></form>';
 };
@@ -5299,7 +5304,7 @@ VIEWS.you = function () {
   function item(h, label, v) { return '<a href="' + h + '">' + label + '<span class="v">' + (v || '') + '</span><span class="chev">›</span></a>'; }
   var html = '<div class="pagehead"><h1>You</h1></div>';
   if (p && pl) html += '<div class="tiles"><div class="tile"><span>Plan</span><b style="font-size:1.15rem">' + esc(pl.method.short) + '</b><em>' + pl.weeks.length + ' weeks</em></div><div class="tile"><span>Fitness</span><b>' + (App.an && App.an.vNow ? App.an.vNow.toFixed(1) : '–') + '</b><em>VDOT</em></div><div class="tile"><span>Races</span><b>' + evs.length + '</b><em>upcoming</em></div></div>';
-  html += '<div class="sechead"><h2>Your plan</h2></div><div class="menu">' + item('#/goals', 'Goals & races', evs.length ? plural(evs.length, 'race') : 'Add one') + item('#/settings', 'Schedule & gym days', p ? p.runDays + ' runs · ' + (p.liftDays || 0) + ' lifts' : '') + item('#/style', 'Training style', pl ? esc(pl.method.short) : '') + item('#/zones', 'Paces, threshold & VO2max', '') + '</div>';
+  html += '<div class="sechead"><h2>Your plan</h2></div><div class="menu">' + item('#/goals', 'Goals & races', evs.length ? plural(evs.length, 'race') : 'Add one') + item('#/settings', 'Schedule, gym days & volume checks', p ? p.runDays + ' runs · ' + (p.liftDays || 0) + ' lifts' : '') + item('#/style', 'Training style', pl ? esc(pl.method.short) : '') + item('#/zones', 'Paces, threshold & VO2max', '') + '</div>';
   html += '<div class="sechead"><h2>Library</h2></div><div class="menu">' + item('#/strength', 'Strength sessions') + item('#/cross', 'Gym days & treadmill') + item('#/shins', 'Shins & prehab') + item('#/warmup', 'Warm-up & cool-down') + item('#/nutrition', 'Nutrition') + '</div>';
   html += '<div class="sechead"><h2>App</h2></div><div class="menu">' + item('#/sync', 'Garmin & sync', Store.mode === 'github' ? 'Connected' : 'Not connected') + item('#/data', 'Export & import') +
     '<button data-act="theme">Appearance<span class="v">' + (LS.get('rp-theme') === 'light' ? 'Light' : 'Dark') + '</span><span class="chev">›</span></button><button data-act="size">Text size<span class="v">' + ['Standard', 'Large', 'Largest'][+(LS.get('rp-size') || 0)] + '</span><span class="chev">›</span></button>' + item('#/about', 'About & terms') + '</div>';
@@ -6771,7 +6776,7 @@ function honestCard() {
   return '<section class="card honest"><div class="eyebrow">Honest check-in</div><h3 style="margin-top:2px">' + (c.level === 'verylow' ? 'You are running well under the plan' : 'You are a bit behind the plan') + '</h3><ul class="plain small" style="margin-top:6px">' + lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>' +
     '<p class="small" style="margin-top:8px">' + (cap ? 'Jumping straight back to the full plan is how shin splints start, so this week is capped at <b>' + mi(cap.mi) + ' mi</b> (planned ' + mi(cap.planned) + ')' + (cap.long ? ' and the long run at <b>' + cap.long + ' mi</b>' : '') + '. Hit these and next week builds again.' : 'This week is already within a safe step of what you have been running. Aim to get every run in.') + '</p>' +
     (msg ? '<p class="small muted" style="margin-top:6px">' + msg + '</p>' : '') +
-    '<div class="btns" style="margin-top:10px"><a class="btn sm" href="#/editweek/' + (App.week ? App.week.n : 1) + '">Rearrange this week</a><a class="btn sm ghost" href="#/settings">Fewer run days</a>' + (msg ? '<a class="btn sm ghost" href="#/goals">Review goal</a>' : '') + '</div></section>';
+    '<div class="btns" style="margin-top:10px"><a class="btn sm" href="#/editweek/' + (App.week ? App.week.n : 1) + '">Rearrange this week</a><a class="btn sm ghost" href="#/settings">Fewer run days</a>' + (msg ? '<a class="btn sm ghost" href="#/goals">Review goal</a>' : '') + '</div><p class="tiny muted" style="margin-top:8px">The app sizes your next weeks from what you have been running. <a href="#/settings" data-act="goto-volume">Turn this off</a></p></section>';
 }
 
 /* ---------- drag-and-drop week editor ---------- */
@@ -11158,6 +11163,20 @@ VIEWS.you = function () {
   return h.slice(0, close) + item + h.slice(close);
 };
 App.p17 = { dressFor: dressFor };
+
+/* ---------- the volume safety switches (Plan settings → Adjust to your recent running) ---------- */
+document.addEventListener('change', function (e) {
+  if (!e.target.hasAttribute || !e.target.hasAttribute('data-matchrecent')) return;
+  var on = e.target.checked; Store.edit('prefs', 'matchRecent', function (S) { S.prefs = S.prefs || {}; S.prefs.matchRecent = on; });
+  toast(on ? 'Plan matches your recent weeks again' : 'Plan kept as written, whatever you ran lately');
+});
+/* any run the app trimmed for volume links straight to the switches */
+var _day17b = VIEWS.day;
+VIEWS.day = function () {
+  var h = _day17b();
+  return h.replace(/(Shortened to stay under your shin-load ceiling of [\d.]+ mi this week\.)/, '$1 <a href="#/settings" data-act="goto-volume">Change</a>');
+};
+ACTIONS['goto-volume'] = function () { go('#/settings'); setTimeout(function () { var el = document.getElementById('set-volume'); if (el) el.scrollIntoView({ block: 'start' }); }, 250); };
 
 
 /* ---------------- Garmin polling ---------------- */

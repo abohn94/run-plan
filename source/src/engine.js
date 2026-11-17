@@ -1510,6 +1510,7 @@ function partKey(date, p) { return date + '|' + (p.role || p.type) + (p.type ===
 function isRunType(t) { return t === 'easy' || t === 'recovery' || t === 'long' || t === 'speed' || t === 'race'; }
 /* How well recent weeks were followed. If you ran much less than planned, this week is capped so the jump back is not too big. */
 function compliance(plan, st) {
+  if ((st.prefs || {}).matchRecent === false) return null;   /* switched off in Plan settings */
   var t = today(), cur = weekOf(plan, t);
   if (!cur || cur.n < 2) return null;
   var logs = st.logs || {}, marks = weekStatuses(plan, st), weeks = [];

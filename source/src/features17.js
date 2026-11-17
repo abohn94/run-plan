@@ -84,3 +84,17 @@ VIEWS.you = function () {
   return h.slice(0, close) + item + h.slice(close);
 };
 App.p17 = { dressFor: dressFor };
+
+/* ---------- the volume safety switches (Plan settings → Adjust to your recent running) ---------- */
+document.addEventListener('change', function (e) {
+  if (!e.target.hasAttribute || !e.target.hasAttribute('data-matchrecent')) return;
+  var on = e.target.checked; Store.edit('prefs', 'matchRecent', function (S) { S.prefs = S.prefs || {}; S.prefs.matchRecent = on; });
+  toast(on ? 'Plan matches your recent weeks again' : 'Plan kept as written, whatever you ran lately');
+});
+/* any run the app trimmed for volume links straight to the switches */
+var _day17b = VIEWS.day;
+VIEWS.day = function () {
+  var h = _day17b();
+  return h.replace(/(Shortened to stay under your shin-load ceiling of [\d.]+ mi this week\.)/, '$1 <a href="#/settings" data-act="goto-volume">Change</a>');
+};
+ACTIONS['goto-volume'] = function () { go('#/settings'); setTimeout(function () { var el = document.getElementById('set-volume'); if (el) el.scrollIntoView({ block: 'start' }); }, 250); };
