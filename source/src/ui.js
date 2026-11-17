@@ -238,7 +238,7 @@ function heroHTML(x, date, zz) {
   var nums = '';
   if (E.isRun(x)) nums = '<div><b>' + mi(x.mi) + ' mi</b><span>Distance</span></div><div><b>' + estText(x, zz) + '</b><span>Time</span></div>' + (mainPace(x, zz) ? '<div><b>' + mainPace(x, zz).split(' ')[0] + '</b><span>' + esc(mainPace(x, zz).split(' ').slice(1).join(' ')) + ' /mi</span></div>' : '');
   else if (x.min) nums = '<div><b>' + x.min + ' min</b><span>Duration</span></div>' + (x.type === 'strength' ? '<div><b>' + E.LIFT_PHASES[x.lp].k + '</b><span>Loads</span></div>' : '');
-  return '<a class="herow t-' + t + '" href="#/day/' + date + '"><div class="spread"><span class="lab">Today · ' + (TYPE_LABEL[x.type] || x.type) + '</span>' + (done ? '<span class="pill good">Done ✓</span>' : x.changed || x.moved ? '<span class="pill warn">Adjusted</span>' : '') + '</div>' +
+  return '<a class="herow t-' + t + '" href="#/day/' + date + '"><div class="spread"><span class="lab">Today · ' + (TYPE_LABEL[x.type] || x.type) + '</span>' + (done ? '<span class="pill good">Done ✓</span>' : x.changed || x.moved ? '<span class="pill warn adjbtn" role="button" tabindex="0" data-act="why-adjusted" data-arg="' + jattr({ date: date }) + '">Adjusted <i aria-hidden="true">ⓘ</i></span>' : '') + '</div>' +
     '<h2>' + esc(x.title) + '</h2>' + (nums ? '<div class="nums">' + nums + '</div>' : '<p class="small muted">' + esc(x.note || '') + '</p>') +
     (E.isRun(x) ? structHTML(x, zz) : '') + '<span class="btn primary" style="justify-self:start">' + (x.type === 'rest' ? 'Recovery tips' : done ? 'View workout' : 'View workout') + '</span></a>';
 }
@@ -379,7 +379,7 @@ function partDetail(x, date, w, zz, l, idx) {
     (estText(x, zz) && E.isRun(x) ? '<div class="tiny muted mono">' + (x.type === 'race' || x.timed ? '' : '≈ ') + estText(x, zz) + '</div>' : '') + '</div></div>';
   var body = '';
   if (x.moved) body += '<div class="banner info small">Moved here from ' + E.fmtDate(x.moved, { weekday: 'long' }) + '.</div>';
-  if (x.changed && x.from) body += '<div class="banner warn small">Adjusted from: ' + esc(x.from) + '.</div>';
+  if (x.changed && x.from) body += '<div class="banner warn small">Adjusted from: ' + esc(x.from) + '. <a href="#" data-act="why-adjusted" data-arg="' + jattr({ date: date }) + '">Why?</a></div>';
   if (E.isRun(x)) {
     body += structHTML(x, zz, true);
     if (x.purpose) body += '<p class="small"><b>Why:</b> ' + esc(x.purpose) + '</p>';
@@ -1293,6 +1293,7 @@ var ACTIONS = {
     delete p.fromGarmin;
     if (!p.level) p.level = 'some'; if (!p.goalType) p.goalType = 'time'; if (!p.method) p.method = 'balanced';
     var fresh = !Store.state.profile;
+    if (fresh && !p.setupAt) p.setupAt = App.today;
     Store.editMany([['profile'], ['events']], function (s) { s.profile = p; s.events = z.events; });
     App.wiz = null;
     if (fresh) coachSay('Your plan is ready: ' + E.METHODS[p.method].name + ' with ' + (p.liftDays || 0) + ' lifting days a week. Each morning I check your recovery and suggest adjustments. Tell me any time something comes up.', [{ label: 'See today', act: { nav: '#/today' } }]);

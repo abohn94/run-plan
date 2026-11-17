@@ -1182,3 +1182,13 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .gloss dt { font-weight: 800; margin-top: 10px; } .gloss dt:first-child { margin-top: 0; }
 .gloss dd { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
 #set-volume .check { align-items: flex-start; } #set-volume .check input { margin-top: 2px; }
+/* adjusted bubble, why sheet, runner type */
+.adjbtn { cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: inset 0 0 0 1.5px currentColor; position: relative; z-index: 1; }
+.adjbtn i { font-style: normal; font-size: .85em; }
+.adjbtn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.why { padding: 12px; border-radius: 14px; background: var(--card2); display: grid; gap: 2px; }
+.why p { margin: 0; color: var(--muted); }
+.rtcard { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.rtcard > div { display: grid; min-width: 0; } .rtcard b { font-size: 1.02rem; }
+.opt.rt { display: grid; gap: 2px; text-align: left; }
+.flash { animation: flashy 1.6s ease; } @keyframes flashy { 0%, 60% { box-shadow: inset 0 0 0 2px var(--green); } 100% { box-shadow: none; } }

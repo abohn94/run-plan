@@ -284,7 +284,7 @@ function reviewCard() {
 function missedCard() {
   var p = App.plan; if (!p || App.today < p.start) return '';
   var ok = (st().prefs || {}).missedOk || {}, w = App.week; if (!w) return '';
-  var ms = E.missedThisWeek(p, st(), App.today).filter(function (m) { var k = partKeyOf(m.day, m.p); return !ok[k] && E.diffD(m.date, App.today) <= 3; });
+  var ms = E.missedThisWeek(p, st(), App.today).filter(function (m) { var k = partKeyOf(m.day, m.p); return !ok[k] && E.diffD(m.date, App.today) <= 3 && !(((st().profile || {}).setupAt) > m.date); });
   if (!ms.length) return '';
   return '<section class="card missed"><div class="eyebrow">Missed this week</div><div class="stack tight" style="margin-top:8px">' + ms.slice(0, 3).map(function (m) {
     var k = partKeyOf(m.day, m.p);

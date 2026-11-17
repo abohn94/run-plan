@@ -2141,6 +2141,8 @@ function shinLoad(st, garmin, plan, date) {
   /* the biggest week in the last 10 that was not followed by pain within 7 days */
   var safe = 0; wk.forEach(function (w) { var hurt = ((st && st.checkins) || []).some(function (c) { return c.pain && c.date >= w.start && c.date <= addD(w.end, 7); }); if (!hurt) safe = Math.max(safe, w.mi); });
   var reasons = [], f = prof.injuryProne ? 1.10 : 1.15;
+  var runs0 = ((garmin && garmin.activities) || []).filter(function (a) { return a.run && a.date; }).map(function (a) { return a.date; }).sort()[0];
+  if ((!runs0 || runs0 > addD(date, -28)) && +prof.mpw > a4) { a4 = +prof.mpw; safe = Math.max(safe, +prof.mpw); reasons.push('your watch has less than 4 weeks of runs, so this starts from the ' + prof.mpw + ' mi a week you entered'); }
   var ceiling = Math.max(a4 * f, Math.min(safe * 1.05, a4 * 1.3), 8);
   if (shinPain.length) { ceiling = Math.min(ceiling, Math.max(a4, 6)); reasons.push('shin or lower-leg pain reported in the last 3 weeks'); }
   var tread = mean(last4.map(function (w) { return w.mi ? w.tread / w.mi : 0; })) || 0;
