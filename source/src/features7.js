@@ -381,7 +381,7 @@ function oddsFor(ev) { if (!App.plan || !App.an) return null; try { return E.goa
 function oddsHTML(ev, compact) {
   var o = oddsFor(ev); if (!o) return '';
   var col = o.p >= 70 ? 'var(--green)' : o.p >= 40 ? 'var(--gold)' : 'var(--amber)';
-  return '<div class="odds' + (compact ? ' sm' : '') + '"><div class="ring" style="--p:' + o.p + ';--c:' + col + '"><b>' + o.p + '%</b></div><div><b>Chance of ' + E.clock(o.goal) + '</b><p class="small muted">On track for about ' + E.clock(o.expected) + ' in ' + plural(o.weeks, 'week') + (o.garmin ? '. Garmin predicts ' + E.clock(o.garmin) + ' today' : '') + '.' + (o.tips.length && !compact ? ' To raise it: ' + esc(o.tips.join('; ')) + '.' : '') + '</p></div></div>';
+  return '<div class="odds' + (compact ? ' sm' : '') + '"><div class="ring" style="--p:' + o.p + ';--c:' + col + '"><b>' + o.p + '%</b></div><div><b>Chance of ' + E.clock(o.goal) + '</b><p class="small muted">On track for about ' + E.clock(o.expected) + (o.weeks < 1 ? ' on race day' : ' in ' + plural(o.weeks, 'week')) + (o.garmin ? '. Garmin predicts ' + E.clock(o.garmin) + ' today' : '') + '.' + (o.tips.length && !compact ? ' To raise it: ' + esc(o.tips.join('; ')) + '.' : '') + '</p></div></div>';
 }
 var _goals7 = VIEWS.goals;
 VIEWS.goals = function () {

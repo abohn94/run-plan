@@ -713,6 +713,15 @@ function generate(state) {
   });
   weeks.forEach(function (w, idx) { buildWeek(w, idx, weeks, prof, method, otherEvents, lastLongs); });
   var cbInfo = cb ? applyComeback(weeks, prof, cb) : null;
+  /* "Suggest run-walk on long runs": long runs get real walk breaks on the watch, 9 min running and 1 min walking */
+  if (prof.runWalk && method.key !== 'runwalk') weeks.forEach(function (w) {
+    if (w.comeback) return;
+    w.days.forEach(function (d) { d.parts = d.parts.map(function (p) {
+      if (p.type !== 'long' || p.timed || !p.steps || p.steps.length !== 1 || p.steps[0].k !== 'run') return p;
+      var ep = w.zones && w.zones.E ? (w.zones.E[0] + w.zones.E[1]) / 2 : 600, min = Math.round(p.mi * ep / 60), reps = Math.max(2, Math.round(min / 10));
+      return Object.assign({}, p, { timed: true, min: reps * 10, title: 'Long run, run-walk', steps: [{ k: 'rep', n: reps, work: { min: 9 }, z: 'E', rec: { min: 1, walk: true }, effort: 'easy, then a 1-minute walk' }], note: 'Run 9 minutes, walk 1, ' + reps + ' times. Walk breaks lower the impact without costing fitness.' });
+    }); });
+  });
   return { comeback: cbInfo, start: lead[0] || start, weekStart: start, lead: lead, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
 }
 
@@ -731,6 +740,8 @@ function applyComeback(weeks, prof, cb) {
     w.comeback = { week: k + 1, of: timedN, walk: walk };
     w.days.forEach(function (d) {
       d.parts = d.parts.map(function (p) {
+        /* the first two comeback weeks lift with body weight: the same patterns, none of the barbell load */
+        if (p.type === 'strength' && k < 2 && /^[ABC]$/.test(p.key || '')) return Object.assign(liftPart('HT', 0, w, 'Comeback week ' + (k + 1) + ': body-weight strength, so muscles and tendons catch up before the barbell comes back.'), { role: p.role, moved: p.moved, title: 'Body-weight strength' });
         if (!isRun(p) || p.type === 'race') return p;
         var easyMin = Math.max(15, Math.round((p.mi || 2) * ep / 60 / 5) * 5);
         if (p.type === 'speed' && k < 2) p = Object.assign({}, p, { type: 'easy', role: 'easy', key: null, title: 'Easy run' });
@@ -1253,9 +1264,43 @@ function adapt(plan, st, analysis) {
     w.tot = totals(w.days);
   });
   addLead(plan, st);
+  applyLadder(plan, st);
   plan.statusByWeek = stat;
   plan.mult = mult;
   return plan;
+}
+/* Return-to-run ladder after a niggle (st.ladder {start, step 0..4}): each run day from the start takes the next rung,
+   walk → run-walk 1:1 → run-walk 4:1 → 20 min easy → 30 min easy. No workouts until it's done. Pain moves you back a rung (set in the app). */
+var LADDER = [
+  { title: 'Pain-free walk', min: 30, walk: true, note: 'Brisk walk, 30 minutes. It has to be completely pain-free to move up.' },
+  { title: 'Run-walk 1:1', min: 20, steps: [{ k: 'rep', n: 10, work: { min: 1 }, z: 'E', rec: { min: 1, walk: true }, effort: 'very easy jog, then walk' }], note: 'Jog 1 minute, walk 1 minute, 10 times. Stop if it hurts.' },
+  { title: 'Run-walk 4:1', min: 25, steps: [{ k: 'rep', n: 5, work: { min: 4 }, z: 'E', rec: { min: 1, walk: true }, effort: 'easy running, then walk' }], note: 'Run 4 minutes, walk 1 minute, 5 times. Soft surface or treadmill if you can.' },
+  { title: 'Easy run 20 min', min: 20, steps: [{ k: 'run', min: 20, z: 'E' }], note: 'Twenty minutes easy and continuous. The last rung before normal easy running.' },
+  { title: 'Easy run 30 min', min: 30, steps: [{ k: 'run', min: 30, z: 'E' }], note: 'Thirty minutes easy. Pain-free today means you are back to the plan, workouts included.' }
+];
+function applyLadder(plan, st) {
+  var L = st.ladder; if (!L || L.step == null || L.step >= LADDER.length || !L.start) return;
+  var step = L.step, from = L.start, logs = st.logs || {}, td = today();
+  plan.weeks.forEach(function (w) {
+    if (w.end < from) return;
+    var zz = w.zonesAdj || w.zones, ep = zz && zz.E ? (zz.E[0] + zz.E[1]) / 2 : 600, changed = false;
+    w.days.forEach(function (d) {
+      if (d.date < from || step >= LADDER.length) return;
+      /* no jumping or heavy leg work while you climb back: leg days become upper body and core */
+      d.parts = d.parts.map(function (p) { return p.type === 'strength' && /^[ABC]$/.test(p.key || '') ? Object.assign(liftPart('UB', 0, w, 'Return ladder: upper body and core only, so the sore spot gets a break from impact and heavy leg work.'), { role: p.role }) : p; });
+      var hasRun = d.parts.some(function (p) { return isRun(p) && p.type !== 'race'; }); if (!hasRun) return;
+      /* a past day you didn't do keeps no rung (and uses none up); the ladder waits for you */
+      var lg = logs[d.date] || {}, did = (lg.run && !lg.run.skip) || lg.cross || lg.done;
+      if (d.date < td && !did) { d.parts = d.parts.filter(function (p) { return !isRun(p) || p.type === 'race'; }); if (!d.parts.length) d.parts.push(restPart()); changed = true; return; }
+      var r = LADDER[step], part;
+      if (r.walk) part = { type: 'cross', role: 'cross', title: r.title, min: r.min, note: r.note, ladder: step + 1 };
+      else part = { type: 'easy', role: 'easy', title: r.title, min: r.min, mi: round1(r.min * 60 / ep), timed: true, steps: r.steps, note: r.note, ladder: step + 1 };
+      d.parts = d.parts.filter(function (p) { return !isRun(p) || p.type === 'race'; }).filter(function (p) { return !(p.type === 'strength' && /^[ABC]$/.test(p.key || '')); });
+      d.parts.unshift(part); step++; changed = true;
+    });
+    if (changed) w.tot = totals(w.days);
+  });
+  plan.ladder = { step: L.step, of: LADDER.length, kind: L.kind || 'other' };
 }
 /* lead-in days before week 1 (see generate): rest by default. A move from a week-1 day onto a lead-in day
    (st.moves {from: leadDate}) carries that whole day's sessions over and leaves the old day as rest; workouts
@@ -2301,7 +2346,7 @@ var api = {
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
   sunTimes: sunTimes, clockMin: clockMin, applyDaylight: applyDaylight, heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
-  weekOf: weekOf, dayAt: dayAt, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
+  weekOf: weekOf, dayAt: dayAt, LADDER: LADDER, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,
   loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
 };

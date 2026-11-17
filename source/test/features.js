@@ -42,7 +42,7 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   await go('#/progress/workouts'); await pg.click('.actrow'); await pg.waitForTimeout(400); await shot('05-activity', true); log('activity:', pg.url().split('#')[1]);
   // shoes
   await go('#/shoes'); await pg.click('text=Add shoes'); await pg.fill('#sh-brand', 'Brooks'); await pg.fill('#sh-model', 'Ghost 17'); await pg.fill('#sh-start', '120'); await pg.fill('#sh-since', E.addD(today, -60)); await pg.click('[data-act=sheet-save]'); await pg.waitForTimeout(400);
-  await shot('06-shoes'); log('shoes:', (await text()).replace(/\n/g, ' ').slice(0, 160));
+  await shot('06-shoes'); log('shoes:', (await text()).replace(/\n/g, ' ').slice(0, 600));
   await pg.click('.shoecard'); await pg.waitForTimeout(300); await shot('07-shoe', true);
   // assign 'none' on the first run in shoe page
   const runHref = await pg.$eval('.actrow', a => a.getAttribute('href')); await go(runHref, 500); await pg.click('[data-act=set-gear] >> text=None'); await pg.waitForTimeout(300); log('gear set:', JSON.stringify(await pg.evaluate(() => window.Store.state.gear)).slice(0, 80));

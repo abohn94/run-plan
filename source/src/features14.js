@@ -19,7 +19,7 @@ function workoutRecords() {
 function milestones() {
   var logs = st().logs || {}, out = [], dates = Object.keys(logs).sort(), since = (st().profile || {}).comeback && st().profile.comeback.from;
   /* all your running, Garmin history included, so a "first" is really a first */
-  var runs = allRuns().map(function (r) { return { date: r.date, mi: +r.mi, sec: +r.sec || 0 }; });
+  var runs = allRuns().filter(function (r) { return r.date <= App.today; }).map(function (r) { return { date: r.date, mi: +r.mi, sec: +r.sec || 0 }; });
   if (since) runs = runs.filter(function (r) { return r.date >= since; });
   var starter = since || (st().profile || {}).level === 'new';
   var first = function (f) { for (var i = 0; i < runs.length; i++) if (f(runs[i])) return runs[i].date; return null; };

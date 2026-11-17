@@ -123,6 +123,7 @@ function structHTML(p, zz, lg) {
 }
 function estText(p, zz) {
   if (E.isRun(p) && p.timed && p.min) return '≈ ' + mi(p.mi) + ' mi';
+  if (p.type === 'race' && E.parseClock(p.goal) > 0) { var gm = Math.round(E.parseClock(p.goal) / 60); return 'goal ' + (gm >= 60 ? Math.floor(gm / 60) + ' h ' + (gm % 60) + ' min' : gm + ' min'); }
   if (E.isRun(p)) { var m = E.estMinutes(p, zz); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; }
   if (p.min) return p.min + ' min';
   return '';

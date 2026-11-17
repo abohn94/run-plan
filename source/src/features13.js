@@ -35,6 +35,11 @@ function recapData(date, slot) {
     var m = all.length ? Math.round(all.reduce(function (s, v) { return s + v; }, 0) / all.length) : 0;
     verdict = ex.hit === ex.of ? 'Nailed it: every work lap on target.' : ex.hit / ex.of >= 0.7 ? 'On target: ' + ex.hit + ' of ' + ex.of + ' work laps in range.' : m < 0 ? 'Faster than planned: ' + ex.hit + ' of ' + ex.of + ' laps in range, the rest about ' + (-m) + ' s/mi quick.' : 'Tough day: ' + ex.hit + ' of ' + ex.of + ' laps in range, the rest about ' + m + ' s/mi slow.';
     tone = ex.hit / ex.of >= 0.7 ? 'ok' : m < 0 ? 'mid' : 'low';
+  } else if (p && p.timed) {
+    /* comeback run-walk or timed run: finishing is the whole job */
+    var wk0 = App.plan && E.weekOf(App.plan, date), cbw = wk0 && wk0.comeback;
+    verdict = (cbw ? 'Comeback week ' + cbw.week + ' of ' + cbw.of + ': ' : '') + (r.sec >= (p.min || 0) * 60 * 0.9 ? 'done, all ' + Math.round(r.sec / 60) + ' minutes. That\'s the whole job.' : Math.round(r.sec / 60) + ' of ' + p.min + ' minutes. Stopping early is fine when something feels off.');
+    tone = r.sec >= (p.min || 0) * 60 * 0.9 ? 'ok' : 'mid';
   } else if (kind === 'speed') { verdict = 'Workout done. The lap-by-lap check appears once your laps sync from Garmin.'; tone = 'mid';
   } else if (kind === 'race') { verdict = 'Race done: ' + mi(r.mi) + ' mi in ' + E.clock(r.sec) + '.'; }
   else {
@@ -46,7 +51,7 @@ function recapData(date, slot) {
   }
   /* similar runs: the same kind, a similar distance, the last 120 days */
   var sim = [], cmp = null;
-  if (a && r.hr) {
+  if (a && r.hr && !(p && p.timed)) {
     sim = classedRuns().filter(function (x) { return x.date < date && E.diffD(x.date, date) <= 120 && x.cls === cls && x.a.avgHR && Math.abs(x.r.mi - r.mi) <= Math.max(1, r.mi * 0.35); }).slice(-3);
     var me = speedOf(a);
     if (sim.length && me) {
@@ -89,7 +94,7 @@ function recapData(date, slot) {
   }
   /* recovery prompts */
   var kg = +(st().profile || {}).weightKg || 0, hardRun = kind === 'speed' || kind === 'long' || kind === 'race' || (r.sec || 0) >= 75 * 60;
-  var fuel = kg ? { carb: Math.round(kg * (hardRun ? 1.0 : 0.6) / 5) * 5, pro: Math.round(kg * 0.3 / 5) * 5 } : null;
+  var fuel = kg && (hardRun || (r.sec || 0) >= 45 * 60) ? { carb: Math.round(kg * (hardRun ? 1.0 : 0.6) / 5) * 5, pro: Math.round(kg * 0.3 / 5) * 5 } : null;
   var sw = ((st().prefs || {}).sweat || []).slice(-1)[0], fluid = sw && r.sec ? Math.round(sw.ozh * r.sec / 3600 * 1.25) : null;
   var shin = hardRun && (st().profile || {}).injuryProne;
   return { date: date, slot: slot, r: r, a: a, p: p, kind: kind, ex: ex, du: du, verdict: verdict, tone: tone, cmp: cmp, recs: recs, wk: wk, tmr: tmr, fuel: fuel, fluid: fluid, shin: shin, long: kind === 'long' || r.mi >= 10 };
