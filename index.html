@@ -1314,6 +1314,17 @@ function paceAt(vdot, p) {
   var v = (-b + Math.sqrt(b * b + 4 * a * x)) / (2 * a);
   return MI_M / v * 60;
 }
+/* Age and sex grading. Returns the runner's age and sex and a factor that turns their fitness (VDOT) into an
+   open-male equivalent, so "sub-elite" means the same thing for a 25-year-old man and a 52-year-old woman.
+   Women's distance times run about 11% slower than men's at the same level (about 12% in VDOT);
+   age costs nothing to 35, then about 0.6% a year to 50, 0.9% a year to 65 and 1.3% a year after (close to WMA age grading). */
+function ageOf(prof, onDate) { var by = +(prof && prof.birthYear); return by > 1900 ? +(onDate || today()).slice(0, 4) - by : null; }
+function grade(prof, onDate) {
+  var age = ageOf(prof, onDate), sex = prof && (prof.sex === 'F' || prof.sex === 'M') ? prof.sex : null;
+  var dec = age == null || age <= 35 ? 0 : age <= 50 ? 0.006 * (age - 35) : age <= 65 ? 0.09 + 0.009 * (age - 50) : Math.min(0.6, 0.225 + 0.013 * (age - 65));
+  return { age: age, sex: sex, f: (sex === 'F' ? 1.12 : 1) / (1 - dec) };
+}
+function isMasters(prof) { return prof && prof.masters != null ? !!prof.masters : (ageOf(prof) || 0) >= 40; }
 function predict(vdot, mi) {
   var lo = mi * 200, hi = mi * 1800;
   for (var i = 0; i < 60; i++) { var mid = (lo + hi) / 2; if (vdotOf(mi, mid) > vdot) lo = mid; else hi = mid; }
@@ -2053,7 +2064,9 @@ function generate(state) {
   var cb = prof.comeback && +prof.comeback.off ? prof.comeback : null;
   if (cb && v0 && prof.recent && prof.recent.time) v0 = v0 * (1 - (cb.off <= 4 ? 0.03 : cb.off <= 8 ? 0.06 : cb.off <= 16 ? 0.1 : 0.15));
   var gv = aEvents.length ? goalVdot(aEvents[0]) : null;
-  if (!v0) v0 = elite ? (gv ? gv - 2 : 58) : gv ? gv - 3 : prof.level === 'new' && !(+prof.mpw > 5) ? 30 : 38;   /* a true beginner with no pace on file starts around 12:30/mi easy */
+  var gr = grade(prof);
+  /* no race or pace on file: start from a typical fitness for the level, scaled for age and sex */
+  if (!v0) v0 = elite ? (gv ? gv - 2 : 58 / gr.f) : gv ? gv - 3 : (prof.level === 'new' && !(+prof.mpw > 5) ? 30 : 38) / gr.f;   /* a true beginner with no pace on file starts around 12:30/mi easy */
 
   /* assign every week to a block */
   var weeks = [];
@@ -2075,6 +2088,8 @@ function generate(state) {
     var peakTarget = Math.max(+prof.mpw || 8, Math.round(dist.peak * method.peakMult * (prof.volume || 1)));
     /* sub-elite peaks: about 50 (5K), 55 (10K), 62 (half), 72 (marathon) mi a week in a balanced style, and always some growth over where you are now */
     if (elite) peakTarget = Math.max(peakTarget, Math.round(({ '5k': 50, '10k': 55, half: 62, full: 72 }[dist.key] || 60) * method.peakMult * (prof.volume || 1)), Math.round((+prof.mpw || 0) * 1.2));
+    /* older sub-elites recover slower: about 10% less peak volume from 50, 20% from 60 (never below where you are now) */
+    if (elite && gr.age >= 50) peakTarget = Math.max(+prof.mpw || 0, Math.round(peakTarget * (gr.age >= 60 ? 0.8 : 0.9)));
     var cap = method.runs[1] * (elite ? 13 : 10) + 4;
     if (+prof.runDays) cap = Math.min(cap, (+prof.runDays) * (elite ? 13 : 10) + (elite ? 4 : 2));
     peakTarget = Math.min(peakTarget, Math.max(cap, +prof.mpw || 8));
@@ -2114,7 +2129,7 @@ function generate(state) {
         miles = Math.round(peakReached * (dist.key === 'full' ? 0.32 : dist.key === 'half' ? 0.4 : 0.6)); kind = 'race';
       } else {
         buildIdx++;
-        if (buildIdx % (prof.masters ? 3 : 4) === 0 && wi < L - T - 1) { cut = true; kind = 'cutback'; miles = Math.round(lastBuild * 0.75); }
+        if (buildIdx % (isMasters(prof) ? 3 : 4) === 0 && wi < L - T - 1) { cut = true; kind = 'cutback'; miles = Math.round(lastBuild * 0.75); }
         else {
           if (buildIdx === 1 && firstBlock) miles = m;
           else miles = Math.min(peakTarget, Math.max(lastBuild + 1, Math.round(lastBuild * 1.1)));
@@ -3908,7 +3923,7 @@ var api = {
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
   ds: ds, pd: pd, addD: addD, dow: dow, monday: monday, diffD: diffD, today: today, fmtDate: fmtDate,
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
-  vdotOf: vdotOf, paceAt: paceAt, predict: predict, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
+  vdotOf: vdotOf, paceAt: paceAt, predict: predict, grade: grade, ageOf: ageOf, isMasters: isMasters, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
   sunTimes: sunTimes, clockMin: clockMin, applyDaylight: applyDaylight, heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
@@ -5152,7 +5167,7 @@ VIEWS.settings = function () {
     '<label class="f">Extra gym days (lift + treadmill run)<select class="i" name="crossDays">' + [0, 1, 2, 3].map(function (n) { return '<option' + (+p.crossDays === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label></div>' +
     '<label class="check"><input type="checkbox" name="doubles"' + (p.doubles !== false ? ' checked' : '') + '> Lift on run days (run first). Turn off to keep lifting on separate days; runs per week drop to fit.</label>' +
     '<label class="f">Longest weekday run<select class="i" name="weekdayMin">' + [[0, 'No limit'], [40, '40 minutes'], [50, '50 minutes'], [60, '1 hour'], [75, '1 hour 15'], [90, '1 hour 30']].map(function (o) { return '<option value="' + o[0] + '"' + ((+p.weekdayMin || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><span class="tiny muted" style="font-weight:500">Easy runs Monday to Friday fit inside it. Weekends and workouts are left alone.</span></label>' +
-    '<label class="check"><input type="checkbox" name="masters"' + (p.masters ? ' checked' : '') + '> Masters runner (40+): a lighter week every third week instead of every fourth</label></section>' +
+    '<label class="check"><input type="checkbox" name="masters"' + (E.isMasters(p) ? ' checked' : '') + '> Masters runner (40+): a lighter week every third week instead of every fourth</label></section>' +
     '<section class="card stack"><h3>Fitness</h3><div class="grid2">' +
     '<label class="f">Plan start<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"><span class="tiny muted" style="font-weight:500">A Friday to Sunday start adds those days to week 1.</span></label>' +
     '<label class="f">Weekly miles at start<input class="i" type="number" min="0" max="120" name="mpw" value="' + esc(p.mpw) + '"></label>' +
@@ -5292,6 +5307,7 @@ VIEWS.setup = function () {
       '<div class="card stack"><div class="grid2"><label class="f">Miles per week now<input class="i" type="number" name="mpw" min="0" max="150" inputmode="decimal" value="' + esc(p.mpw) + '"></label><label class="f">Longest recent run (mi)<input class="i" type="number" name="longest" min="0" max="40" inputmode="decimal" value="' + esc(p.longest) + '"></label>' +
       '<label class="f">Typical easy pace (m:ss)<input class="i" name="easyPace" placeholder="10:00" value="' + esc(p.easyPace || '') + '"></label><label class="f">Body weight (lb, optional)<input class="i" type="number" name="weightLb" inputmode="decimal" value="' + (p.weightKg ? Math.round(p.weightKg * 2.2046) : '') + '"></label></div>' +
       '<label class="f">A recent race or time trial (optional, sets your paces)<div class="grid2"><select class="i" name="rdist"><option value="">None</option>' + ['5k', '10k', 'half', 'full'].map(function (k) { return '<option value="' + k + '"' + (p.recent && p.recent.dist === k ? ' selected' : '') + '>' + E.DIST[k].label + '</option>'; }).join('') + '</select><input class="i" name="rtime" placeholder="h:mm:ss" value="' + esc(p.recent && p.recent.time || '') + '"></div></label>' +
+      '<div><b class="small">About you</b><p class="tiny muted" style="margin:2px 0 6px">So your times are judged fairly for your age and sex' + (GX().who ? ' (filled in from Garmin)' : '') + '. Optional.</p>' + aboutYouFields(p, 'wz') + '</div>' +
       '<label class="check"><input type="checkbox" name="injuryProne"' + (p.injuryProne ? ' checked' : '') + '> I get shin splints or other running injuries</label>' +
       '<label class="check"><input type="checkbox" name="hrTrainer"' + (p.hrTrainer ? ' checked' : '') + '> I like to train by heart rate</label></div><p class="err" id="wizErr"></p>' + wizFoot('Continue', true, true) + '</form>';
   } else if (name === 'days') {
@@ -5675,6 +5691,7 @@ document.addEventListener('submit', function (e) {
       p.weightKg = +el.weightLb.value ? Math.round(+el.weightLb.value / 2.2046 * 10) / 10 : null;
       p.recent = el.rdist.value && E.parseClock(el.rtime.value) > 0 ? { dist: el.rdist.value, time: el.rtime.value.trim() } : null;
       p.injuryProne = el.injuryProne.checked; p.hrTrainer = el.hrTrainer.checked;
+      var ab = readAboutYou('wz'); p.sex = ab.sex; p.birthYear = ab.birthYear;
     } else if (name === 'days') {
       p.avail = [0, 1, 2, 3, 4, 5, 6].map(function (i) { return $('[data-toggle="avail"][data-i="' + i + '"]', f).getAttribute('aria-pressed') === 'true'; });
       if (p.avail.filter(Boolean).length < 2) { werr.textContent = 'Pick at least two days.'; return; }
@@ -11256,14 +11273,15 @@ var RUNNER_TYPES = [
   ['elite', 'Sub-elite / very experienced', 'Racing near the front: high mileage, two or three key sessions a week, faster paces and longer long runs.']
 ];
 function runnerType(p) { p = p || st().profile || {}; if (p.comeback && +p.comeback.off) return 'comeback'; if (p.level === 'new') return 'starter'; if (p.level === 'exp') return 'exp'; if (p.level === 'elite') return 'elite'; return 'regular'; }
-function runnerTypeLabel(p) { p = p || st().profile || {}; var t = RUNNER_TYPES.filter(function (x) { return x[0] === runnerType(p); })[0][1]; var mods = []; if (p.masters) mods.push('masters'); if (+p.weekdayMin) mods.push('weekdays ≤ ' + p.weekdayMin + ' min'); return t + (mods.length ? ' · ' + mods.join(' · ') : ''); }
+function runnerTypeLabel(p) { p = p || st().profile || {}; var t = RUNNER_TYPES.filter(function (x) { return x[0] === runnerType(p); })[0][1]; var mods = []; if (E.isMasters(p)) mods.push('masters'); if (+p.weekdayMin) mods.push('weekdays ≤ ' + p.weekdayMin + ' min'); return t + (mods.length ? ' · ' + mods.join(' · ') : ''); }
 SHEETS.runnertype = function (a) {
   var p = st().profile || {}, cur = (a && a.pre) || runnerType(p); sheetCtx.rt = cur;
   return '<h3>What kind of runner are you?</h3><p class="small muted">This shapes how runs are written (by time or distance), how fast the plan builds, and how much detail you see. You can change it any time; your logs are kept.</p>' +
     '<div class="stack tight rt-list">' + RUNNER_TYPES.map(function (r) { return '<button type="button" class="opt rt" data-act="rt-pick" data-arg="' + jattr({ k: r[0] }) + '" aria-pressed="' + (cur === r[0]) + '"><b>' + esc(r[1]) + '</b><span class="small muted">' + esc(r[2]) + '</span></button>'; }).join('') + '</div>' +
     '<div id="rt-cb" class="grid2"' + (cur === 'comeback' ? '' : ' hidden') + '><label class="f">Time off<select class="i" id="rt-off">' + [[3, '2 to 4 weeks'], [6, '5 to 8 weeks'], [12, '2 to 4 months'], [30, '4 months to a year'], [60, 'More than a year']].map(function (o) { return '<option value="' + o[0] + '"' + (p.comeback && +p.comeback.off === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label><label class="f">Miles a week before<input class="i" id="rt-before" type="number" min="0" max="150" value="' + esc(p.comeback ? p.comeback.before || '' : '') + '" placeholder="e.g. 25"></label></div>' +
     '<div id="rt-elite" class="banner warn small rt-warn"' + (cur === 'elite' ? '' : ' hidden') + '>' + (cur === 'elite' ? eliteWarnHTML() : '') + '</div>' +
-    '<h4>Also true for me</h4><label class="check"><input type="checkbox" id="rt-masters"' + (p.masters ? ' checked' : '') + '> 40 or older: a lighter week every third week</label>' +
+    '<h4>About you</h4><p class="tiny muted" style="margin:-4px 0 6px">Used to judge your times fairly (a 1:30 half means something different at 25 and 55, and for women and men). Your paces always come from your own runs.</p>' + aboutYouFields(p, 'rt') +
+    '<h4>Also true for me</h4><label class="check"><input type="checkbox" id="rt-masters"' + (E.isMasters(p) ? ' checked' : '') + '> Masters (usually 40+): a lighter week every third week</label>' +
     '<label class="f">Longest weekday run<select class="i" id="rt-wd">' + [[0, 'No limit'], [40, '40 minutes'], [50, '50 minutes'], [60, '1 hour'], [75, '1 hour 15'], [90, '1 hour 30']].map(function (o) { return '<option value="' + o[0] + '"' + ((+p.weekdayMin || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
     '<div class="btns"><button class="btn primary" data-act="rt-save">Save and rebuild plan</button><button class="btn ghost" data-act="sheet-close">Cancel</button></div>';
 };
@@ -11272,10 +11290,10 @@ ACTIONS['rt-save'] = function () {
   var k0 = sheetCtx.rt;
   /* stepping up to sub-elite asks once more, in the app's own dialog */
   if (k0 === 'elite' && runnerType() !== 'elite' && !ASK({ icon: '⚠', title: 'Switch to sub-elite training?', text: 'Peak weeks grow to roughly 60 to 95 miles depending on your race and style, with two or more hard sessions a week and long runs up to 22 miles. This is for runners already handling 50+ miles a week injury-free. The safety checks stay on.', ok: 'Yes, I train at this level', cancel: 'Not yet' }, ACTIONS['rt-save'], this, arguments)) return;
-  var k = sheetCtx.rt, masters = $('#rt-masters').checked, wd = +$('#rt-wd').value || 0, off = +$('#rt-off').value || 3, before = +$('#rt-before').value || 0;
+  var k = sheetCtx.rt, about = readAboutYou('rt'), masters = $('#rt-masters').checked, wd = +$('#rt-wd').value || 0, off = +$('#rt-off').value || 3, before = +$('#rt-before').value || 0;
   Store.edit('profile', null, function (S) {
     var p = S.profile; if (!p) return;
-    p.masters = masters; p.weekdayMin = wd;
+    p.masters = masters; p.weekdayMin = wd; p.sex = about.sex; p.birthYear = about.birthYear;
     if (k === 'starter') { p.level = 'new'; if (+p.mpw > 3) { p.prevMpw = p.mpw; p.mpw = 0; } delete p.comeback; }
     else if (k === 'comeback') { p.level = p.level === 'exp' || p.level === 'elite' ? p.level : 'some'; p.comeback = { off: off, before: before, from: (p.comeback && p.comeback.from) || App.today }; }
     else { p.level = k === 'exp' || k === 'elite' ? k : 'some'; delete p.comeback; if (p.prevMpw && !(+p.mpw)) p.mpw = p.prevMpw; }
@@ -11331,14 +11349,34 @@ function curVdot() {
   if (r && r.time && (r.mi || E.DIST[r.dist])) { var t = E.parseClock(r.time); if (t > 0) return E.vdotOf(+r.mi || E.DIST[r.dist].mi, t); }
   return null;
 }
+/* ---------- age and sex: filled in from Garmin when it knows them, editable in Runner type and setup ---------- */
+function whoDefaults(p) { var w = GX().who || {}; return { sex: p.sex != null ? p.sex : w.sex === 'FEMALE' ? 'F' : w.sex === 'MALE' ? 'M' : '', by: p.birthYear || w.by || '' }; }
+function aboutYouFields(p, pre) {
+  var d = whoDefaults(p || {}), o = function (v, l) { return '<option value="' + v + '"' + (d.sex === v ? ' selected' : '') + '>' + l + '</option>'; };
+  return '<div class="grid2"><label class="f">Sex<select class="i" id="' + pre + '-sex">' + o('', 'Prefer not to say') + o('F', 'Female') + o('M', 'Male') + '</select></label><label class="f">Birth year<input class="i" id="' + pre + '-by" type="number" inputmode="numeric" min="1920" max="2016" value="' + esc(d.by) + '" placeholder="e.g. 1988"></label></div>';
+}
+function readAboutYou(pre) { var s = $('#' + pre + '-sex'), b = $('#' + pre + '-by'), by = b ? +b.value : 0; return { sex: s ? s.value : '', birthYear: by > 1900 && by <= +App.today.slice(0, 4) - 8 ? by : null }; }
+/* a profile that has never had age or sex set takes them from Garmin, once */
+var _whySynced = false;
+function syncWho() {
+  var p = st().profile, w = GX().who; if (_whySynced || !p || !w || p.sex != null || p.birthYear != null) return; _whySynced = true;
+  setTimeout(function () { Store.edit('profile', null, function (S) { if (!S.profile || S.profile.sex != null || S.profile.birthYear != null) return; S.profile.sex = w.sex === 'FEMALE' ? 'F' : w.sex === 'MALE' ? 'M' : ''; S.profile.birthYear = +w.by || null; }); }, 50);
+}
+var _today19 = VIEWS.today; VIEWS.today = function () { try { syncWho(); } catch (e) {} return _today19(); };
+/* the runner's grade, using what's typed in the open sheet if there is one */
+function gradeNow() { var p = Object.assign({}, st().profile || {}); if ($('#rt-sex')) { var a = readAboutYou('rt'); p.sex = a.sex; p.birthYear = a.birthYear; } return E.grade(p); }
+function whoWords(g) { return g.sex === 'F' ? 'a woman' + (g.age ? ' of ' + g.age : '') : g.sex === 'M' ? 'a man' + (g.age ? ' of ' + g.age : '') : g.age ? 'someone ' + g.age : ''; }
+/* what your VDOT is worth for someone your age and sex, in words */
+function fitWords(vd, g) { if (!vd) return ''; var vg = vd * g.f; return ' with fitness around VDOT ' + Math.round(vd) + (g.f > 1.01 ? ', which for ' + whoWords(g) + ' is like a ' + Math.round(vg) + ' for a 25-year-old man' : ''); }
+function benchTimes(v, g) { var t = function (mi, r) { return E.clock(Math.round(E.predict(v / g.f, mi) / r) * r); }; return t(E.DIST['5k'].mi, 5) + ' for 5K, ' + t(E.DIST.half.mi, 60).replace(/:00$/, '') + ' for the half or ' + t(E.DIST.full.mi, 60).replace(/:00$/, '') + ' for the marathon'; }
 function eliteWarnHTML() {
-  var m = recentMpw(), mpw = m != null ? m : +(st().profile || {}).mpw || 0, vd = curVdot(), cmp = '';
+  var m = recentMpw(), mpw = m != null ? m : +(st().profile || {}).mpw || 0, vd = curVdot(), cmp = '', g = gradeNow();
   try {
     var A = planStats(App.plan), B = planStats(planForLevel('elite'));
     cmp = '<div class="rt-cmp"><span>Typical week <b>' + Math.round(A.avg) + ' → ' + Math.round(B.avg) + ' mi</b></span><span>Peak week <b>' + Math.round(A.peak) + ' → ' + Math.round(B.peak) + ' mi</b></span><span>Key workouts <b>' + (Math.round(A.quality * 2) / 2) + ' → ' + (Math.round(B.quality * 2) / 2) + ' a week</b></span><span>Longest run <b>' + Math.round(A.long) + ' → ' + Math.round(B.long) + ' mi</b></span></div>';
   } catch (e) { cmp = ''; }
-  var low = mpw && mpw < 45, slow = vd && vd < 55;
-  return '<b>Heads up: this is a big step.</b> Sub-elite plans assume months of 50+ mile weeks without injury and race times around a sub-18 5K, sub-1:22 half or sub-2:55 marathon. ' +
+  var ms = g.age >= 60 ? 0.75 : g.age >= 50 ? 0.85 : 1, low = mpw && mpw < 45 * ms, slow = vd && vd * g.f < 55;
+  return '<b>Heads up: this is a big step.</b> Sub-elite plans assume months of ' + Math.round(50 * ms) + '+ mile weeks without injury and race times around ' + (g.f > 1.01 ? benchTimes(57, g) + ' (that\'s sub-elite for ' + whoWords(g) + ')' : 'a sub-18 5K, sub-1:22 half or sub-2:55 marathon' + (g.sex || g.age ? '' : ' (add your age and sex below for benchmarks that fit you)')) + '. ' +
     (low || slow ? 'You\'ve ' + (low ? 'averaged ' + Math.round(mpw) + ' mi a week lately' : '') + (low && slow ? ' and your ' : low ? '' : 'your ') + (slow ? 'current fitness is closer to the experienced plan' : '') + ', so the jump would be steep. ' : '') +
     'Too much too soon is the most common way to get shin splints or a stress fracture. The safety checks (shin-load ceiling, matching recent weeks) stay on.' + cmp;
 }
@@ -11354,6 +11392,7 @@ ACTIONS['wiz-set'] = function (a) {
 function runnerTypeHint() {
   var p = st().profile; if (!p) return null;
   var cur = runnerType(p), t = App.today, rm = recentMpw(), mpw = Math.max(rm || 0, +p.mpw || 0), vd = curVdot();
+  var g = E.grade(p), vg = vd ? vd * g.f : null, ms = g.age >= 60 ? 0.75 : g.age >= 50 ? 0.85 : 1;
   var peak = p.ctl && +p.ctl.peak || 0, mlv = (E.METHODS[p.method] || {}).level || 2, mw = function (x) { return Math.round(x) + ' mi a week'; };
   /* a long gap in your watch history looks like a break */
   var runs = allRuns().filter(function (r) { return r.date <= t; }), lastRun = runs.reduce(function (a, r) { return r.date > a ? r.date : a; }, '');
@@ -11372,17 +11411,17 @@ function runnerTypeHint() {
     return null;
   }
   if (cur === 'elite') {
-    if ((mpw && mpw < 35 && !(vd >= 60)) || (peak && peak < 45)) return { to: 'exp', why: (peak && peak < 45 ? 'You set your peak to ' + peak + ' mi a week' : 'You\'ve been running about ' + mw(mpw)) + ', well under what the sub-elite plan is built around. The experienced plan fits that better and still has two key sessions a week.' };
+    if ((mpw && mpw < 35 * ms && !(vg >= 60)) || (peak && peak < 45 * ms)) return { to: 'exp', why: (peak && peak < 45 ? 'You set your peak to ' + peak + ' mi a week' : 'You\'ve been running about ' + mw(mpw)) + ', well under what the sub-elite plan is built around. The experienced plan fits that better and still has two key sessions a week.' };
     return null;
   }
   if (cur === 'exp') {
-    if ((mpw >= 50 && vd >= 57) || vd >= 62 || peak >= 75) return { to: 'elite', why: (peak >= 75 ? 'You set your peak to ' + peak + ' mi a week' : 'You\'re running about ' + mw(mpw)) + (vd ? ' with fitness around VDOT ' + Math.round(vd) : '') + '. The sub-elite plan adds volume, a second key session in base weeks and longer long runs.' };
-    if (rm != null && rm < 15 && !(vd >= 50)) return { to: 'regular', why: 'You\'ve averaged ' + mw(rm) + ' lately. The regular plan builds from there more gently.' };
+    if ((mpw >= 50 * ms && vg >= 57) || vg >= 62 || peak >= 75 * ms) return { to: 'elite', why: (peak >= 75 * ms ? 'You set your peak to ' + peak + ' mi a week' : 'You\'re running about ' + mw(mpw)) + fitWords(vd, g) + '. The sub-elite plan adds volume, a second key session in base weeks and longer long runs.' };
+    if (rm != null && rm < 15 && !(vg >= 50)) return { to: 'regular', why: 'You\'ve averaged ' + mw(rm) + ' lately. The regular plan builds from there more gently.' };
     return null;
   }
   /* regular */
-  if ((mpw >= 50 && vd >= 57) || vd >= 62) return { to: 'elite', why: 'You\'re running about ' + mw(mpw) + (vd ? ' with fitness around VDOT ' + Math.round(vd) : '') + ', which is sub-elite territory.' };
-  if (mpw >= 35 || vd >= 52 || mlv >= 3 || peak >= 50 || +p.volume >= 1.2) return { to: 'exp', why: (mlv >= 3 ? 'You picked ' + E.METHODS[p.method].name + ', a style for experienced runners' : peak >= 50 ? 'You set your peak to ' + peak + ' mi a week' : +p.volume >= 1.2 ? 'You turned weekly volume up' : mpw >= 35 ? 'You\'re running about ' + mw(mpw) : 'Your fitness (VDOT ' + Math.round(vd) + ') is ahead of the regular plan') + '. The experienced plan adds bigger workouts and pace suggestions.' };
+  if ((mpw >= 50 * ms && vg >= 57) || vg >= 62) return { to: 'elite', why: 'You\'re running about ' + mw(mpw) + fitWords(vd, g) + ', which is sub-elite territory.' };
+  if (mpw >= 35 * ms || vg >= 52 || mlv >= 3 || peak >= 50 || +p.volume >= 1.2) return { to: 'exp', why: (mlv >= 3 ? 'You picked ' + E.METHODS[p.method].name + ', a style for experienced runners' : peak >= 50 ? 'You set your peak to ' + peak + ' mi a week' : +p.volume >= 1.2 ? 'You turned weekly volume up' : mpw >= 35 * ms ? 'You\'re running about ' + mw(mpw) : 'Your fitness (VDOT ' + Math.round(vd) + (g.f > 1.01 ? ', strong for ' + whoWords(g) : '') + ') is ahead of the regular plan') + '. The experienced plan adds bigger workouts and pace suggestions.' };
   if (rm != null && rm < 2 && !(+p.mpw > 3) && !lastRun) return { to: 'starter', why: 'No runs logged yet. The starter weeks use run-walk by time and build to 30 minutes non-stop.' };
   return null;
 }
@@ -11418,6 +11457,7 @@ document.addEventListener('submit', function (e) { if (e.target && e.target.data
 var _spAccept19 = ACTIONS['sp-accept'];
 ACTIONS['sp-accept'] = function () { var r = _spAccept19.apply(this, arguments); offerAfterChange(); return r; };
 
+document.addEventListener('change', function (e) { if (!e.target || (e.target.id !== 'rt-sex' && e.target.id !== 'rt-by')) return; var ew = $('#rt-elite'); if (ew && !ew.hidden) ew.innerHTML = eliteWarnHTML(); });
 App.p19 = { runnerTypeHint: runnerTypeHint, recentMpw: recentMpw, planForLevel: planForLevel };
 
 

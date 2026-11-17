@@ -808,7 +808,7 @@ VIEWS.settings = function () {
     '<label class="f">Extra gym days (lift + treadmill run)<select class="i" name="crossDays">' + [0, 1, 2, 3].map(function (n) { return '<option' + (+p.crossDays === n ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label></div>' +
     '<label class="check"><input type="checkbox" name="doubles"' + (p.doubles !== false ? ' checked' : '') + '> Lift on run days (run first). Turn off to keep lifting on separate days; runs per week drop to fit.</label>' +
     '<label class="f">Longest weekday run<select class="i" name="weekdayMin">' + [[0, 'No limit'], [40, '40 minutes'], [50, '50 minutes'], [60, '1 hour'], [75, '1 hour 15'], [90, '1 hour 30']].map(function (o) { return '<option value="' + o[0] + '"' + ((+p.weekdayMin || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><span class="tiny muted" style="font-weight:500">Easy runs Monday to Friday fit inside it. Weekends and workouts are left alone.</span></label>' +
-    '<label class="check"><input type="checkbox" name="masters"' + (p.masters ? ' checked' : '') + '> Masters runner (40+): a lighter week every third week instead of every fourth</label></section>' +
+    '<label class="check"><input type="checkbox" name="masters"' + (E.isMasters(p) ? ' checked' : '') + '> Masters runner (40+): a lighter week every third week instead of every fourth</label></section>' +
     '<section class="card stack"><h3>Fitness</h3><div class="grid2">' +
     '<label class="f">Plan start<input class="i" type="date" name="startDate" value="' + esc(p.startDate) + '"><span class="tiny muted" style="font-weight:500">A Friday to Sunday start adds those days to week 1.</span></label>' +
     '<label class="f">Weekly miles at start<input class="i" type="number" min="0" max="120" name="mpw" value="' + esc(p.mpw) + '"></label>' +
@@ -948,6 +948,7 @@ VIEWS.setup = function () {
       '<div class="card stack"><div class="grid2"><label class="f">Miles per week now<input class="i" type="number" name="mpw" min="0" max="150" inputmode="decimal" value="' + esc(p.mpw) + '"></label><label class="f">Longest recent run (mi)<input class="i" type="number" name="longest" min="0" max="40" inputmode="decimal" value="' + esc(p.longest) + '"></label>' +
       '<label class="f">Typical easy pace (m:ss)<input class="i" name="easyPace" placeholder="10:00" value="' + esc(p.easyPace || '') + '"></label><label class="f">Body weight (lb, optional)<input class="i" type="number" name="weightLb" inputmode="decimal" value="' + (p.weightKg ? Math.round(p.weightKg * 2.2046) : '') + '"></label></div>' +
       '<label class="f">A recent race or time trial (optional, sets your paces)<div class="grid2"><select class="i" name="rdist"><option value="">None</option>' + ['5k', '10k', 'half', 'full'].map(function (k) { return '<option value="' + k + '"' + (p.recent && p.recent.dist === k ? ' selected' : '') + '>' + E.DIST[k].label + '</option>'; }).join('') + '</select><input class="i" name="rtime" placeholder="h:mm:ss" value="' + esc(p.recent && p.recent.time || '') + '"></div></label>' +
+      '<div><b class="small">About you</b><p class="tiny muted" style="margin:2px 0 6px">So your times are judged fairly for your age and sex' + (GX().who ? ' (filled in from Garmin)' : '') + '. Optional.</p>' + aboutYouFields(p, 'wz') + '</div>' +
       '<label class="check"><input type="checkbox" name="injuryProne"' + (p.injuryProne ? ' checked' : '') + '> I get shin splints or other running injuries</label>' +
       '<label class="check"><input type="checkbox" name="hrTrainer"' + (p.hrTrainer ? ' checked' : '') + '> I like to train by heart rate</label></div><p class="err" id="wizErr"></p>' + wizFoot('Continue', true, true) + '</form>';
   } else if (name === 'days') {
@@ -1331,6 +1332,7 @@ document.addEventListener('submit', function (e) {
       p.weightKg = +el.weightLb.value ? Math.round(+el.weightLb.value / 2.2046 * 10) / 10 : null;
       p.recent = el.rdist.value && E.parseClock(el.rtime.value) > 0 ? { dist: el.rdist.value, time: el.rtime.value.trim() } : null;
       p.injuryProne = el.injuryProne.checked; p.hrTrainer = el.hrTrainer.checked;
+      var ab = readAboutYou('wz'); p.sex = ab.sex; p.birthYear = ab.birthYear;
     } else if (name === 'days') {
       p.avail = [0, 1, 2, 3, 4, 5, 6].map(function (i) { return $('[data-toggle="avail"][data-i="' + i + '"]', f).getAttribute('aria-pressed') === 'true'; });
       if (p.avail.filter(Boolean).length < 2) { werr.textContent = 'Pick at least two days.'; return; }

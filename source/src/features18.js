@@ -49,14 +49,15 @@ var RUNNER_TYPES = [
   ['elite', 'Sub-elite / very experienced', 'Racing near the front: high mileage, two or three key sessions a week, faster paces and longer long runs.']
 ];
 function runnerType(p) { p = p || st().profile || {}; if (p.comeback && +p.comeback.off) return 'comeback'; if (p.level === 'new') return 'starter'; if (p.level === 'exp') return 'exp'; if (p.level === 'elite') return 'elite'; return 'regular'; }
-function runnerTypeLabel(p) { p = p || st().profile || {}; var t = RUNNER_TYPES.filter(function (x) { return x[0] === runnerType(p); })[0][1]; var mods = []; if (p.masters) mods.push('masters'); if (+p.weekdayMin) mods.push('weekdays ≤ ' + p.weekdayMin + ' min'); return t + (mods.length ? ' · ' + mods.join(' · ') : ''); }
+function runnerTypeLabel(p) { p = p || st().profile || {}; var t = RUNNER_TYPES.filter(function (x) { return x[0] === runnerType(p); })[0][1]; var mods = []; if (E.isMasters(p)) mods.push('masters'); if (+p.weekdayMin) mods.push('weekdays ≤ ' + p.weekdayMin + ' min'); return t + (mods.length ? ' · ' + mods.join(' · ') : ''); }
 SHEETS.runnertype = function (a) {
   var p = st().profile || {}, cur = (a && a.pre) || runnerType(p); sheetCtx.rt = cur;
   return '<h3>What kind of runner are you?</h3><p class="small muted">This shapes how runs are written (by time or distance), how fast the plan builds, and how much detail you see. You can change it any time; your logs are kept.</p>' +
     '<div class="stack tight rt-list">' + RUNNER_TYPES.map(function (r) { return '<button type="button" class="opt rt" data-act="rt-pick" data-arg="' + jattr({ k: r[0] }) + '" aria-pressed="' + (cur === r[0]) + '"><b>' + esc(r[1]) + '</b><span class="small muted">' + esc(r[2]) + '</span></button>'; }).join('') + '</div>' +
     '<div id="rt-cb" class="grid2"' + (cur === 'comeback' ? '' : ' hidden') + '><label class="f">Time off<select class="i" id="rt-off">' + [[3, '2 to 4 weeks'], [6, '5 to 8 weeks'], [12, '2 to 4 months'], [30, '4 months to a year'], [60, 'More than a year']].map(function (o) { return '<option value="' + o[0] + '"' + (p.comeback && +p.comeback.off === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label><label class="f">Miles a week before<input class="i" id="rt-before" type="number" min="0" max="150" value="' + esc(p.comeback ? p.comeback.before || '' : '') + '" placeholder="e.g. 25"></label></div>' +
     '<div id="rt-elite" class="banner warn small rt-warn"' + (cur === 'elite' ? '' : ' hidden') + '>' + (cur === 'elite' ? eliteWarnHTML() : '') + '</div>' +
-    '<h4>Also true for me</h4><label class="check"><input type="checkbox" id="rt-masters"' + (p.masters ? ' checked' : '') + '> 40 or older: a lighter week every third week</label>' +
+    '<h4>About you</h4><p class="tiny muted" style="margin:-4px 0 6px">Used to judge your times fairly (a 1:30 half means something different at 25 and 55, and for women and men). Your paces always come from your own runs.</p>' + aboutYouFields(p, 'rt') +
+    '<h4>Also true for me</h4><label class="check"><input type="checkbox" id="rt-masters"' + (E.isMasters(p) ? ' checked' : '') + '> Masters (usually 40+): a lighter week every third week</label>' +
     '<label class="f">Longest weekday run<select class="i" id="rt-wd">' + [[0, 'No limit'], [40, '40 minutes'], [50, '50 minutes'], [60, '1 hour'], [75, '1 hour 15'], [90, '1 hour 30']].map(function (o) { return '<option value="' + o[0] + '"' + ((+p.weekdayMin || 0) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
     '<div class="btns"><button class="btn primary" data-act="rt-save">Save and rebuild plan</button><button class="btn ghost" data-act="sheet-close">Cancel</button></div>';
 };
@@ -65,10 +66,10 @@ ACTIONS['rt-save'] = function () {
   var k0 = sheetCtx.rt;
   /* stepping up to sub-elite asks once more, in the app's own dialog */
   if (k0 === 'elite' && runnerType() !== 'elite' && !ASK({ icon: '⚠', title: 'Switch to sub-elite training?', text: 'Peak weeks grow to roughly 60 to 95 miles depending on your race and style, with two or more hard sessions a week and long runs up to 22 miles. This is for runners already handling 50+ miles a week injury-free. The safety checks stay on.', ok: 'Yes, I train at this level', cancel: 'Not yet' }, ACTIONS['rt-save'], this, arguments)) return;
-  var k = sheetCtx.rt, masters = $('#rt-masters').checked, wd = +$('#rt-wd').value || 0, off = +$('#rt-off').value || 3, before = +$('#rt-before').value || 0;
+  var k = sheetCtx.rt, about = readAboutYou('rt'), masters = $('#rt-masters').checked, wd = +$('#rt-wd').value || 0, off = +$('#rt-off').value || 3, before = +$('#rt-before').value || 0;
   Store.edit('profile', null, function (S) {
     var p = S.profile; if (!p) return;
-    p.masters = masters; p.weekdayMin = wd;
+    p.masters = masters; p.weekdayMin = wd; p.sex = about.sex; p.birthYear = about.birthYear;
     if (k === 'starter') { p.level = 'new'; if (+p.mpw > 3) { p.prevMpw = p.mpw; p.mpw = 0; } delete p.comeback; }
     else if (k === 'comeback') { p.level = p.level === 'exp' || p.level === 'elite' ? p.level : 'some'; p.comeback = { off: off, before: before, from: (p.comeback && p.comeback.from) || App.today }; }
     else { p.level = k === 'exp' || k === 'elite' ? k : 'some'; delete p.comeback; if (p.prevMpw && !(+p.mpw)) p.mpw = p.prevMpw; }

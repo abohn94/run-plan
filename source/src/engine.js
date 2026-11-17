@@ -60,6 +60,17 @@ function paceAt(vdot, p) {
   var v = (-b + Math.sqrt(b * b + 4 * a * x)) / (2 * a);
   return MI_M / v * 60;
 }
+/* Age and sex grading. Returns the runner's age and sex and a factor that turns their fitness (VDOT) into an
+   open-male equivalent, so "sub-elite" means the same thing for a 25-year-old man and a 52-year-old woman.
+   Women's distance times run about 11% slower than men's at the same level (about 12% in VDOT);
+   age costs nothing to 35, then about 0.6% a year to 50, 0.9% a year to 65 and 1.3% a year after (close to WMA age grading). */
+function ageOf(prof, onDate) { var by = +(prof && prof.birthYear); return by > 1900 ? +(onDate || today()).slice(0, 4) - by : null; }
+function grade(prof, onDate) {
+  var age = ageOf(prof, onDate), sex = prof && (prof.sex === 'F' || prof.sex === 'M') ? prof.sex : null;
+  var dec = age == null || age <= 35 ? 0 : age <= 50 ? 0.006 * (age - 35) : age <= 65 ? 0.09 + 0.009 * (age - 50) : Math.min(0.6, 0.225 + 0.013 * (age - 65));
+  return { age: age, sex: sex, f: (sex === 'F' ? 1.12 : 1) / (1 - dec) };
+}
+function isMasters(prof) { return prof && prof.masters != null ? !!prof.masters : (ageOf(prof) || 0) >= 40; }
 function predict(vdot, mi) {
   var lo = mi * 200, hi = mi * 1800;
   for (var i = 0; i < 60; i++) { var mid = (lo + hi) / 2; if (vdotOf(mi, mid) > vdot) lo = mid; else hi = mid; }
@@ -635,7 +646,9 @@ function generate(state) {
   var cb = prof.comeback && +prof.comeback.off ? prof.comeback : null;
   if (cb && v0 && prof.recent && prof.recent.time) v0 = v0 * (1 - (cb.off <= 4 ? 0.03 : cb.off <= 8 ? 0.06 : cb.off <= 16 ? 0.1 : 0.15));
   var gv = aEvents.length ? goalVdot(aEvents[0]) : null;
-  if (!v0) v0 = elite ? (gv ? gv - 2 : 58) : gv ? gv - 3 : prof.level === 'new' && !(+prof.mpw > 5) ? 30 : 38;   /* a true beginner with no pace on file starts around 12:30/mi easy */
+  var gr = grade(prof);
+  /* no race or pace on file: start from a typical fitness for the level, scaled for age and sex */
+  if (!v0) v0 = elite ? (gv ? gv - 2 : 58 / gr.f) : gv ? gv - 3 : (prof.level === 'new' && !(+prof.mpw > 5) ? 30 : 38) / gr.f;   /* a true beginner with no pace on file starts around 12:30/mi easy */
 
   /* assign every week to a block */
   var weeks = [];
@@ -657,6 +670,8 @@ function generate(state) {
     var peakTarget = Math.max(+prof.mpw || 8, Math.round(dist.peak * method.peakMult * (prof.volume || 1)));
     /* sub-elite peaks: about 50 (5K), 55 (10K), 62 (half), 72 (marathon) mi a week in a balanced style, and always some growth over where you are now */
     if (elite) peakTarget = Math.max(peakTarget, Math.round(({ '5k': 50, '10k': 55, half: 62, full: 72 }[dist.key] || 60) * method.peakMult * (prof.volume || 1)), Math.round((+prof.mpw || 0) * 1.2));
+    /* older sub-elites recover slower: about 10% less peak volume from 50, 20% from 60 (never below where you are now) */
+    if (elite && gr.age >= 50) peakTarget = Math.max(+prof.mpw || 0, Math.round(peakTarget * (gr.age >= 60 ? 0.8 : 0.9)));
     var cap = method.runs[1] * (elite ? 13 : 10) + 4;
     if (+prof.runDays) cap = Math.min(cap, (+prof.runDays) * (elite ? 13 : 10) + (elite ? 4 : 2));
     peakTarget = Math.min(peakTarget, Math.max(cap, +prof.mpw || 8));
@@ -696,7 +711,7 @@ function generate(state) {
         miles = Math.round(peakReached * (dist.key === 'full' ? 0.32 : dist.key === 'half' ? 0.4 : 0.6)); kind = 'race';
       } else {
         buildIdx++;
-        if (buildIdx % (prof.masters ? 3 : 4) === 0 && wi < L - T - 1) { cut = true; kind = 'cutback'; miles = Math.round(lastBuild * 0.75); }
+        if (buildIdx % (isMasters(prof) ? 3 : 4) === 0 && wi < L - T - 1) { cut = true; kind = 'cutback'; miles = Math.round(lastBuild * 0.75); }
         else {
           if (buildIdx === 1 && firstBlock) miles = m;
           else miles = Math.min(peakTarget, Math.max(lastBuild + 1, Math.round(lastBuild * 1.1)));
@@ -2387,7 +2402,7 @@ var api = {
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
   ds: ds, pd: pd, addD: addD, dow: dow, monday: monday, diffD: diffD, today: today, fmtDate: fmtDate,
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
-  vdotOf: vdotOf, paceAt: paceAt, predict: predict, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
+  vdotOf: vdotOf, paceAt: paceAt, predict: predict, grade: grade, ageOf: ageOf, isMasters: isMasters, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
   sunTimes: sunTimes, clockMin: clockMin, applyDaylight: applyDaylight, heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
