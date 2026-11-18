@@ -1297,6 +1297,12 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .coachcard .cfind { margin-top: 8px; } .capline { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.18); }
 .wkl li { margin: 6px 0; line-height: 1.45; } .wkcard { text-decoration: none; color: inherit; display: block; } .nextwk .cfind { margin-top: 8px; }
 .shinrem { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; } .shinrem > span:nth-child(2) { display: grid; flex: 1; min-width: 0; } .shinrem small { color: var(--muted); } .shinrem .chev { color: var(--dim); font-size: 1.4rem; }
+/* heart-rate zones */
+.hrztab td, .hrztab th { padding: 8px 4px; vertical-align: top; } .zdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+.zdot.z1 { background: var(--gray); } .zdot.z2 { background: var(--blue); } .zdot.z3 { background: var(--green); } .zdot.z4 { background: var(--amber); } .zdot.z5 { background: var(--red); }
+.hrzkeys { display: flex; flex-wrap: wrap; gap: 8px; } .hrzkeys span { padding: 6px 10px; border-radius: 10px; background: var(--card2); font-size: .85rem; } .hrzkeys b { margin-left: 4px; }
+.hrzsteps li { margin: 6px 0; line-height: 1.45; } .hrzcard { display: block; text-decoration: none; color: inherit; }
+.hrzmini { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 8px; } .hrzmini span { display: grid; text-align: center; padding: 6px 2px; border-radius: 10px; background: var(--card2); } .hrzmini small { color: var(--muted); font-size: .68rem; } .hrzmini b { font-size: .78rem; }
 
 </style>
 </head>
@@ -1417,9 +1423,35 @@ function solveV(pct, sec) {
 function vdotFromThreshold(sec) { return solveV(0.8725, sec); }   /* threshold pace sits near 86-89% of VO2max */
 function vdotFromVo2(vo2max) { return vo2max - 2; }                 /* watch VO2max tends to read a little above race-based VDOT */
 function hrZones(lthr, maxHr) {
-  if (lthr) return { REC: [0, Math.round(lthr * 0.8)], E: [Math.round(lthr * 0.75), Math.round(lthr * 0.85)], S: [Math.round(lthr * 0.87), Math.round(lthr * 0.92)], M: [Math.round(lthr * 0.89), Math.round(lthr * 0.93)], T: [Math.round(lthr * 0.95), Math.round(lthr * 1.0)], ST: [Math.round(lthr * 0.9), Math.round(lthr * 0.96)], I: [Math.round(lthr * 1.02), Math.round(lthr * 1.06)] };
+  /* Friel's running zones from lactate threshold heart rate: easy is zones 1-2 (up to 89% of LTHR), marathon effort zone 3, threshold zone 4 */
+  if (lthr) return { REC: [0, Math.round(lthr * 0.85)], E: [Math.round(lthr * 0.8), Math.round(lthr * 0.89)], S: [Math.round(lthr * 0.87), Math.round(lthr * 0.92)], M: [Math.round(lthr * 0.9), Math.round(lthr * 0.94)], T: [Math.round(lthr * 0.95), Math.round(lthr * 1.0)], ST: [Math.round(lthr * 0.9), Math.round(lthr * 0.96)], I: [Math.round(lthr * 1.0), Math.round(lthr * 1.06)] };
   if (maxHr) return { REC: [0, Math.round(maxHr * 0.7)], E: [Math.round(maxHr * 0.65), Math.round(maxHr * 0.78)], S: [Math.round(maxHr * 0.8), Math.round(maxHr * 0.85)], M: [Math.round(maxHr * 0.82), Math.round(maxHr * 0.87)], T: [Math.round(maxHr * 0.87), Math.round(maxHr * 0.92)], ST: [Math.round(maxHr * 0.82), Math.round(maxHr * 0.88)], I: [Math.round(maxHr * 0.94), Math.round(maxHr * 0.98)] };
   return null;
+}
+/* ---------- heart-rate zones for the watch: anchored on lactate threshold, cross-checked with heart-rate reserve ----------
+   anchors: lactate threshold HR (Garmin's detection or a test), max HR (your highest believable reading in the last year,
+   with sensor spikes thrown out), resting HR (30-day median). Five zones for Garmin, in bpm. */
+function hrAnchors(garmin, extra) {
+  var g = garmin || {}, x = extra || {}, lthr = null, lsrc = '', at = '';
+  if (x.lt && x.lt.hr) { lthr = +x.lt.hr; lsrc = 'Garmin threshold detection'; at = x.lt.date || ''; }
+  else { var lh = (g.fitness && g.fitness.ltHr) || {}, ks = Object.keys(lh).sort(); if (ks.length) { lthr = +lh[ks[ks.length - 1]]; lsrc = 'Garmin threshold detection'; at = ks[ks.length - 1]; } }
+  var cut = addD(today(), -365), mx = (g.activities || []).filter(function (a) { return a.run && a.maxHR && a.date >= cut; }).map(function (a) { return { v: +a.maxHR, d: a.date }; }).sort(function (p, q) { return q.v - p.v; });
+  var dropped = [];
+  while (mx.length > 1 && (mx[0].v > 220 || mx[0].v > mx[1].v * 1.06)) dropped.push(mx.shift());
+  var max = mx.length ? mx[0].v : null, maxAt = mx.length ? mx[0].d : '';
+  var days = g.days || {}, rk = Object.keys(days).sort().slice(-30).map(function (k) { return days[k].rhr; }).filter(function (v) { return v > 25 && v < 110; }).sort(function (p, q) { return p - q; });
+  var rest = rk.length ? rk[Math.floor(rk.length / 2)] : null;
+  if (!lthr && max) { lthr = Math.round(max * 0.89); lsrc = 'estimated as 89% of your max'; }
+  return { lthr: lthr, lsrc: lsrc, lthrAt: at, max: max, maxAt: maxAt, rest: rest, dropped: dropped };
+}
+function hrZoneSet(an) {
+  if (!an || !an.lthr) return null;
+  var L = an.lthr, max = an.max || Math.round(L / 0.89), rest = an.rest || 50;
+  var b = [Math.round(L * 0.85), Math.round(L * 0.89), Math.round(L * 0.94), L - 1];
+  var z1lo = Math.min(b[0] - 10, Math.round(rest + 0.5 * (max - rest)));
+  var z = [[z1lo, b[0]], [b[0] + 1, b[1]], [b[1] + 1, b[2]], [b[2] + 1, b[3]], [L, Math.max(max, L + 5)]];
+  var hrr = max && rest ? [0.7, 0.75, 0.8, 0.85].map(function (f) { return Math.round(rest + f * (max - rest)); }) : null;
+  return { z: z, lthr: L, max: max, rest: rest, hrr: hrr, sig: b.join('/'), pct: z.map(function (r) { return [Math.round(r[0] / L * 100), Math.round(r[1] / L * 100)]; }) };
 }
 function vdotFromEasy(sec) {                /* typical easy pace -> rough fitness */
   var lo = 20, hi = 80;
@@ -4008,7 +4040,7 @@ var api = {
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
   weekOf: weekOf, dayAt: dayAt, LADDER: LADDER, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,
-  loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
+  loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, hrAnchors: hrAnchors, hrZoneSet: hrZoneSet, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
 };
 /* Calendar shifts go through a review: st.calAck holds what you accepted per date ("day" / "eve" / "night",
    "none" for no shift, or "x:<type>" for a shift you chose not to plan around). With prefs.calAuto the
@@ -13203,6 +13235,83 @@ VIEWS.today = function () {
   return g > 0 ? h.slice(0, g + 4) + c + h.slice(g + 4) : h;
 };
 App.p30 = { remPrefs: remPrefs };
+
+/* ================= Heart-rate zones: calculated from your threshold, kept current, and handed to Garmin ================= */
+TITLES.hrzones = 'Heart-rate zones'; TABOF.hrzones = 'more';
+var HRZ_USE = [['Recovery and easy', 'Recovery runs, warm-ups, most easy running'], ['Easy aerobic', 'The top of easy: long runs and easy days; still conversational'], ['Steady and marathon effort', 'Marathon pace and steady runs'], ['Threshold', 'Tempo and cruise intervals: comfortably hard'], ['VO2 max and speed', 'Intervals, hills and the end of races']];
+function hrzNow() { try { return E.hrZoneSet(E.hrAnchors(Store.garmin, GX())); } catch (e) { return null; } }
+function hrzRange(r) { return r[0] + '–' + r[1]; }
+/* Garmin's zones as of your newest run, and the max HR they imply */
+function garminZones() {
+  var lo = GX().zoneLows; if (!lo || lo.length !== 5) return null;
+  var z = lo.map(function (v, i) { return [v, i < 4 ? lo[i + 1] - 1 : null]; }), impliedMax = Math.round(lo[4] / 0.9);
+  var pctMax = lo.every(function (v, i) { return Math.abs(v / impliedMax - (0.5 + i * 0.1)) < 0.012; });
+  return { z: z, max: pctMax ? impliedMax : null, date: GX().zoneLowsDate || '' };
+}
+/* keep prefs.hrz in step with your data; announce real changes (the four boundaries, which move with your threshold) */
+var _hrzChecked = '';
+function hrzSync() {
+  var x = GX(); if (!x || !x.updated || !st().profile) return;
+  var cur = hrzNow(); if (!cur) return;
+  var H = (st().prefs || {}).hrz, key = cur.sig + '|' + cur.max + '|' + cur.rest;
+  if (_hrzChecked === key) return; _hrzChecked = key;
+  if (H && H.sig === cur.sig && H.max === cur.max && H.rest === cur.rest) return;
+  var changed = !H || H.sig !== cur.sig;
+  setTimeout(function () {
+    Store.edit('prefs', null, function (S) {
+      S.prefs = S.prefs || {}; var old = S.prefs.hrz;
+      S.prefs.hrz = { v: (old ? old.v : 0) + (changed ? 1 : 0), at: changed ? App.today : old.at, sig: cur.sig, z: cur.z, lthr: cur.lthr, max: cur.max, rest: cur.rest, ack: old ? old.ack : null,
+        hist: ((old && old.hist) || []).concat(changed ? [{ at: App.today, sig: cur.sig, from: old ? old.sig : null, lthr: cur.lthr }] : []).slice(-12) };
+      if (S.prefs.easyCap && S.prefs.easyCap !== cur.z[1][1]) S.prefs.easyCap = cur.z[1][1];
+    });
+    if (changed) coachSay((H ? 'Your heart-rate zones changed because your lactate threshold heart rate is now ' + cur.lthr + ' bpm (it was ' + H.lthr + ').' : 'I calculated your heart-rate zones from your lactate threshold heart rate (' + cur.lthr + ' bpm), your max (' + cur.max + ') and your resting heart rate (' + cur.rest + ').') +
+      '\n\nZone 1 ' + hrzRange(cur.z[0]) + ' · Zone 2 ' + hrzRange(cur.z[1]) + ' · Zone 3 ' + hrzRange(cur.z[2]) + ' · Zone 4 ' + hrzRange(cur.z[3]) + ' · Zone 5 ' + hrzRange(cur.z[4]) + '\n\nEasy runs now top out at ' + cur.z[1][1] + ' bpm. Update the same numbers in Garmin so your watch alerts and time-in-zone match.', [{ label: 'Steps for Garmin', act: { nav: '#/hrzones' } }]);
+  }, 120);
+}
+var _today31 = VIEWS.today;
+VIEWS.today = function () {
+  try { hrzSync(); } catch (e) {}
+  var h = _today31(), H = (st().prefs || {}).hrz;
+  if (!H || H.ack === H.sig || !App.plan) return h;
+  var c = '<a class="card hrzcard" href="#/hrzones"><div class="eyebrow">Heart-rate zones ' + (H.v > 1 ? 'updated' : 'ready') + '</div><h3>Update your Garmin zones</h3><div class="hrzmini">' + H.z.map(function (r, i) { return '<span><small>Z' + (i + 1) + '</small><b>' + hrzRange(r) + '</b></span>'; }).join('') + '</div><span class="btn sm primary" style="margin-top:10px">See the steps</span></a>';
+  var g = h.indexOf('class="card coachcard"'); g = g >= 0 ? h.indexOf('</section>', g) + 10 : (h.indexOf('class="herow') >= 0 ? h.indexOf('</a>', h.indexOf('class="herow')) + 4 : -1);
+  return g > 3 ? h.slice(0, g) + c + h.slice(g) : h + c;
+};
+VIEWS.hrzones = function () {
+  try { hrzSync(); } catch (e) {}
+  var cur = hrzNow(), an = null; try { an = E.hrAnchors(Store.garmin, GX()); } catch (e) { an = null; }
+  if (!cur) return '<div class="pagehead"><h1>Heart-rate zones</h1></div><section class="card"><p class="small muted">Needs a lactate threshold heart rate (from Garmin\'s detection or its guided test) or a few hard runs with heart rate.</p></section>';
+  var H = (st().prefs || {}).hrz || {}, G = garminZones(), done = H.ack === cur.sig;
+  var h = '<div class="pagehead"><h1>Heart-rate zones</h1><p>Built from your lactate threshold heart rate, the anchor coaches and sports scientists trust most for running, and kept up to date automatically when it changes.</p></div>';
+  h += '<section class="card"><table class="t fit hrztab"><thead><tr><th>Zone</th><th class="num">BPM</th><th class="num">% LTHR</th><th>For</th></tr></thead><tbody>' + cur.z.map(function (r, i) { return '<tr><td><span class="zdot z' + (i + 1) + '"></span><b>' + (i + 1) + '</b></td><td class="num"><b>' + hrzRange(r) + '</b></td><td class="num">' + cur.pct[i][0] + '–' + (i === 4 ? cur.pct[i][1] : cur.pct[i][1]) + '%</td><td class="small">' + HRZ_USE[i][0] + '<br><span class="tiny muted">' + HRZ_USE[i][1] + '</span></td></tr>'; }).join('') + '</tbody></table>' +
+    '<p class="small" style="margin-top:8px"><b>Easy runs: under ' + cur.z[1][1] + ' bpm</b> (zones 1–2). Recovery runs under ' + cur.z[0][1] + '. The app now uses these for every easy-run cap, run review and 80/20 chart.</p></section>';
+  h += '<section class="card"><h3>Where these come from</h3><ul class="plain small wkl">' +
+    '<li><b>Lactate threshold heart rate: ' + cur.lthr + ' bpm</b> (' + esc(an.lsrc) + (an.lthrAt ? ', ' + fmtD(an.lthrAt, { month: 'short', day: 'numeric' }) : '') + '). The heart rate you can hold for about an hour all-out. Zones are set as percentages of it (Joe Friel\'s running zones).</li>' +
+    '<li><b>Max heart rate: ' + cur.max + ' bpm</b>, your highest believable reading in the last year' + (an.maxAt ? ' (' + fmtD(an.maxAt, { month: 'short', day: 'numeric' }) + ')' : '') + '.' + (an.dropped && an.dropped.length ? ' I ignored ' + an.dropped.map(function (d) { return d.v + ' bpm on ' + fmtD(d.d, { month: 'short', day: 'numeric' }); }).join(', ') + ': a sensor glitch, not a real heart rate.' : '') + '</li>' +
+    '<li><b>Resting heart rate: ' + cur.rest + ' bpm</b>, the median of your last 30 days.</li>' +
+    (cur.hrr ? '<li><b>Cross-check:</b> heart-rate reserve (max minus resting) at 70/75/80/85% gives ' + cur.hrr.join(' / ') + ' bpm, within a couple of beats of the zone 1–4 tops above. Two independent methods agreeing is a good sign the zones are right.</li>' : '') + '</ul></section>';
+  if (G) h += '<section class="card"><h3>What Garmin uses now</h3><p class="small muted">' + (G.max ? 'Percent of max heart rate, with a max of <b>' + G.max + ' bpm</b>' + (G.max > cur.max + 3 ? ', about ' + (G.max - cur.max) + ' beats above your real max. That pushes every zone too high' : '') + '.' : 'From your newest run.') + '</p>' +
+    '<table class="t fit hrztab"><thead><tr><th>Zone</th><th class="num">Garmin now</th><th class="num">New</th></tr></thead><tbody>' + G.z.map(function (r, i) { var n = cur.z[i]; return '<tr><td><span class="zdot z' + (i + 1) + '"></span>' + (i + 1) + '</td><td class="num muted">' + r[0] + (r[1] ? '–' + r[1] : '+') + '</td><td class="num"><b>' + hrzRange(n) + '</b></td></tr>'; }).join('') + '</tbody></table>' +
+    '<p class="small" style="margin-top:8px">The biggest change: Garmin calls ' + (G.z[2][0]) + '+ bpm "zone 3", so ' + (G.z[2][0]) + '–' + cur.z[1][1] + ' bpm runs that are genuinely easy for you were counted as moderate.</p></section>';
+  h += '<section class="card stack"><h3>Update Garmin</h3><p class="small muted">Your watch can\'t be changed from here, so here are the numbers and the steps. Setting zones by <b>%LTHR</b> is best: Garmin then moves them itself when it detects a new threshold, the same way this app does.</p>' +
+    '<div class="hrzkeys"><span>Max HR <b>' + cur.max + '</b></span><span>Resting HR <b>' + cur.rest + '</b></span><span>LTHR <b>' + cur.lthr + '</b></span></div>' +
+    '<h4>In the Garmin Connect app</h4><ol class="num small hrzsteps"><li>Tap your watch icon at the top (or <b>More</b> → <b>Garmin Devices</b>) and choose your <b>fēnix 7X</b>.</li><li>Open <b>User Settings</b> (on some versions <b>User Profile</b>) → <b>Heart Rate &amp; Power Zones</b> → <b>Heart Rate</b>.</li><li>Set <b>Max HR</b> to <b>' + cur.max + '</b> and <b>Resting HR</b> to <b>' + cur.rest + '</b> (or leave resting on auto). Check <b>Lactate Threshold</b> shows <b>' + cur.lthr + '</b>; keep <b>Auto Detection</b> on so it stays current.</li>' +
+    '<li>Tap <b>Zones</b> → <b>Based On</b> → <b>%LTHR</b>, then enter the low % for each zone: <b>Z1 ' + cur.pct[0][0] + '%, Z2 ' + cur.pct[1][0] + '%, Z3 ' + cur.pct[2][0] + '%, Z4 ' + cur.pct[3][0] + '%, Z5 100%</b>. Garmin rounds percentages, so a boundary may land 1 bpm lower; that\'s fine. Prefer exact numbers? Choose <b>BPM</b> and enter <b>' + cur.z.map(function (r) { return r[0]; }).join(', ') + '</b> as the zone starts (but then they won\'t move on their own).</li><li>If you see <b>Sport Heart Rate Zones</b> or a <b>Running</b> zone set, enter the same values there; a running set overrides the default for runs.</li><li>Save, then sync your watch.</li></ol>' +
+    '<h4>Or on the watch</h4><ol class="num small hrzsteps"><li>Hold the middle-left button (<b>MENU</b>) → <b>User Profile</b> → <b>Heart Rate &amp; Power Zones</b> → <b>Heart Rate</b>.</li><li>Set <b>Max. HR</b> ' + cur.max + ', <b>LTHR</b> ' + cur.lthr + ', <b>Resting HR</b> → Set Custom ' + cur.rest + '.</li><li><b>Zones</b> → <b>Based On</b> → <b>%LTHR</b> and enter the percentages above (or <b>BPM</b> and the zone starts).</li></ol>' +
+    '<p class="tiny muted">Garmin occasionally renames these menus between app versions; the path is the same idea if a label differs.</p>' +
+    (done ? '<div class="banner small"><b>Done ✓</b> You marked these as set in Garmin. If your threshold changes, I\'ll update the zones, tell you here and on Today, and send a reminder.</div>' : '<div class="btns"><button class="btn primary" data-act="hrz-ack" data-arg="' + jattr({ sig: cur.sig }) + '">I\'ve updated Garmin</button></div>') + '</section>';
+  var hist = (H.hist || []).slice().reverse();
+  if (hist.length) h += '<section class="card"><h3>Changes</h3>' + hist.map(function (x) { return '<div class="strow"><span>' + fmtD(x.at, { month: 'short', day: 'numeric', year: 'numeric' }) + '</span><b>' + (x.from ? 'Tops ' + x.from.replace(/\//g, ' / ') + ' → ' : 'Set: ') + x.sig.replace(/\//g, ' / ') + ' (LTHR ' + x.lthr + ')</b></div>'; }).join('') + '</section>';
+  h += '<section class="card"><h3>Keep it accurate</h3><ul class="plain small wkl"><li>Your threshold estimate is only as good as your hard efforts. Every 4–6 weeks in a training block, a 30-minute solo time trial (average heart rate of the last 20 minutes ≈ LTHR) or Garmin\'s guided Lactate Threshold test with your chest strap keeps it honest.</li><li>Wear the chest strap for workouts: wrist readings lag and spike during intervals, which is how a 245 bpm reading ends up inflating max heart rate.</li></ul></section>';
+  return h;
+};
+ACTIONS['hrz-ack'] = function (a) { Store.edit('prefs', 'hrz', function (S) { S.prefs.hrz.ack = a.sig; }); toast('Great. Your watch and the app now match'); };
+/* reach it from More, the Paces page and the zones chart */
+var _more31 = VIEWS.more;
+VIEWS.more = function () { var h = _more31(), i = h.indexOf('<a href="#/zones"'); if (i < 0) return h; var cur = (st().prefs || {}).hrz; return h.slice(0, i) + '<a href="#/hrzones">Heart-rate zones<span class="v">' + (cur ? 'easy under ' + cur.z[1][1] : '') + '</span><span class="chev">›</span></a>' + h.slice(i); };
+var _zones31 = VIEWS.zones;
+VIEWS.zones = function () { var h = _zones31(); return h.replace('</h1>', '</h1>') + '<a class="card formlink" href="#/hrzones" style="margin-top:12px"><div><span class="eyebrow">Heart-rate zones</span><b>Your zones and how to set them in Garmin</b></div><span class="chev">›</span></a>'; };
+App.p31 = { hrzNow: hrzNow, garminZones: garminZones };
 
 
 /* ---------------- Garmin polling ---------------- */

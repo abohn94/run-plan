@@ -84,9 +84,35 @@ function solveV(pct, sec) {
 function vdotFromThreshold(sec) { return solveV(0.8725, sec); }   /* threshold pace sits near 86-89% of VO2max */
 function vdotFromVo2(vo2max) { return vo2max - 2; }                 /* watch VO2max tends to read a little above race-based VDOT */
 function hrZones(lthr, maxHr) {
-  if (lthr) return { REC: [0, Math.round(lthr * 0.8)], E: [Math.round(lthr * 0.75), Math.round(lthr * 0.85)], S: [Math.round(lthr * 0.87), Math.round(lthr * 0.92)], M: [Math.round(lthr * 0.89), Math.round(lthr * 0.93)], T: [Math.round(lthr * 0.95), Math.round(lthr * 1.0)], ST: [Math.round(lthr * 0.9), Math.round(lthr * 0.96)], I: [Math.round(lthr * 1.02), Math.round(lthr * 1.06)] };
+  /* Friel's running zones from lactate threshold heart rate: easy is zones 1-2 (up to 89% of LTHR), marathon effort zone 3, threshold zone 4 */
+  if (lthr) return { REC: [0, Math.round(lthr * 0.85)], E: [Math.round(lthr * 0.8), Math.round(lthr * 0.89)], S: [Math.round(lthr * 0.87), Math.round(lthr * 0.92)], M: [Math.round(lthr * 0.9), Math.round(lthr * 0.94)], T: [Math.round(lthr * 0.95), Math.round(lthr * 1.0)], ST: [Math.round(lthr * 0.9), Math.round(lthr * 0.96)], I: [Math.round(lthr * 1.0), Math.round(lthr * 1.06)] };
   if (maxHr) return { REC: [0, Math.round(maxHr * 0.7)], E: [Math.round(maxHr * 0.65), Math.round(maxHr * 0.78)], S: [Math.round(maxHr * 0.8), Math.round(maxHr * 0.85)], M: [Math.round(maxHr * 0.82), Math.round(maxHr * 0.87)], T: [Math.round(maxHr * 0.87), Math.round(maxHr * 0.92)], ST: [Math.round(maxHr * 0.82), Math.round(maxHr * 0.88)], I: [Math.round(maxHr * 0.94), Math.round(maxHr * 0.98)] };
   return null;
+}
+/* ---------- heart-rate zones for the watch: anchored on lactate threshold, cross-checked with heart-rate reserve ----------
+   anchors: lactate threshold HR (Garmin's detection or a test), max HR (your highest believable reading in the last year,
+   with sensor spikes thrown out), resting HR (30-day median). Five zones for Garmin, in bpm. */
+function hrAnchors(garmin, extra) {
+  var g = garmin || {}, x = extra || {}, lthr = null, lsrc = '', at = '';
+  if (x.lt && x.lt.hr) { lthr = +x.lt.hr; lsrc = 'Garmin threshold detection'; at = x.lt.date || ''; }
+  else { var lh = (g.fitness && g.fitness.ltHr) || {}, ks = Object.keys(lh).sort(); if (ks.length) { lthr = +lh[ks[ks.length - 1]]; lsrc = 'Garmin threshold detection'; at = ks[ks.length - 1]; } }
+  var cut = addD(today(), -365), mx = (g.activities || []).filter(function (a) { return a.run && a.maxHR && a.date >= cut; }).map(function (a) { return { v: +a.maxHR, d: a.date }; }).sort(function (p, q) { return q.v - p.v; });
+  var dropped = [];
+  while (mx.length > 1 && (mx[0].v > 220 || mx[0].v > mx[1].v * 1.06)) dropped.push(mx.shift());
+  var max = mx.length ? mx[0].v : null, maxAt = mx.length ? mx[0].d : '';
+  var days = g.days || {}, rk = Object.keys(days).sort().slice(-30).map(function (k) { return days[k].rhr; }).filter(function (v) { return v > 25 && v < 110; }).sort(function (p, q) { return p - q; });
+  var rest = rk.length ? rk[Math.floor(rk.length / 2)] : null;
+  if (!lthr && max) { lthr = Math.round(max * 0.89); lsrc = 'estimated as 89% of your max'; }
+  return { lthr: lthr, lsrc: lsrc, lthrAt: at, max: max, maxAt: maxAt, rest: rest, dropped: dropped };
+}
+function hrZoneSet(an) {
+  if (!an || !an.lthr) return null;
+  var L = an.lthr, max = an.max || Math.round(L / 0.89), rest = an.rest || 50;
+  var b = [Math.round(L * 0.85), Math.round(L * 0.89), Math.round(L * 0.94), L - 1];
+  var z1lo = Math.min(b[0] - 10, Math.round(rest + 0.5 * (max - rest)));
+  var z = [[z1lo, b[0]], [b[0] + 1, b[1]], [b[1] + 1, b[2]], [b[2] + 1, b[3]], [L, Math.max(max, L + 5)]];
+  var hrr = max && rest ? [0.7, 0.75, 0.8, 0.85].map(function (f) { return Math.round(rest + f * (max - rest)); }) : null;
+  return { z: z, lthr: L, max: max, rest: rest, hrr: hrr, sig: b.join('/'), pct: z.map(function (r) { return [Math.round(r[0] / L * 100), Math.round(r[1] / L * 100)]; }) };
 }
 function vdotFromEasy(sec) {                /* typical easy pace -> rough fitness */
   var lo = 20, hi = 80;
@@ -2408,7 +2434,7 @@ var api = {
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
   weekOf: weekOf, dayAt: dayAt, LADDER: LADDER, partOn: partOn, zonesFor: zonesFor, describe: describe, structure: structure, estMinutes: estMinutes, stepMiles: stepMiles,
   fitItems: fitItems, workoutFile: workoutFile, workoutFit: workoutFit, zipFiles: zipFiles, fitCrc: fitCrc, flattenSteps: flattenSteps,
-  loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
+  loadMiles: loadMiles, vdotFromThreshold: vdotFromThreshold, vdotFromVo2: vdotFromVo2, hrZones: hrZones, hrAnchors: hrAnchors, hrZoneSet: hrZoneSet, checkinFor: checkinFor, maxHrSeen: maxHrSeen, weekStatuses: weekStatuses, liftRotation: liftRotation
 };
 /* Calendar shifts go through a review: st.calAck holds what you accepted per date ("day" / "eve" / "night",
    "none" for no shift, or "x:<type>" for a shift you chose not to plan around). With prefs.calAuto the
