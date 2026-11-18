@@ -1248,3 +1248,4 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .runlink .rl-main > div { display: grid; gap: 2px; min-width: 0; } .runlink .rl-main > div > b { font-size: 1.05rem; }
 .rl-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .82rem; color: var(--muted); } .rl-stats b { color: var(--ink); font-size: .95rem; }
 .runlink .chev { color: var(--dim); font-size: 1.4rem; } .rl-tabs { margin-top: 10px; } .rl-tabs .chip { text-decoration: none; }
+.tmrwx .dress { margin-top: 10px; }
