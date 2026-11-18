@@ -437,7 +437,7 @@ App.p32 = { coachFindings: coachFindings, st: st, openSheet: function (k, a) { o
 
 /* ================= Treadmill walks: log the incline, and the coach sets the next one ================= */
 var INC_CAP = { bone: 8, tendon: 3, other: 10 };
-function isTreadType(t) { return /treadmill|incline/i.test(t || ''); }
+function isTreadType(t) { return /treadmill|incline|indoor_walk/i.test(t || ''); }
 function incWalks(days) { var L = st().logs || {}; return Object.keys(L).filter(function (d) { var c = L[d] && L[d].cross; return c && isTreadType(c.type) && E.diffD(d, App.today) <= (days || 21); }).sort().map(function (d) { return Object.assign({ date: d }, L[d].cross); }); }
 function incPain() {
   var C = (st().checkins || []).filter(function (c) { return E.diffD(c.date, App.today) <= 10 && c.pain && c.painLvl != null; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; }), c = C[C.length - 1];

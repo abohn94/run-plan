@@ -1837,6 +1837,7 @@ function maxHrSeen(g) {
 function isWalkAct(a) {
   if (!a) return false;
   if (/walk/i.test(a.type || '')) return true;
+  if (a.run && /walk/i.test(a.name || '')) return true;   /* a custom watch activity named e.g. "Treadmill Walk" */
   if (!a.run || !(a.distM > 100)) return false;
   var p = (a.movS || a.durS || 0) / (a.distM / MI_M), cad = +a.cadence || 0;
   return p >= 1080 || (p >= 780 && cad > 0 && cad < 135) || (p >= 900 && !cad);
@@ -1844,8 +1845,9 @@ function isWalkAct(a) {
 function markWalks(g) {
   if (!g || !g.activities) return g;
   g.activities.forEach(function (a) {
-    if (a.run && isWalkAct(a)) { a.origType = a.type; a.type = /treadmill|indoor/i.test(a.type || '') ? 'treadmill_walking' : 'walking'; a.run = false; a.walk = true; }
-    else if (/walk/i.test(a.type || '')) a.walk = true;
+    var indoor = /treadmill|indoor/i.test((a.type || '') + ' ' + (a.name || ''));
+    if (a.run && isWalkAct(a)) { a.origType = a.type; a.type = indoor ? 'treadmill_walking' : 'walking'; a.run = false; a.walk = true; }
+    else if (/walk/i.test(a.type || '')) { a.walk = true; if (indoor && a.type !== 'treadmill_walking') { a.origType = a.type; a.type = 'treadmill_walking'; } }
   });
   return g;
 }
