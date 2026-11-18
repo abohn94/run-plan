@@ -53,6 +53,18 @@ function liftSteps(h) {
   var hd = box.querySelector('h3'); if (hd) hd.textContent = 'Next step for each lift';
   return box.innerHTML;
 }
+/* recent runs: the latest three, the rest one tap away */
+function recentFew(h) {
+  if (!h) return h;
+  var box = document.createElement('div'); box.innerHTML = h;
+  var list = box.querySelector('.runbubs'); if (!list || list.children.length <= 3) return h;
+  var extra = Array.prototype.slice.call(list.children, 3), n = extra.length;
+  var more = document.createElement('details'); more.className = 'rbmore';
+  more.innerHTML = '<summary>Show ' + n + ' more</summary><div class="runbubs"></div>';
+  extra.forEach(function (e) { more.lastElementChild.appendChild(e); });
+  list.after(more);
+  return box.innerHTML;
+}
 VIEWS.progress = function () {
   if (!App.plan) return setupNeeded();
   var tab = App.args[0] || 'overview'; tab = PT_ALIAS[tab] || tab; if (!PTABS.some(function (x) { return x[0] === tab; })) tab = 'overview';
@@ -61,7 +73,7 @@ VIEWS.progress = function () {
   head = head.replace(/<h1>[^<]*<\/h1>/, '<h1>Progress</h1>');
   var seg = '<div class="tabs ptabs c12" role="group" aria-label="Progress section">' + PTABS.map(function (x) { return '<button data-act="nav" data-arg="' + jattr({ to: '#/progress/' + x[0], replace: true }) + '" aria-pressed="' + (tab === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div>';
   var jump = { workouts: 'p-acts' }[App.args[0]];
-  App.after = function () { var b = document.querySelector('.ptabs [aria-pressed="true"]'); if (b && b.scrollIntoView) b.scrollIntoView({ block: 'nearest', inline: 'center' }); var j = jump && document.getElementById(jump); if (j) setTimeout(function () { j.scrollIntoView({ block: 'start' }); }, 60); };
+  App.after = function () { var b = document.querySelector('.ptabs [aria-pressed="true"]'); if (b && b.scrollIntoView) b.scrollIntoView({ block: 'nearest', inline: 'center' }); var j = jump && document.getElementById(jump); if (j) { var dd = j.closest('details'); if (dd) dd.open = true; setTimeout(function () { j.scrollIntoView({ block: 'start' }); }, 60); } };
   var add = function (h) { if (h) parts.push(wrapC(noSelfLinks(h))); };
   var rest = function (units, skip) { units.forEach(function (u) { if (used[u.html] || (skip && skip.test(u.t))) return; used[u.html] = 1; add(u.html); }); };
   var SKIP_D = /^(Today|HRV and resting heart rate|Sleep)$/i;                 /* Today has its own tab; the Health cards are the fuller versions */
@@ -72,38 +84,49 @@ VIEWS.progress = function () {
     add(pickU(O, /proof it/i, ou)); add(pickU(O, /^Weekly miles$/i, ou));
     D.forEach(function (u) { if (/^#/.test(u.t)) used[u.html] = 1; });
   }
+  /* a collapsible folder for the long tail: named, with what's inside, remembered open or closed */
+  var fold = function (key, title, teaser, list, open) {
+    var body = list.filter(Boolean).map(function (h) { return wrapC(noSelfLinks(h)); }).join(''); if (!body) return;
+    parts.push('<div class="c12">' + foldWrap('pg-' + key, title, teaser, '<div class="dash pdin">' + body + '</div>', !!open) + '</div>');
+  };
   if (tab === 'running') {
     var P = oldUnits('performance'), O2 = oldUnits('overview'), W = oldUnits('workouts'), R = oldUnits('running'), pu = {}, o2 = {}, ru = {};
-    [/^This (week|month)\b/i].forEach(function (re) { add(pickU(P, re, pu)); });
-    add(pickU(D, /^Race predictions/i, used)); add(pickU(D, /^Goal odds/i, used)); add(pickU(D, /^Garmin metrics/i, used));
-    add(pickU(D, /^VO2 max trend/i, used)); add(pickU(P, /^VO2 max & threshold/i, pu));
-    add(pickU(D, /^Aerobic efficiency/i, used)); add(pickU(P, /^Easy pace and heart rate/i, pu)); add(pickU(D, /^Long-run progression/i, used));
-    add(pickU(D, /^Intensity mix/i, used)); add(pickU(D, /^Consistency/i, used));
-    add(pickU(R, /^#formlink$/, ru)); add(pickU(D, /^Running dynamics/i, used));
-    add(pickU(P, /^Personal records|^1K/i, pu)); add(pickU(O2, /^This build vs/i, o2)); add(pickU(O2, /^Records and milestones|Best sessions|Milestones/i, o2));
-    add(pickU(P, /^Total distance|All-time/i, pu)); add(pickU(P, /^Month by month/i, pu));
-    add(pickU(D, /^Recent runs/i, used));
-    if (W[0]) add('<div class="sechead" id="p-acts"><h2>All activities</h2></div>' + W[0].html);
-    add(pickU(P, /^All runs/i, pu));
-    rest(P.filter(function (u) { return !/^Training dashboard$|^Fitness, fatigue and form$/i.test(u.t); }));
+    /* first: this week, how fast you could race, how the last runs went */
+    add(pickU(P, /^This (week|month)\b/i, pu));
+    add(pickU(D, /^Race predictions/i, used)); add(pickU(D, /^Goal odds/i, used));
+    add(recentFew(pickU(D, /^Recent runs/i, used)));
+    fold('run-fit', 'Fitness trends', 'VO2 max · aerobic efficiency · easy pace vs heart rate · long runs · Garmin metrics', [pickU(D, /^VO2 max trend/i, used), pickU(P, /^VO2 max & threshold/i, pu), pickU(D, /^Aerobic efficiency/i, used), pickU(P, /^Easy pace and heart rate/i, pu), pickU(D, /^Long-run progression/i, used), pickU(D, /^Garmin metrics/i, used)]);
+    fold('run-habits', 'How you train', 'Intensity mix · consistency', [pickU(D, /^Intensity mix/i, used), pickU(D, /^Consistency/i, used)]);
+    fold('run-form', 'Running form', 'Cadence, bounce and ground contact', [pickU(R, /^#formlink$/, ru), pickU(D, /^Running dynamics/i, used)]);
+    fold('run-recs', 'Records and milestones', 'Personal records · best sessions · all-time stats', [pickU(P, /^Personal records|^1K/i, pu), pickU(O2, /^This build vs/i, o2), pickU(O2, /^Records and milestones|Best sessions|Milestones/i, o2), pickU(P, /^Total distance|All-time|#tiles/i, pu)]);
+    var leftover = []; P.forEach(function (u) { if (!pu[u.html] && !/^Training dashboard$|^Fitness, fatigue and form$|^All runs/i.test(u.t)) { pu[u.html] = 1; leftover.push(u.html); } });
+    D.forEach(function (u) { if (!used[u.html] && !/^#|^(Today|HRV and resting heart rate|Sleep|Shin load|Strength|Training load|Training balance|Weekly miles, last)/i.test(u.t)) { used[u.html] = 1; leftover.push(u.html); } });
+    fold('run-hist', 'Run history', 'Month by month · every activity · the full run table', [pickU(P, /^Month by month/i, pu), W[0] ? '<div class="sechead" id="p-acts"><h2>All activities</h2></div>' + W[0].html : '', pickU(P, /^All runs/i, pu)].concat(leftover));
   }
   if (tab === 'load') {
     var P2 = oldUnits('performance'), O3 = oldUnits('overview'), p2 = {}, o3 = {};
-    add(pickU(D, /^Training load/i, used)); add(pickU(P2, /^Fitness, fatigue and form/i, p2)); add(pickU(D, /^Training balance/i, used));
-    add(pickU(D, /^Weekly miles, last/i, used)); add(pickU(O3, /^Week by week/i, o3));
+    add(pickU(D, /^Training load/i, used)); add(pickU(D, /^Training balance/i, used));
+    fold('load-ff', 'Fitness, fatigue and form', 'Are you building or fresh?', [pickU(P2, /^Fitness, fatigue and form/i, p2)]);
+    fold('load-miles', 'Mileage history', 'Last 26 weeks · week by week', [pickU(D, /^Weekly miles, last/i, used), pickU(O3, /^Week by week/i, o3)]);
   }
   if (tab === 'recovery') {
-    var H = oldUnits('health');
-    rest(H.filter(function (u) { return !/^VO2 max$/i.test(u.t); }));
+    var H = oldUnits('health'), hu = {};
+    /* first: readiness and the three numbers that move it */
+    add(pickU(H, /^Readiness/i, hu)); add(pickU(H, /^HRV/i, hu)); add(pickU(H, /^Resting heart rate/i, hu)); add(pickU(H, /^Sleep$/i, hu));
     add(pickU(D, /^Shin load/i, used));
+    var more = []; H.forEach(function (u) { if (!hu[u.html] && !/^VO2 max$/i.test(u.t)) { hu[u.html] = 1; more.push(u.html); } });
+    fold('rec-more', 'More body metrics', 'Sleep score · Body Battery · stress · steps · weight', more);
   }
   if (tab === 'strength') {
-    var S = oldUnits('strength');
+    var S = oldUnits('strength'), su = {};
+    add(pickU(S, /^$/, su));                                                  /* start a workout · 1RM calculator */
     add(liftSteps(pickU(D, /^Strength$/i, used)));
-    rest(S);
+    add(pickU(S, /^Top estimated 1RM/i, su));
+    fold('str-1rm', 'Your 1RMs', 'Calculated and entered, per lift', [pickU(S, /^Your 1RMs/i, su)]);
+    fold('str-charts', 'Lift progress', 'Progressive overload · graph', [pickU(S, /^Progressive overload/i, su), pickU(S, /^Graph/i, su)]);
+    var sm = []; S.forEach(function (u) { if (!su[u.html]) { su[u.html] = 1; sm.push(u.html); } });
+    fold('str-vol', 'Volume and sessions', 'Weekly volume · gym sessions · planned vs done', sm);
   }
-  /* anything new that appears on the dashboard later lands in its best-fit section instead of disappearing */
-  if (tab === 'running') rest(D, /^#|^(Today|HRV and resting heart rate|Sleep|Shin load|Strength|Training load|Training balance|Weekly miles, last)/i);
   return '<div class="dash pdash">' + head + seg + parts.join('') + '</div>';
 };
 /* one Progress tab: You (the dashboard) folds into it */
