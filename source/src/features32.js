@@ -493,3 +493,77 @@ pnFindings = function () {
   return out;
 };
 App.p32.incSuggest = incSuggest;
+
+/* ================= Walks are walks: never compared with runs, and a treadmill walk asks for its incline ================= */
+GTYPE.treadmill_walking = GTYPE.treadmill_walking || 'Treadmill walk';
+GTYPE.indoor_walking = GTYPE.indoor_walking || 'Treadmill walk';
+function isTreadAct(a) { var l = (a && a.log) || {}, g = (a && a.g) || {}; return isTreadType(l.type) || /treadmill|indoor_walk/i.test(g.type || ''); }
+/* a walk the watch recorded as a run moves from the run log to the activity log */
+function fixWalkLogs() {
+  var g = Store.garmin; if (!g || !g.activities) return false; E.markWalks(g);
+  var walk = {}; g.activities.forEach(function (a) { if (a.walk) walk[a.id] = a; });
+  var L = st().logs || {}, moves = [];
+  Object.keys(L).forEach(function (d) { ['run', 'xrun'].forEach(function (s) { var r = L[d] && L[d][s]; if (r && r.gid && walk[r.gid]) moves.push({ d: d, s: s, a: walk[r.gid] }); }); });
+  if (!moves.length) return false;
+  Store.editMany(moves.map(function (m) { return ['logs', m.d]; }), function (S) {
+    moves.forEach(function (m) { var l = S.logs[m.d], a = m.a; delete l[m.s]; if (!l.cross) l.cross = { src: 'garmin', gid: a.id, type: a.type, min: Math.round((a.durS || a.movS || 0) / 60), hr: a.avgHR || null }; });
+  });
+  return true;
+}
+var _applyG32 = applyGarmin;
+applyGarmin = function () { var f = fixWalkLogs(); var r = _applyG32(); return r || f; };
+function walkMph(g) { if (!g || !(g.distM > 0) || !(g.movS || g.durS)) return null; var v = g.distM / E.MI_M / ((g.movS || g.durS) / 3600); return v >= 1.5 && v <= 4.6 ? Math.round(v * 10) / 10 : null; }
+function incSaid(c) {
+  var m = E.walkMets(c.mph || 3.4, c.incline), s = incSuggest(), P = s.P;
+  coachSay('Logged: ' + (c.min ? c.min + ' min at ' : '') + c.incline + '% incline' + (c.mph ? ', ' + c.mph + ' mph' : '') + ' (≈ ' + m.toFixed(1) + ' METs, ' + metWords(m).split(',')[0] + ').' +
+    (P && c.incline > s.cap ? ' That\'s steeper than I\'d like with your ' + (PN_AREA[P.where] || 'sore spot') + ' pain: keep it at ' + s.cap + '% or less until it settles.' : '') +
+    '\n\nNext walk: about ' + s.v + '%. ' + s.why + ' Tell me in tomorrow\'s check-in how the ' + (P ? PN_AREA[P.where] || 'sore spot' : 'legs') + ' felt.', []);
+}
+/* the walk's own page: walk numbers only, and the incline question first */
+var _act32 = VIEWS.activity;
+VIEWS.activity = function () {
+  var h = _act32(), a = actByKey(App.args[0]); if (!a || a.kind === 'run') return h;
+  var g = a.g || {}, isWalk = g.walk || /walk/i.test(g.type || '') || /walk/i.test((a.log || {}).type || '');
+  if (!isWalk && !isTreadAct(a)) return h;
+  var c = '<p class="tiny muted wnote">Walks are kept separate from your runs: they never count toward running pace, cadence, form or race predictions.</p>';
+  if (isTreadAct(a) && a.date <= App.today) {
+    var l = a.log || {}, has = l.incline != null, mph = l.mph || walkMph(g), s = incSuggest();
+    var form = '<div class="grid2"><label class="f">Incline (%)<input class="i" id="w-inc" type="number" inputmode="decimal" step="0.5" min="0" max="15" placeholder="e.g. ' + s.v + '" value="' + (has ? l.incline : '') + '"></label><label class="f">Speed (mph)<input class="i" id="w-mph" type="number" inputmode="decimal" step="0.1" min="1" max="5" placeholder="3.4" value="' + (mph || '') + '"></label></div><p class="tiny muted" id="w-met">' + incMetLine(mph, has ? l.incline : '') + '</p><div class="btns"><button class="btn primary" data-act="w-inc-save" data-arg="' + jattr({ d: a.date, gid: g.id || null }) + '">' + (has ? 'Update' : 'Save incline') + '</button></div>';
+    c = has ? '<section class="card incprompt"><div class="eyebrow">Incline</div><h3>' + l.incline + '% incline' + (l.mph ? ' at ' + l.mph + ' mph' : '') + '</h3><p class="small">≈ ' + E.walkMets(l.mph || 3.4, l.incline).toFixed(1) + ' METs: ' + metWords(E.walkMets(l.mph || 3.4, l.incline)) + '. Next walk: about <b>' + s.v + '%</b>. ' + esc(s.why) + '</p><details class="wedit"><summary class="small">Change it</summary>' + form + '</details></section>' + c
+      : '<section class="card incprompt need"><div class="eyebrow">Incline</div><h3>What incline did you use?</h3><p class="small muted">Your watch can\'t see the treadmill\'s incline. Your coach uses it to count the effort and set your next walk' + (s.P ? ' around your ' + (PN_AREA[s.P.where] || 'sore spot') : '') + '.</p>' + form + '</section>' + c;
+  }
+  h = h.replace(/>Cadence</g, '>Steps per min<');
+  var m = /<div class="pagehead">[\s\S]*?<\/h1>(?:<p>[\s\S]*?<\/p>)?<\/div>/.exec(h); if (!m) return c + h; var i = m.index + m[0].length; return h.slice(0, i) + c + h.slice(i);
+};
+ACTIONS['w-inc-save'] = function (a) {
+  var inc = $('#w-inc').value, mph = $('#w-mph').value; if (inc === '') { toast('Enter the incline'); return; }
+  var act = a.gid ? (Store.garmin.activities || []).filter(function (x) { return x.id === a.gid; })[0] : null, d = a.d;
+  Store.edit('logs', d, function (S) {
+    S.logs[d] = S.logs[d] || {}; var c = S.logs[d].cross;
+    if (!c || (a.gid && c.gid && c.gid !== a.gid)) c = S.logs[d].cross = act ? { src: 'garmin', gid: act.id, type: act.type, min: Math.round((act.durS || act.movS || 0) / 60), hr: act.avgHR || null } : { type: 'Treadmill walk', min: 0 };
+    c.incline = +inc; c.mph = mph !== '' ? +mph : null;
+  });
+  incSaid(logOf(d).cross); toast('Incline saved');
+};
+document.addEventListener('input', function (e) { if (e.target && (e.target.id === 'w-inc' || e.target.id === 'w-mph')) { var el = $('#w-met'); if (el) el.textContent = incMetLine($('#w-mph').value, $('#w-inc').value); } });
+/* a logged treadmill walk with no incline asks for it on the day page and on Today */
+var _crl32b = coachRunLines;
+coachRunLines = function (x, date) {
+  var l = logOf(date).cross;
+  if (x.type === 'cross' && /walk/i.test(x.title || '') && l && isTreadType(l.type) && l.incline == null) return '<p class="small capline"><b>What incline did you use?</b> <a href="#/activity/' + encodeURIComponent(l.gid ? 'g' + l.gid : 'l' + date + '|cross') + '">Add it</a> so I can set your next walk.</p>';
+  return _crl32b(x, date);
+};
+var _today32b = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today32b(), L = st().logs || {}, miss = null;
+  for (var i = 0; i <= 2 && !miss; i++) { var d = E.addD(App.today, -i), c = L[d] && L[d].cross; if (c && isTreadType(c.type) && c.incline == null) miss = { d: d, c: c }; }
+  if (!miss) return h;
+  var k = miss.c.gid ? 'g' + miss.c.gid : 'l' + miss.d + '|cross';
+  var card = '<a class="card shinrem increm" href="#/activity/' + encodeURIComponent(k) + '"><span aria-hidden="true">⛰️</span><span><b>Add your treadmill incline</b><small>' + (miss.d === App.today ? 'Today\'s' : fmtD(miss.d, { weekday: 'long' }) + '\'s') + ' walk: ' + (miss.c.min || '') + ' min. Your coach uses it to set the next walk.</small></span><span class="chev">›</span></a>';
+  var g = h.indexOf('class="greet"'), j = g >= 0 ? h.indexOf('</h1></div>', g) : -1;
+  return j > 0 ? h.slice(0, j + 11) + card + h.slice(j + 11) : h + card;
+};
+/* a walk keeps Garmin's data but never its "Running" name */
+var _acts32 = activities;
+activities = function () { var r = _acts32(); r.forEach(function (x) { if (x.g && x.g.walk && /run/i.test(x.name || '')) x.name = gLabel(x.g.type); }); return r; };
+App.p32.fixWalkLogs = fixWalkLogs;

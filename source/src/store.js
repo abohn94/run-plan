@@ -2,6 +2,7 @@
    The access token stays in this browser's storage and is only ever sent to api.github.com. */
 (function (root) {
 'use strict';
+function gNorm(g) { try { if (g && root.ENGINE && root.ENGINE.markWalks) root.ENGINE.markWalks(g); } catch (e) { /* keep as is */ } return g; }
 var LS = {
   get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage off */ } },
@@ -42,7 +43,7 @@ var Store = {
     this.conn = c && c.owner && c.repo && c.token ? c : null;
     this.mode = this.conn ? 'github' : 'local';
     try { this.state = normalize(JSON.parse(LS.get(K.state) || 'null')); } catch (e) { this.state = normalize(null); }
-    try { this.garmin = JSON.parse(LS.get(K.garmin) || 'null'); } catch (e) { this.garmin = null; }
+    try { this.garmin = gNorm(JSON.parse(LS.get(K.garmin) || 'null')); } catch (e) { this.garmin = null; }
     this.sha = LS.get(K.sha);
     /* edits made just before the app was closed and not yet saved to GitHub */
     try { this.touched = this.mode === 'github' ? (JSON.parse(LS.get(K.touched) || '{}') || {}) : {}; } catch (e) { this.touched = {}; }
@@ -82,7 +83,7 @@ var Store = {
         self.state = remote; self.sha = s.sha;
         LS.set(K.state, JSON.stringify(self.state)); LS.set(K.sha, s.sha || '');
       } else { self.sha = null; }
-      if (g && g.text) { try { self.garmin = JSON.parse(g.text); LS.set(K.garmin, g.text); } catch (e) { /* keep the old copy */ } }
+      if (g && g.text) { try { self.garmin = gNorm(JSON.parse(g.text)); LS.set(K.garmin, g.text); } catch (e) { /* keep the old copy */ } }
       self.setStatus('ok');
       if (self.onchange) self.onchange('pull');
       if (Object.keys(self.touched).length || !s) self.queueSave(0);
@@ -97,7 +98,7 @@ var Store = {
     return this.getFile(GARMIN_PATH, true).then(function (g) {
       if (!g || !g.text) return false;
       var changed = !self.garmin || JSON.stringify(self.garmin) !== g.text.trim() && g.text !== JSON.stringify(self.garmin);
-      try { var parsed = JSON.parse(g.text); changed = !self.garmin || parsed.updated !== self.garmin.updated || parsed.status !== self.garmin.status; self.garmin = parsed; } catch (e) { return false; }
+      try { var parsed = JSON.parse(g.text); changed = !self.garmin || parsed.updated !== self.garmin.updated || parsed.status !== self.garmin.status; self.garmin = gNorm(parsed); } catch (e) { return false; }
       LS.set(K.garmin, g.text);
       if (changed && self.onchange) self.onchange('garmin');
       return changed;
@@ -220,7 +221,7 @@ var Store = {
     this.queueSave(0);
     if (this.onchange) this.onchange('edit');
   },
-  setGarminLocal: function (g) { this.garmin = g; LS.set(K.garmin, JSON.stringify(g)); if (this.onchange) this.onchange('garmin'); }
+  setGarminLocal: function (g) { this.garmin = gNorm(g); LS.set(K.garmin, JSON.stringify(g)); if (this.onchange) this.onchange('garmin'); }
 };
 Store.emptyState = emptyState;
 Store.normalize = normalize;

@@ -1295,3 +1295,8 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .rclr { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .rcflag { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--amber); color: #111; font-weight: 800; font-size: .7rem; }
 .tscroll { overflow-x: auto; }
+.incprompt.need { border: 1px solid var(--amber); }
+.incprompt h3 { margin: 2px 0 4px; }
+.incprompt .grid2 { margin-top: 8px; }
+.wedit summary { cursor: pointer; margin-top: 6px; color: var(--muted); }
+.wnote { margin: 4px 2px 10px; }

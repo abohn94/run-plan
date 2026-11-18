@@ -1702,6 +1702,7 @@ function latestReading(list, key, src) {
 }
 
 function analyze(plan, st, garmin) {
+  markWalks(garmin);
   var runs = runLogs(st);
   var res = { off: { E: 0, S: 0, T: 0, I: 0 }, notes: [], vdot: null, result: null, proj: null, dv: 0, dvFrom: null, easy: null, hr: null };
   res.dvAt = function (date) { return res.dvFrom && date >= monday(res.dvFrom) ? res.dv : 0; };
@@ -1831,8 +1832,27 @@ function maxHrSeen(g) {
   return m >= 150 ? m : null;
 }
 
+/* Walks are never runs. A walk recorded with a running profile (e.g. "Treadmill Running" at 18 min/mi and 96 steps/min)
+   is relabelled so it never feeds paces, VDOT, cadence, form or any other running statistic. Safe to call repeatedly. */
+function isWalkAct(a) {
+  if (!a) return false;
+  if (/walk/i.test(a.type || '')) return true;
+  if (!a.run || !(a.distM > 100)) return false;
+  var p = (a.movS || a.durS || 0) / (a.distM / MI_M), cad = +a.cadence || 0;
+  return p >= 1080 || (p >= 780 && cad > 0 && cad < 135) || (p >= 900 && !cad);
+}
+function markWalks(g) {
+  if (!g || !g.activities) return g;
+  g.activities.forEach(function (a) {
+    if (a.run && isWalkAct(a)) { a.origType = a.type; a.type = /treadmill|indoor/i.test(a.type || '') ? 'treadmill_walking' : 'walking'; a.run = false; a.walk = true; }
+    else if (/walk/i.test(a.type || '')) a.walk = true;
+  });
+  return g;
+}
+
 /* ---------------- Garmin -> logs ---------------- */
 function matchGarmin(st, plan, garmin) {
+  markWalks(garmin);
   /* returns a list of {date, slot, rec} to add; never overwrites manual entries */
   var adds = [];
   if (!garmin || !garmin.activities) return adds;
@@ -2431,7 +2451,7 @@ var api = {
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
   ds: ds, pd: pd, addD: addD, dow: dow, monday: monday, diffD: diffD, today: today, fmtDate: fmtDate,
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
-  vdotOf: vdotOf, walkMets: walkMets, paceAt: paceAt, predict: predict, grade: grade, ageOf: ageOf, isMasters: isMasters, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
+  vdotOf: vdotOf, walkMets: walkMets, markWalks: markWalks, isWalkAct: isWalkAct, paceAt: paceAt, predict: predict, grade: grade, ageOf: ageOf, isMasters: isMasters, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
   sunTimes: sunTimes, clockMin: clockMin, applyDaylight: applyDaylight, heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
