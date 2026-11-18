@@ -1259,3 +1259,20 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .pdash .fold .pdin { margin-top: 2px; }
 .rbmore { margin-top: 10px; } .rbmore > summary { list-style: none; cursor: pointer; text-align: center; font-weight: 700; font-size: .85rem; color: var(--muted); padding: 10px; border-radius: 14px; background: var(--card2); }
 .rbmore > summary::-webkit-details-marker { display: none; } .rbmore[open] > summary { margin-bottom: 10px; }
+/* coach metrics */
+.mcard .msvg { width: 100%; height: auto; display: block; margin-top: 8px; }
+.mcard .msvg text { fill: var(--dim); font-size: 8px; }
+.mverd { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--card2); }
+.mverd .ins-dot { margin-top: 5px; flex: none; } .mverd p { margin: 0; line-height: 1.45; }
+.mwhy { margin-top: 8px; } .mwhy > summary { cursor: pointer; font-size: .82rem; font-weight: 700; color: var(--muted); list-style: none; } .mwhy > summary::-webkit-details-marker { display: none; } .mwhy > summary::after { content: ' ›'; } .mwhy[open] > summary::after { content: ' ⌄'; } .mwhy p { margin-top: 6px; line-height: 1.5; }
+.warnt { color: var(--amber); }
+/* coach findings */
+.cfind { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: var(--card2); border-left: 3px solid var(--blue); }
+.cfind.act { border-left-color: var(--amber); } .cfind.good { border-left-color: var(--green); }
+.cfind p { margin: 6px 0 0; line-height: 1.45; } .cfind .btns { margin-top: 10px; }
+.cf-h { display: grid; gap: 2px; } .cf-h b { font-size: 1rem; }
+.cf-tag { font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.cfind.act .cf-tag { color: var(--amber); } .cfind.good .cf-tag { color: var(--green); }
+.coachcard .cfind { margin-top: 8px; } .capline { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.18); }
+.wkl li { margin: 6px 0; line-height: 1.45; } .wkcard { text-decoration: none; color: inherit; display: block; } .nextwk .cfind { margin-top: 8px; }
+.shinrem { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; } .shinrem > span:nth-child(2) { display: grid; flex: 1; min-width: 0; } .shinrem small { color: var(--muted); } .shinrem .chev { color: var(--dim); font-size: 1.4rem; }

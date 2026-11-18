@@ -1072,13 +1072,16 @@ SHEETS.cross = function (a) {
 };
 SHEETS.checkin = function () {
   var c = E.checkinFor(Store.state, App.today) || {};
-  sheetCtx.ci = { feel: c.feel != null ? c.feel : null, sore: c.sore || 0, stress: c.stress || 1, sleep: c.sleep != null ? c.sleep : null, ill: !!c.ill, pain: !!c.pain, where: c.where || '' };
+  sheetCtx.ci = { feel: c.feel != null ? c.feel : null, sore: c.sore || 0, stress: c.stress || 1, sleep: c.sleep != null ? c.sleep : null, sleepQ: c.sleepQ != null ? c.sleepQ : null, mood: c.mood != null ? c.mood : null, motiv: c.motiv != null ? c.motiv : null, ill: !!c.ill, pain: !!c.pain, where: c.where || '' };
   var ci = sheetCtx.ci;
   function chips(k, opts) { return '<div class="chips">' + opts.map(function (o) { return '<button type="button" class="chip" data-ci="' + k + '" data-v="' + esc(o[0]) + '" aria-pressed="' + (String(ci[k]) === String(o[0])) + '">' + o[1] + '</button>'; }).join('') + '</div>'; }
-  return '<h3>Daily check-in</h3><p class="small muted">Ten seconds. It sharpens today\'s recommendation' + (Store.garmin ? ' alongside your Garmin data.' : '.') + '</p>' +
-    '<label class="f">How do you feel?' + chips('feel', [[1, 'Awful'], [2, 'Flat'], [3, 'OK'], [4, 'Good'], [5, 'Great']]) + '</label>' +
+  return '<h3>How do you feel today?</h3><p class="small muted">Fifteen seconds. Your coach reads it with your Garmin data and tells you right away if today should change.</p>' +
+    '<label class="f">Sleep quality' + chips('sleepQ', [[1, 'Awful'], [2, 'Poor'], [3, 'OK'], [4, 'Good'], [5, 'Great']]) + '</label>' +
+    '<label class="f">Energy' + chips('feel', [[1, 'Drained'], [2, 'Flat'], [3, 'OK'], [4, 'Good'], [5, 'Great']]) + '</label>' +
     '<label class="f">Legs' + chips('sore', [[0, 'Fresh'], [1, 'A bit tight'], [2, 'Sore']]) + '</label>' +
     '<label class="f">Life stress' + chips('stress', [[1, 'Low'], [2, 'Medium'], [3, 'High']]) + '</label>' +
+    '<label class="f">Mood' + chips('mood', [[1, 'Low'], [2, 'Meh'], [3, 'OK'], [4, 'Good'], [5, 'Great']]) + '</label>' +
+    '<label class="f">Motivation to train' + chips('motiv', [[1, 'None'], [2, 'Low'], [3, 'OK'], [4, 'Keen'], [5, 'Fired up']]) + '</label>' +
     (!(Store.garmin && Store.garmin.days && Store.garmin.days[App.today] && Store.garmin.days[App.today].sleepH) ? '<label class="f">Sleep last night' + chips('sleep', [[1, 'Poor'], [2, 'Short'], [3, 'OK'], [4, 'Great']]) + '</label>' : '') +
     '<label class="check"><input type="checkbox" id="ci-pain"' + (ci.pain ? ' checked' : '') + '> Something hurts</label><label class="f" id="ci-wherew"' + (ci.pain ? '' : ' hidden') + '>Where?' + chips('where', [['shin', 'Shin'], ['calf', 'Calf / Achilles'], ['knee', 'Knee'], ['hip', 'Hip / hamstring'], ['foot', 'Foot'], ['other', 'Other']]) + '</label>' +
     '<label class="check"><input type="checkbox" id="ci-ill"' + (ci.ill ? ' checked' : '') + '> I feel sick</label>' +
@@ -1161,8 +1164,8 @@ function saveSheet() {
   }
   if (k === 'checkin') {
     var ci = sheetCtx.ci;
-    if (ci.feel == null) return fail('Pick how you feel.');
-    var c = { id: App.today, date: App.today, t: new Date().toISOString(), feel: +ci.feel, sore: +ci.sore, stress: +ci.stress, sleep: ci.sleep != null ? +ci.sleep : null, ill: $('#ci-ill').checked, pain: $('#ci-pain').checked, where: $('#ci-pain').checked ? ci.where : '', note: $('#ci-note').value.trim() };
+    if (ci.feel == null) return fail('Pick your energy level.');
+    var c = { id: App.today, date: App.today, t: new Date().toISOString(), feel: +ci.feel, sore: +ci.sore, stress: +ci.stress, sleep: ci.sleep != null ? +ci.sleep : null, sleepQ: ci.sleepQ != null ? +ci.sleepQ : null, mood: ci.mood != null ? +ci.mood : null, motiv: ci.motiv != null ? +ci.motiv : null, ill: $('#ci-ill').checked, pain: $('#ci-pain').checked, where: $('#ci-pain').checked ? ci.where : '', note: $('#ci-note').value.trim() };
     Store.edit('checkins', c.id, function (s) { s.checkins = s.checkins.filter(function (x) { return x.id !== c.id; }); s.checkins.push(c); if (s.checkins.length > 400) s.checkins = s.checkins.slice(-400); });
     closeSheet();
     recompute();
@@ -1170,6 +1173,7 @@ function saveSheet() {
     if (c.note && /\b(travel|trip|shift|busy|work|wedding|vacation)\b/i.test(c.note)) acts.push({ label: 'Plan around it', act: { sheet: 'life' } });
     coachSay(C.afterCheckin(c, App.rd, App.rec), acts);
     toast('Check-in saved');
+    if (typeof ciFeedback === 'function') setTimeout(function () { ciFeedback(c); }, 260);
     return;
   }
   if (k === 'life') {
