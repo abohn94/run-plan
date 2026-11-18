@@ -160,49 +160,87 @@ ACTIONS['rc-save'] = function () {
 function pnSeries(days) {
   return (st().checkins || []).filter(function (c) { return E.diffD(c.date, App.today) <= (days || 60); }).sort(function (a, b) { return a.date < b.date ? -1 : 1; }).map(function (c) { return { d: c.date, v: c.pain ? (c.painLvl != null ? +c.painLvl : null) : 0, where: c.pain ? c.where : '', when: c.painWhen || '' }; }).filter(function (x) { return x.v != null; });
 }
-var PN_WHEN = { during: 'during runs', after: 'after runs', morning: 'worst the morning after', always: 'even when walking' };
+var PN_WHEN = { during: 'during runs', after: 'after runs', morning: 'worse the morning after', always: 'even when walking' };
+var PN_AREA = { shin: 'shin', calf: 'calf / Achilles', knee: 'knee', hip: 'hip / hamstring', foot: 'foot', other: 'sore spot' };
+/* Pain rules by tissue. Bone (shin, foot): bone stress can't be run through, so the line is low and red flags stop running.
+   Tendon and joint (Achilles/calf, knee, hip): the tendon pain-monitoring model allows a little more if it settles by the next morning. */
+var PN_RULES = {
+  bone: { ok: 2, stop: 4, name: 'shin and foot', why: 'Shin and foot pain can be bone under stress, which doesn\'t adapt to being run through the way a tendon does' },
+  tendon: { ok: 3, stop: 6, name: 'tendon and joint', why: 'Tendons tolerate some pain while they adapt, as long as it settles by the next morning and isn\'t creeping up' },
+  other: { ok: 2, stop: 6, name: 'general', why: 'Low, stable pain is usually safe to train with; rising pain isn\'t' }
+};
+function pnTissue(where) { return where === 'shin' || where === 'foot' ? 'bone' : where === 'calf' || where === 'knee' || where === 'hip' ? 'tendon' : 'other'; }
+/* one check-in → ok / modify / stop, with the reasons */
+function pnBand(c, prev) {
+  if (!c || !c.pain || c.painLvl == null) return null;
+  var lvl = +c.painLvl, t = pnTissue(c.where), R = PN_RULES[t], why = [], band = 'ok';
+  var flags = { limp: !!c.painLimp, spot: !!c.painSpot && t === 'bone', night: !!c.painNight, walk: c.painWhen === 'always' };
+  var rising = prev && prev.painLvl != null && lvl >= +prev.painLvl + 2, morning = c.painWhen === 'morning' && lvl >= 2;
+  if (flags.limp) why.push('it changes how you run or walk');
+  if (flags.spot) why.push('it\'s one pinpoint spot on the bone');
+  if (flags.night) why.push('it aches at rest or at night');
+  if (flags.walk) why.push('it hurts even when walking');
+  if (lvl >= R.stop) why.push(lvl + '/10 is at or above the ' + R.stop + '/10 stop line for ' + R.name + ' pain');
+  if (why.length) band = 'stop';
+  else if (lvl > R.ok || morning || rising) { band = 'mod'; if (lvl > R.ok) why.push(lvl + '/10 is above the ' + R.ok + '/10 you can train with for ' + R.name + ' pain'); if (morning) why.push('it was worse the next morning, which means the last run was more than the tissue could take'); if (rising) why.push('it rose from ' + prev.painLvl + ' to ' + lvl + ' in a few days'); }
+  return { band: band, why: why, t: t, R: R, lvl: lvl, flags: flags, red: flags.limp || flags.spot || flags.night || flags.walk };
+}
+function pnLifeNow() { return (st().life || []).filter(function (e) { return e.kind === 'injured' && e.from <= App.today && e.to >= E.addD(App.today, -1); })[0] || null; }
 function painCard() {
   var S = pnSeries(60); if (!S.some(function (x) { return x.v > 0; }) && S.length < 5) return '';
-  var last = S[S.length - 1], wk = S.filter(function (x) { return E.diffD(x.d, App.today) <= 6; }), mx = Math.max.apply(null, wk.map(function (x) { return x.v; }).concat([0]));
-  var verdict = !last ? '' : mx >= 5 ? '<b>Above 5 this week.</b> That\'s the stop line: no running until it settles and walking is pain-free.' : mx >= 3 ? '<b>Into the 3–5 band this week.</b> Train, but back off: shorter, softer, no speed until it\'s back to 2 or less.' : wk.some(function (x) { return x.v > 0; }) ? '<b>Low and acceptable.</b> Up to 2/10 is fine if it\'s settled by the next morning.' : '<b>Pain-free this week.</b>';
-  var pts = S.map(function (x) { return { d: x.d, v: x.v, c: x.v >= 5 ? 'var(--red)' : x.v >= 3 ? 'var(--amber)' : 'var(--green)' }; });
-  return mcard('pain', 'Pain', 'Your 0–10 pain score from the daily check-in (0 on days with no pain). The green band is the acceptable zone.', verdict, mx >= 5 ? 'bad' : mx >= 3 ? 'warn' : 'ok',
+  var C = (st().checkins || []).filter(function (c) { return E.diffD(c.date, App.today) <= 6 && c.pain; }), bands = C.map(function (c) { return pnBand(c); }).filter(Boolean);
+  var worst = bands.some(function (b) { return b.band === 'stop'; }) ? 'stop' : bands.some(function (b) { return b.band === 'mod'; }) ? 'mod' : bands.length ? 'ok' : 'none';
+  var verdict = worst === 'stop' ? '<b>Over the stop line this week.</b> No running until walking is pain-free; then a gradual return.' : worst === 'mod' ? '<b>In the back-off zone this week.</b> Shorter, flatter, softer, no speed until it\'s back in the safe zone.' : worst === 'ok' ? '<b>Low and acceptable.</b> Fine to train with if it\'s settled by the next morning.' : '<b>Pain-free this week.</b>';
+  var pts = S.map(function (x) { return { d: x.d, v: x.v, c: x.v >= 4 ? 'var(--red)' : x.v >= 3 ? 'var(--amber)' : 'var(--green)' }; });
+  return mcard('pain', 'Pain', 'Your 0–10 pain score from the daily check-in (0 on days with no pain). The green band is the zone you can train with for shin and foot pain.', verdict, worst === 'stop' ? 'bad' : worst === 'mod' ? 'warn' : 'ok',
     lineSVG(pts, { label: 'Pain score', band: [0, 2], color: 'var(--ink)', fmt: function (v) { return Math.round(v); } }),
-    'This is the pain-monitoring model sports physios use for tendon and shin problems: pain up to 2/10 during or after running is acceptable if it\'s back to normal by the next morning and isn\'t creeping up week to week. 3–5 means modify. Above 5 means stop. Training through low, stable pain keeps you running while tissues adapt; it\'s the trend that matters, which is why I chart it.');
+    'Sports physios use a pain-monitoring model: you keep running while pain stays low, settles by the next morning and isn\'t creeping up, and you back off when it doesn\'t. The lines depend on the tissue. <b>Shin and foot:</b> up to 2/10 is okay, 3 means back off, 4 or more means stop, because these can be bone stress injuries, which don\'t adapt to being run through. <b>Achilles, calf, knee and hip:</b> tendons tolerate a little more, so up to 3/10 is okay, 4–5 means back off, and 6 or more means stop. <b>Always stop</b> if it makes you limp, hurts when walking, aches at night, or is one pinpoint spot on the bone, and get it checked.');
 }
 function pnFindings() {
-  var out = [], C = (st().checkins || []).slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }), last = C.filter(function (c) { return E.diffD(c.date, App.today) <= 1; }).pop();
-  if (last && last.pain && last.painLvl != null) {
-    var lvl = +last.painLvl, where = last.where ? ikName([['shin', 'shin'], ['calf', 'calf / Achilles'], ['knee', 'knee'], ['hip', 'hip / hamstring'], ['foot', 'foot'], ['other', 'sore spot']], last.where) : 'sore spot';
-    var prev = C.filter(function (c) { return c.date < last.date && E.diffD(c.date, last.date) <= 7 && c.pain && c.painLvl != null && (!last.where || c.where === last.where); }).pop();
-    var rising = prev && lvl >= +prev.painLvl + 2, mornWorse = last.painWhen === 'morning' && prev && lvl > +prev.painLvl;
-    var runs = daysAhead(3, function (p) { return E.isRun(p); }, App.today === last.date ? 0 : 1), hard = runs.filter(function (x) { return isHardP(x.p); }), xt = ikXT();
-    var tail = where === 'shin' ? ' Do the shin routine today unless it makes the pain worse.' : '';
-    if (lvl >= 5 || (last.painWhen === 'always' && lvl >= 4)) {
-      out.push({ id: 'pain-stop-' + last.date, pri: 11, tone: 'act', title: 'Stop running for now', seen: 'Your ' + where + ' pain is ' + lvl + '/10' + (last.painWhen ? ', ' + PN_WHEN[last.painWhen] : '') + '. Above 5 is the stop line in the pain-monitoring model' + (last.painWhen === 'always' ? ', and pain while walking means the tissue isn\'t coping with everyday load' : '') + '.',
-        change: 'No running until it\'s under 3/10 and walking is pain-free. Cross-train instead (' + xt.join(', ') + ': whatever doesn\'t hurt). See a doctor or physical therapist if it\'s one pinpoint spot on the bone, hurts at night or makes you limp: those can be signs of a stress fracture.' + tail,
-        plan: runs.length ? 'Your ' + plural(runs.length, 'run') + ' in the next 3 days become cross-training. If it\'s still 3 or more after that, log it as an injury and the return ladder takes over.' : 'No runs in the next 3 days anyway. If it\'s still 3 or more by then, log it as an injury and the return ladder takes over.',
-        expect: 'Caught at this stage, most overuse pain settles in 1–2 weeks of reduced load. Running through it is how a 2-week problem becomes a 2-month one.',
-        act: runs.length ? { ov: runs.map(function (x) { return [x.date, 'cross']; }) } : { sheet: 'life' }, label: runs.length ? 'Switch to cross-training' : 'Log it as an injury' });
-    } else if (lvl >= 3 || rising || mornWorse) {
-      var r0 = runs[0];
-      out.push({ id: 'pain-off-' + last.date, pri: 10, tone: 'act', title: rising || mornWorse ? 'Pain is going the wrong way' : 'Pain is above the safe line', seen: 'Your ' + where + ' pain is ' + lvl + '/10' + (last.painWhen ? ', ' + PN_WHEN[last.painWhen] : '') + (prev ? ', up from ' + prev.painLvl + ' on ' + fmtD(prev.date, { weekday: 'long' }) : '') + '. ' + (mornWorse ? 'Pain that\'s worse the next morning means the last run was more than the tissue could take.' : 'The 3–5 band means keep moving but reduce the load.'),
-        change: (r0 ? 'Make ' + dlab(r0.date) + '\'s ' + partLine(r0) + ' about a third shorter and fully easy, on a soft surface or treadmill' : 'Keep the next run short and easy') + (hard.filter(function (x) { return !r0 || x.date !== r0.date; }).length ? ', and run ' + hard.filter(function (x) { return !r0 || x.date !== r0.date; }).map(function (x) { return dlab(x.date) + '\'s ' + x.p.title.toLowerCase(); }).join(' and ') + ' easy' : '') + '. Stop if it goes above 3 during the run.' + tail,
-        plan: 'Miles drop a little for the next few days; no speed work until pain is 2 or less. When you\'ve had 3 days at 2 or less, the plan goes back to normal.',
-        expect: 'Pain back to 2 or less within about a week. If it\'s still 3+ after a week of reduced load, get it looked at.',
-        act: r0 || hard.length ? { ov: (r0 ? [[r0.date, 'short']] : []).concat(hard.filter(function (x) { return !r0 || x.date !== r0.date; }).map(function (x) { return [x.date, 'easy']; })) } : null, label: r0 || hard.length ? 'Back off' : 'Got it' });
+  var out = [], C = (st().checkins || []).slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }), last = C.filter(function (c) { return E.diffD(c.date, App.today) <= 1; }).pop(), life = pnLifeNow();
+  var prevOf = function (c) { return C.filter(function (x) { return x.date < c.date && E.diffD(x.date, c.date) <= 7 && x.pain && x.painLvl != null && x.where === c.where; }).pop(); };
+  var B = last ? pnBand(last, prevOf(last)) : null;
+  if (B) {
+    var where = PN_AREA[last.where] || 'sore spot', lvl = B.lvl, xt = ikXT(), bone = B.t === 'bone';
+    var runs = daysAhead(3, function (p) { return E.isRun(p); }, App.today === last.date ? 0 : 1), hard = runs.filter(function (x) { return isHardP(x.p); });
+    var desc = 'Your ' + where + ' pain is ' + lvl + '/10' + (last.painWhen ? ', ' + PN_WHEN[last.painWhen] : '') + '.';
+    var routine = last.where === 'shin' ? ' Keep doing the shin routine only if it\'s pain-free.' : '';
+    /* recent days in the back-off zone for the same spot */
+    var modDays = C.filter(function (c) { return E.diffD(c.date, last.date) <= 6 && c.where === last.where; }).filter(function (c) { var b = pnBand(c, prevOf(c)); return b && b.band !== 'ok'; }).length;
+    if (B.band === 'stop') {
+      var already = life && life.level === 'out';
+      out.push({ id: 'pain-stop-' + last.date, pri: 11, tone: 'act', title: B.red ? 'Stop running and get it checked' : 'Stop running for now', seen: desc + ' That\'s over the line because ' + B.why.join(', and ') + '.',
+        change: 'No running for now. Cross-train only if it\'s pain-free (' + xt.join(', ') + '), and keep lifting upper body and core.' + (B.red || bone ? ' See a doctor or physical therapist' + (B.red ? ' soon' : ' if it isn\'t clearly better in a few days') + (bone ? ': pinpoint bone pain, pain at night or pain when walking can mean a stress fracture, which needs imaging and 6+ weeks off, not a few days.' : '.') : '') + routine,
+        plan: already ? 'You\'re already marked injured, so running stays off and the return plan is ready.' : 'I\'ll mark you injured: runs become pain-free cross-training or treadmill walks for the rest of the week. After that the plan comes back gradually at about 40%, then 60%, 75% and 90% of your normal weeks, with speed work last.',
+        expect: 'Before your first run back you should be able to walk briskly for 30 minutes and do 15 single-leg hops on the sore side, all pain-free. Most overuse pain caught at this stage settles in 1–3 weeks; running through it is how 2 weeks becomes 2 months.',
+        act: already ? null : { life: { kind: 'injured', level: 'out', note: where + ' ' + lvl + '/10' } }, label: already ? 'Got it' : 'Mark me injured' });
+    } else if (B.band === 'mod') {
+      var niggle = modDays >= 2 && !life;
+      var r0 = runs[0], others = hard.filter(function (x) { return !r0 || x.date !== r0.date; });
+      if (niggle) out.push({ id: 'pain-niggle-' + last.date, pri: 10, tone: 'act', title: 'This needs a lighter week', seen: desc + ' That\'s ' + plural(modDays, 'day') + ' in the back-off zone this week, so one shorter run isn\'t enough.',
+        change: 'Run only while it stays at ' + B.R.ok + '/10 or less, on flat soft ground, no speed work or hills.' + (bone ? ' Shorten your stride slightly and land under your hips.' : '') + routine,
+        plan: 'I\'ll mark this week as a niggle week: about 60% of planned miles, every run easy, strength work switches to upper body and core. Then 70%, 80% and 90% weeks bring you back.',
+        expect: 'Pain back in the safe zone within a week or two. If it reaches ' + B.R.stop + '/10, makes you limp or hurts when walking, running stops.', act: { life: { kind: 'injured', level: 'modified', note: where + ' ' + lvl + '/10' } }, label: 'Make it a niggle week' });
+      else if (!life) out.push({ id: 'pain-off-' + last.date, pri: 10, tone: 'act', title: B.why.some(function (w) { return /morning|rose|jumped/.test(w); }) ? 'Pain is going the wrong way' : 'Pain is above the safe line', seen: desc + ' Time to back off: ' + B.why.join(', and ') + '.',
+        change: (bone && last.painWhen === 'morning' && r0 ? 'Take ' + dlab(r0.date) + ' off running (pain-free cross-training is fine)' : r0 ? 'Make ' + dlab(r0.date) + '\'s ' + partLine(r0) + ' about a third shorter and fully easy, on flat soft ground or a treadmill' : 'Keep the next run short and easy') + (others.length ? ', and run ' + others.map(function (x) { return dlab(x.date) + '\'s ' + x.p.title.toLowerCase(); }).join(' and ') + ' easy' : '') + '. During any run, stop if it goes above ' + B.R.ok + '/10 or changes your stride.' + routine,
+        plan: 'No speed work or hills until pain is back to ' + B.R.ok + '/10 or less, and no mileage increase this week. If it stays in this zone for another day, I\'ll suggest a lighter week.',
+        expect: 'Back in the safe zone within a few days. Pain that\'s still above ' + B.R.ok + ' after a week of reduced load should be looked at.',
+        act: r0 || others.length ? { ov: (r0 ? [[r0.date, bone && last.painWhen === 'morning' ? 'cross' : 'short']] : []).concat(others.map(function (x) { return [x.date, 'easy']; })) } : null, label: r0 || others.length ? 'Back off' : 'Got it' });
     } else if (lvl > 0) {
-      out.push({ id: 'pain-ok-' + last.date, pri: 5, tone: 'watch', title: 'Low pain, okay to train', seen: 'Your ' + where + ' pain is ' + lvl + '/10' + (last.painWhen ? ', ' + PN_WHEN[last.painWhen] : '') + '. That\'s in the acceptable zone.',
-        change: 'Train as planned. The rule: up to 2/10 is fine if it\'s settled by the next morning and isn\'t creeping up. Keep scoring it in your check-in so I can see the trend.' + tail,
-        plan: 'No change.', expect: 'Low, stable pain usually fades as the tissue adapts. If it climbs to 3 or is worse the next morning, I\'ll pull the load back.', act: null, label: 'Got it' });
+      out.push({ id: 'pain-ok-' + last.date, pri: 5, tone: 'watch', title: 'Low pain, okay to train', seen: desc + ' For ' + B.R.name + ' pain, up to ' + B.R.ok + '/10 is in the zone you can train with.',
+        change: 'Train as planned, as long as it stays at ' + B.R.ok + '/10 or less during the run, doesn\'t change your stride, and is back to normal by the next morning. Keep scoring it in your check-in.' + routine,
+        plan: 'No change.', expect: 'Low, stable pain usually fades as the tissue adapts. If it climbs above ' + B.R.ok + ' or is worse the next morning, I\'ll pull the load back.', act: null, label: 'Got it' });
     }
   }
-  /* three pain-free check-ins after a painful stretch: back to normal */
-  var r3 = C.filter(function (c) { return E.diffD(c.date, App.today) <= 3; }), before = C.filter(function (c) { var g = E.diffD(c.date, App.today); return g > 3 && g <= 14 && c.pain; });
-  if (r3.length >= 3 && r3.every(function (c) { return !c.pain || (c.painLvl != null && +c.painLvl <= 1); }) && before.length) out.push({ id: 'painfree', pri: 3, tone: 'good', title: 'Pain has settled', seen: 'Your last ' + r3.length + ' check-ins were pain-free (or nearly), after ' + plural(before.length, 'painful day') + ' before that.', change: 'Back to normal training. Keep the prehab going for at least two more weeks; that\'s when the tissue is still rebuilding.', plan: 'No change: the plan is back to normal.', expect: '', act: null, label: 'Nice' });
+  /* pain has settled: back to running, gradually if it was serious */
+  var r3 = C.filter(function (c) { return E.diffD(c.date, App.today) <= 3; }), before = C.filter(function (c) { var g = E.diffD(c.date, App.today); return g > 3 && g <= 21 && c.pain; });
+  var wasStop = before.some(function (c) { var b = pnBand(c, prevOf(c)); return b && b.band === 'stop'; });
+  if (r3.length >= 3 && r3.every(function (c) { return !c.pain || (c.painLvl != null && +c.painLvl <= 1); }) && before.length) out.push({ id: 'painfree', pri: wasStop ? 6 : 3, tone: wasStop ? 'act' : 'good', title: wasStop ? 'Ready to test a return to running' : 'Pain has settled', seen: 'Your last ' + r3.length + ' check-ins were pain-free (or nearly), after ' + plural(before.length, 'painful day') + ' before that.',
+    change: wasStop ? 'Before your first run: a brisk 30-minute walk and 15 single-leg hops on the sore side, both pain-free. If either hurts, wait a few more days. Then start with run-walk (for example 5 × 3 minutes running, 1 minute walking) every other day.' : 'Back to normal training. Keep the prehab going for at least two more weeks; the tissue is still rebuilding.',
+    plan: wasStop ? (life ? 'The return weeks are already in your plan: about 40%, 60%, 75% then 90% of normal.' : 'Your plan builds back over the next few weeks; speed work returns last.') : 'No change: the plan is back to normal.',
+    expect: wasStop ? 'Mild soreness the next day means hold that step; pain over 2/10 means drop back a step for two days.' : '', act: wasStop ? { nav: '#/shins' } : null, label: wasStop ? 'Got it' : 'Nice' });
   return out;
 }
-
 /* ---------- the coach's new rules ---------- */
 function ikPlanPeak(until) { var W = (App.plan && App.plan.weeks) || []; return Math.max.apply(null, W.filter(function (w) { return !until || w.start <= until; }).map(function (w) { var m = 0; w.days.forEach(function (d) { d.parts.forEach(function (p) { if (E.isRun(p) && p.type !== 'race') m += +p.mi || 0; }); }); return Math.round(m * 10) / 10; }).concat([0])); }
 function ikFindings() {
@@ -262,7 +300,7 @@ coachFindings = function () {
     var base = (_cf27safe() || []).slice(), ws = wkStart(App.today), prefs = st().prefs || {}, no = prefs.cfNo || {}, acc = prefs.cfAcc || {}, I = INTK();
     var extra = []; try { extra = pnFindings(); } catch (e) { console.warn(e); } try { extra = extra.concat(ikFindings()); } catch (e) { console.warn(e); }
     extra.forEach(function (f) { f.id = f.id + ':' + ws; });
-    if (extra.some(function (f) { return /^pain-/.test(f.id); })) base = base.filter(function (f) { return !/^shin:/.test(f.id); });
+    if ((st().checkins || []).some(function (c) { return E.diffD(c.date, App.today) <= 2 && c.pain && c.painLvl != null; })) base = base.filter(function (f) { return !/^shin:/.test(f.id); });
     if (I.hrMed) base = base.filter(function (f) { return !/^easycap:/.test(f.id); });
     return base.concat(extra.filter(function (f) { return !no[f.id] && !acc[f.id]; })).sort(function (a, b) { return b.pri - a.pri; });
   });
@@ -272,6 +310,11 @@ function _cf27safe() { try { return _cf32(); } catch (e) { return []; } }
 var _apply32 = applyCoachAct;
 applyCoachAct = function (f) {
   var a = f.act || {};
+  if (a.life) {
+    var L = a.life, f0 = L.level === 'out' ? App.today : wkStart(App.today), e = { id: uid(), kind: L.kind, level: L.level, from: f0, to: L.level === 'out' ? E.addD(App.today, 2) : E.addD(f0, 6), note: L.note || 'from your coach' };
+    Store.edit('life', e.id, function (S) { S.life = (S.life || []).concat([e]); });
+    if (typeof recompute === 'function') recompute();
+  }
   if (a.peak) {
     var ev = ((App.plan && App.plan.aEvents) || []).filter(function (e) { return e.date >= App.today; })[0];
     Store.editMany([['profile', null], ['prefs', 'peakByCoach']], function (S) { S.profile.ctl = Object.assign({}, S.profile.ctl || {}, { peak: a.peak }); S.prefs = S.prefs || {}; S.prefs.peakByCoach = { v: a.peak, at: App.today, ev: ev ? ev.date : null }; });
@@ -365,7 +408,7 @@ weeklyHTML = function (ws) {
   var h = _weekly32(ws), we = E.addD(ws, 6), b = [];
   var P = pnSeries(21), wk = P.filter(function (x) { return x.d >= ws && x.d <= we; }), pw = P.filter(function (x) { return x.d >= E.addD(ws, -7) && x.d < ws; });
   var mx = function (L) { return Math.max.apply(null, L.map(function (x) { return x.v; }).concat([0])); };
-  if (wk.some(function (x) { return x.v > 0; })) b.push('Pain: highest ' + mx(wk) + '/10 this week' + (pw.length ? (mx(wk) > mx(pw) ? ', up from ' + mx(pw) + ' the week before.' : mx(wk) < mx(pw) ? ', down from ' + mx(pw) + ' the week before.' : ', same as the week before.') : '.') + (mx(wk) <= 2 ? ' Within the safe zone.' : mx(wk) <= 5 ? ' In the back-off band: I\'ve suggested reducing load.' : ' Above the stop line.'));
+  if (wk.some(function (x) { return x.v > 0; })) b.push('Pain: highest ' + mx(wk) + '/10 this week' + (pw.length ? (mx(wk) > mx(pw) ? ', up from ' + mx(pw) + ' the week before.' : mx(wk) < mx(pw) ? ', down from ' + mx(pw) + ' the week before.' : ', same as the week before.') : '.') + (function () { var bs = (st().checkins || []).filter(function (c) { return c.date >= ws && c.date <= we && c.pain; }).map(function (c) { return (pnBand(c) || {}).band; }); return bs.indexOf('stop') >= 0 ? ' Over the stop line: running paused, then a gradual return.' : bs.indexOf('mod') >= 0 ? ' In the back-off zone: I suggested reducing load.' : ' Within the safe zone.'; })());
   else if (wk.length >= 3) b.push('Pain-free all week.');
   var rl = rcLast(); b.push(rl ? 'Strength check: ' + fmtD(rl.date, { month: 'short', day: 'numeric' }) + (rcDue() ? ', due again: about 10 minutes.' : ', next one ' + fmtD(E.addD(rl.date, 28), { month: 'short', day: 'numeric' }) + '.') : 'Strength check: not done yet. It tells me whether your calves and hips are ready for the miles ahead.');
   var pre = (st().prefs || {}).prehab || []; if (pre.length) b.push('Prehab: ' + pre.map(function (k) { return (RC_FIX[k] || {}).name; }).filter(Boolean).join(', ').toLowerCase() + ', three times a week.');
@@ -391,3 +434,62 @@ VIEWS.more = function () {
 };
 ACTIONS['ev-course'] = function (a) { sheetCtx.ev.course = sheetCtx.ev.course === a.v ? '' : a.v; $$('[data-act="ev-course"]').forEach(function (x) { x.setAttribute('aria-pressed', String(JSON.parse(x.dataset.arg).v === sheetCtx.ev.course)); }); };
 App.p32 = { coachFindings: coachFindings, st: st, openSheet: function (k, a) { openSheet(k, a || {}); }, closeSheet: function () { closeSheet(); }, ikFindings: ikFindings, pnFindings: pnFindings, rcAssess: rcAssess, ikPeakEver: ikPeakEver, painCard: painCard };
+
+/* ================= Treadmill walks: log the incline, and the coach sets the next one ================= */
+var INC_CAP = { bone: 8, tendon: 3, other: 10 };
+function isTreadType(t) { return /treadmill|incline/i.test(t || ''); }
+function incWalks(days) { var L = st().logs || {}; return Object.keys(L).filter(function (d) { var c = L[d] && L[d].cross; return c && isTreadType(c.type) && E.diffD(d, App.today) <= (days || 21); }).sort().map(function (d) { return Object.assign({ date: d }, L[d].cross); }); }
+function incPain() {
+  var C = (st().checkins || []).filter(function (c) { return E.diffD(c.date, App.today) <= 10 && c.pain && c.painLvl != null; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; }), c = C[C.length - 1];
+  if (!c) return null; var b = pnBand(c) || {}; return { date: c.date, where: c.where, t: pnTissue(c.where), band: b.band, lvl: c.painLvl };
+}
+function incSuggest() {
+  var P = incPain(), cap = P ? INC_CAP[P.t] : 12, W = incWalks(21).filter(function (w) { return w.incline != null; }), last = W[W.length - 1], v, why;
+  var area = P ? (PN_AREA[P.where] || 'sore spot') : '';
+  if (!last) { v = P ? Math.min(cap, P.t === 'tendon' ? 0 : 4) : 5; why = P ? (P.t === 'tendon' ? 'Start flat: steep inclines stretch and load the Achilles and calf.' : 'A moderate start: steep inclines work the front of the shin hard.') : 'A brisk incline walk is real aerobic work with almost no impact.'; }
+  else if (P && P.band && P.band !== 'ok' && P.date >= last.date) { v = Math.min(cap, Math.max(0, last.incline - 2)); why = 'Your ' + area + ' hurt after the last walk at ' + last.incline + '%, so ' + (v < last.incline - 2 ? 'come down to ' + v + '%: steeper loads it more than it\'s ready for.' : 'drop it 2%.'); }
+  else if (last.incline >= cap) { v = cap; why = P ? 'Hold at ' + cap + '%: higher inclines load your ' + area + ' more than it\'s ready for.' : 'That\'s plenty: add minutes or speed instead.'; }
+  else { v = Math.min(cap, last.incline + 1); why = 'No pain reported after your last walk at ' + last.incline + '%, so add 1%.'; }
+  return { v: v, cap: cap, why: why, P: P, last: last };
+}
+function metWords(m) { return m < 4 ? 'light' : m < 6 ? 'moderate, like a brisk walk' : m < 8 ? 'vigorous, about an easy jog' : 'hard, like steady running'; }
+/* the plan's treadmill walks carry the incline to use */
+var _crl32 = coachRunLines;
+coachRunLines = function (x, date) {
+  if (x.type === 'cross' && /walk/i.test(x.title || '') && !partDone(date, x) && date >= App.today) {
+    var s = incSuggest(); return '<p class="small capline"><b>Incline: about ' + s.v + '%</b> at a brisk 3.0–3.8 mph. ' + esc(s.why) + ' Log the incline when you finish so I can set the next one.</p>';
+  }
+  return _crl32(x, date);
+};
+/* the log sheet asks for incline and speed on treadmill walks */
+var _crossSheet32 = SHEETS.cross;
+SHEETS.cross = function (a) {
+  var h = _crossSheet32(a), r = logOf(a.date).cross || {}, day = dayOf(a.date), planned = day && day.parts.filter(function (p) { return p.type === 'cross' && /walk/i.test(p.title || ''); })[0];
+  if (!r.type && planned) { h = h.replace('<option>Treadmill walk</option>', '<option selected>Treadmill walk</option>'); if (planned.min) h = h.replace('id="c-min" type="number" min="0" value=""', 'id="c-min" type="number" min="0" value="' + planned.min + '"'); }
+  var show = r.type ? isTreadType(r.type) : true, s = incSuggest();
+  var f = '<div id="c-incw"' + (show ? '' : ' hidden') + '><div class="grid2"><label class="f">Incline (%)<input class="i" id="c-inc" type="number" inputmode="decimal" step="0.5" min="0" max="15" placeholder="' + s.v + '" value="' + (r.incline != null ? r.incline : '') + '"></label><label class="f">Speed (mph)<input class="i" id="c-mph" type="number" inputmode="decimal" step="0.1" min="1" max="5" placeholder="3.4" value="' + (r.mph || '') + '"></label></div><p class="tiny muted" id="c-met">' + incMetLine(r.mph, r.incline) + '</p></div>';
+  var i = h.indexOf('<label class="f">Effort (RPE)'); return i > 0 ? h.slice(0, i) + f + h.slice(i) : h;
+};
+function incMetLine(mph, inc) { if (inc == null || inc === '') return 'Your coach uses the incline to set your next walk and to count it toward your training load.'; var m = E.walkMets(mph || 3.4, inc); return '≈ ' + m.toFixed(1) + ' METs: ' + metWords(m) + '.'; }
+document.addEventListener('input', function (e) { if (e.target && (e.target.id === 'c-inc' || e.target.id === 'c-mph')) { var el = $('#c-met'); if (el) el.textContent = incMetLine($('#c-mph').value, $('#c-inc').value); } });
+document.addEventListener('change', function (e) { if (e.target && e.target.id === 'c-type') { var w = $('#c-incw'); if (w) w.hidden = !isTreadType(e.target.value); } });
+/* after logging a treadmill walk, the coach says what it makes of it and sets the next incline */
+var _save32 = ACTIONS['sheet-save'];
+ACTIONS['sheet-save'] = function (a) {
+  var k = sheetCtx.kind, d = sheetCtx.a && sheetCtx.a.date;
+  _save32(a);
+  if (k !== 'cross' || !d) return;
+  var c = logOf(d).cross; if (!c || !isTreadType(c.type) || c.incline == null) return;
+  var m = E.walkMets(c.mph || 3.4, c.incline), s = incSuggest(), P = s.P;
+  coachSay('Logged: ' + c.min + ' min at ' + c.incline + '% incline' + (c.mph ? ', ' + c.mph + ' mph' : '') + ' (≈ ' + m.toFixed(1) + ' METs, ' + metWords(m).split(',')[0] + ').' +
+    (P && c.incline > s.cap ? ' That\'s steeper than I\'d like with your ' + (PN_AREA[P.where] || 'sore spot') + ' pain: keep it at ' + s.cap + '% or less until it settles.' : '') +
+    '\n\nNext walk: about ' + s.v + '%. ' + s.why + ' Tell me in tomorrow\'s check-in how the ' + (P ? PN_AREA[P.where] || 'sore spot' : 'legs') + ' felt.', []);
+};
+/* the coach notices a walk that was too steep for a sore spot */
+var _pnF32 = pnFindings;
+pnFindings = function () {
+  var out = _pnF32(), P = incPain(), W = incWalks(5).filter(function (w) { return w.incline != null; }), last = W[W.length - 1];
+  if (P && last && last.incline > INC_CAP[P.t] && P.band !== 'ok') out.push({ id: 'incline-' + last.date, pri: 7, tone: 'act', title: 'Lower the treadmill incline', seen: 'Your last treadmill walk was at ' + last.incline + '% and your ' + (PN_AREA[P.where] || 'sore spot') + ' is at ' + P.lvl + '/10.', change: 'Keep incline walks at ' + INC_CAP[P.t] + '% or less until the pain is back in the safe zone' + (P.t === 'tendon' ? ': steep inclines stretch the Achilles and calf with every step.' : ': very steep inclines work the front of the shin hard.'), plan: 'Your planned treadmill walks will show ' + incSuggest().v + '%.', expect: 'The walk keeps your aerobic fitness without irritating the sore spot.', act: null, label: 'Got it' });
+  return out;
+};
+App.p32.incSuggest = incSuggest;

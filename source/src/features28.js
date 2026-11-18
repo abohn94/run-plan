@@ -36,7 +36,9 @@ SHEETS.cifb = function (a) {
   var acts = (rec.actions || []).filter(function (x) { return x.action && x.action !== 'keep' && x.action !== 'sick' && x.action !== 'injured'; });
   var wellLow = N && w < N.mean - 20, hard = runP && (runP.type === 'speed' || runP.type === 'long');
   if (!acts.length && wellLow && runP) acts = hard ? [{ action: 'easy', label: 'Make it easy' }, { action: 'short', label: 'Shorten it' }] : [{ action: 'short', label: 'Shorten it' }];
-  if (todo.length && acts.length) {
+  var painF = null; try { painF = coachFindings().filter(function (f) { return /^pain-(stop|off|niggle)/.test(f.id); })[0]; } catch (e) { painF = null; }
+  if (painF) { acts = []; todo = []; h += '<p class="small"><b>Today:</b> the pain plan below replaces the usual advice.</p>'; }
+  else if (todo.length && acts.length) {
     var x0 = acts[0].action;
     h += '<div class="cfind act"><div class="cf-h"><span class="cf-tag">For today</span><b>' + esc(rec.headline && rec.headline !== 'Good to go' ? rec.headline : 'Take it easier today') + '</b></div>' +
       '<p class="small"><b>Why:</b> ' + esc(rec.body && rec.headline !== 'Good to go' ? rec.body : 'Your check-in is well below your normal even though your watch data looks fine. How you feel is data too.') + '</p>' +
@@ -44,7 +46,7 @@ SHEETS.cifb = function (a) {
       '<div class="btns">' + acts.slice(0, 3).map(function (x, i) { return '<button class="btn sm ' + (i ? '' : 'primary') + '" data-act="cifb-do" data-arg="' + jattr({ action: x.action }) + '">' + esc(x.label) + '</button>'; }).join('') + '<button class="btn sm ghost" data-act="sheet-close">Keep the plan</button></div></div>';
   } else if (todo.length) {
     h += '<div class="cfind good"><div class="cf-h"><span class="cf-tag">For today</span><b>Good to go</b></div><p class="small">' + esc(todo.map(function (p) { return p.title + (p.mi ? ' ' + mi(p.mi) + ' mi' : ''); }).join(' + ')) + ' as planned. ' + (hard ? 'Warm up well and run the first rep by feel.' : 'Keep it conversational.') + '</p></div>';
-  } else h += '<div class="cfind good"><div class="cf-h"><span class="cf-tag">Today</span><b>' + (day && day.parts.every(function (p) { return p.type === 'rest'; }) ? 'Rest day' : 'Training done') + '</b></div><p class="small">' + (day && day.parts.every(function (p) { return p.type === 'rest'; }) ? 'Recovery is training too. ' + ((st().profile || {}).injuryProne ? 'Ten minutes of the shin routine is the one job today.' : 'An easy walk is fine.') : 'Eat, hydrate and sleep: that\'s when the adaptation happens.') + '</p></div>';
+  } else if (!painF) h += '<div class="cfind good"><div class="cf-h"><span class="cf-tag">Today</span><b>' + (day && day.parts.every(function (p) { return p.type === 'rest'; }) ? 'Rest day' : 'Training done') + '</b></div><p class="small">' + (day && day.parts.every(function (p) { return p.type === 'rest'; }) ? 'Recovery is training too. ' + ((st().profile || {}).injuryProne ? 'Ten minutes of the shin routine is the one job today.' : 'An easy walk is fine.') : 'Eat, hydrate and sleep: that\'s when the adaptation happens.') + '</p></div>';
   /* anything else the check-in triggered */
   var F = []; try { F = coachFindings().filter(function (f) { return f.tone === 'act'; }).slice(0, 2); } catch (e) { F = []; }
   F.forEach(function (f) { h += findingHTML(f, false); });

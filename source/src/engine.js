@@ -1120,7 +1120,7 @@ function modRun(p, mod, zz) {
   if (p.type === 'race') return p;
   if (m === 0) {
     if (k === 'injured') {
-      return { type: 'cross', role: p.role, title: 'Treadmill walk', min: p.role === 'long' ? 40 : 25, note: 'Flat or gentle-incline treadmill walk, pain-free only. If walking hurts, rest instead.', changed: true, from: p.title };
+      return { type: 'cross', role: p.role, title: 'Treadmill walk', min: p.role === 'long' ? 40 : 25, note: 'Treadmill walk at the incline your coach sets, pain-free only. If walking hurts, rest instead.', changed: true, from: p.title };
     }
     return restPart(k === 'vacation' ? 'Vacation' : 'Rest', k === 'vacation' ? 'Skip the run and enjoy the break. A walk or swim is a bonus.' : 'Rest completely. Walk only if you feel up to it.');
   }
@@ -1276,7 +1276,7 @@ function adapt(plan, st, analysis) {
         if (o.action === 'long' && o.mi) return { type: 'long', role: 'long', title: o.title || 'Medium-long run', mi: o.mi, steps: [run(o.mi, 'E')], note: o.reason || 'Easy, conversational: this stands in for the long run this week.', changed: true, from: p.title };
         if (o.action === 'strides' && p.type !== 'speed') { var sm = Math.max(2, p.mi || 3); return { type: 'easy', role: p.role, title: 'Easy + strides', mi: sm, steps: [run(Math.max(1, sm - 0.4), 'E'), rep(6, { sec: 20 }, 'R', { sec: 40, walk: true }, 'fast but relaxed')], note: o.reason || 'Strides keep your legs quick without real fatigue.', changed: true, from: p.title }; }
         if (o.action === 'tread') return Object.assign({}, p, { treadmill: true, changed: true, from: p.title, note: 'Treadmill today: ' + (o.reason || 'icy or very cold outside') + '. Set a 1% incline so the effort matches the road; paces stay the same.' });
-        if (o.action === 'cross') return { type: 'cross', role: p.role, title: 'Treadmill walk', min: clamp(Math.round((p.mi || 3) * 10), 20, 45), note: 'Brisk walk on a 4–8% incline instead of running: ' + (o.reason || 'low impact today.'), changed: true, from: p.title };
+        if (o.action === 'cross') return { type: 'cross', role: p.role, title: 'Treadmill walk', min: clamp(Math.round((p.mi || 3) * 10), 20, 45), note: 'Brisk walk on an incline instead of running (your coach sets the incline): ' + (o.reason || 'low impact today.'), changed: true, from: p.title };
         return p;
       });
     });
@@ -1675,6 +1675,8 @@ function mainZone(p) {
 
 /* VO2max and lactate threshold readings: yours (entered in the app) plus whatever Garmin syncs. Oldest first. */
 function ltSpeedToPace(v) { v = +v; if (!(v > 0)) return null; if (v < 1.5) v *= 10; return v > 1.5 && v < 8 ? Math.round(MI_M / v) : null; }
+/* ACSM walking equation: METs for a walk at mph and % grade (valid roughly 1.9–3.7 mph) */
+function walkMets(mph, grade) { var S = (+mph || 3.2) * 26.8224, G = (+grade || 0) / 100; return (3.5 + 0.1 * S + 1.8 * S * G) / 3.5; }
 function fitnessReadings(st, garmin) {
   var out = [];
   (st && st.metrics || []).forEach(function (m) {
@@ -1884,7 +1886,7 @@ function loadMiles(st, date, ndays) {
     var d = logs[addD(date, -i)];
     if (!d) continue;
     ['run', 'xrun'].forEach(function (s) { if (d[s] && !d[s].skip) t += +d[s].mi || 0; });
-    if (d.cross && d.cross.min) t += d.cross.min / 12;   /* ~5 mi-equivalent per hour of easy cross-training */
+    if (d.cross && d.cross.min) t += d.cross.incline != null ? d.cross.min / 60 * 6 * Math.min(1, walkMets(d.cross.mph || 3.2, d.cross.incline) / 10) : d.cross.min / 12;   /* ~5 mi-equivalent per hour of easy cross-training; treadmill walks scale with speed and incline */
   }
   return t;
 }
@@ -1989,7 +1991,7 @@ function recommend0(rd, day) {
   }
   if (rd.flags.pain) {
     r.headline = 'Protect the sore spot';
-    r.body = 'Pain changes the plan. If it is 3/10 or less and settles as you warm up, run easy and short on soft ground. Otherwise walk on the treadmill pain-free, or rest, and mark the week as a niggle so the plan eases you back.';
+    r.body = 'Pain at this level changes today. Run only if it stays in your safe zone (2/10 for shin or foot, 3/10 for Achilles, knee or hip) and doesn\'t change your stride; otherwise walk on the treadmill pain-free or cross-train. Your coach\'s note has the plan for the next few days.';
     r.actions = [{ action: 'cross', label: 'Treadmill walk instead' }, { action: 'short', label: 'Short easy run' }, { action: 'injured', label: 'Mark a niggle' }];
     return r;
   }
@@ -2429,7 +2431,7 @@ var api = {
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
   ds: ds, pd: pd, addD: addD, dow: dow, monday: monday, diffD: diffD, today: today, fmtDate: fmtDate,
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
-  vdotOf: vdotOf, paceAt: paceAt, predict: predict, grade: grade, ageOf: ageOf, isMasters: isMasters, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
+  vdotOf: vdotOf, walkMets: walkMets, paceAt: paceAt, predict: predict, grade: grade, ageOf: ageOf, isMasters: isMasters, zones: zones, distOf: distOf, goalVdot: goalVdot, vdotFromEasy: vdotFromEasy,
   suggestMethods: suggestMethods, historyStats: historyStats, defaultProfile: defaultProfile, generate: generate, layoutWeek: layoutWeek, adapt: adapt, isRun: isRun,
   sunTimes: sunTimes, clockMin: clockMin, applyDaylight: applyDaylight, heatPct: heatPct, heatZones: heatZones, winterCheck: winterCheck, weeklyMiles: weeklyMiles, shinLoad: shinLoad, capWeek: capWeek, recoveryProfile: recoveryProfile, applyShifts: applyShifts, goalOdds: goalOdds, execution: execution, durability: durability, racePacing: racePacing, sleepTarget: sleepTarget, normCdf: normCdf,
   analyze: analyze, compliance: compliance, weekIntensity: weekIntensity, partKey: partKey, sessionAlternatives: sessionAlternatives, missedThisWeek: missedThisWeek, restDayOffer: restDayOffer, loadFocus: loadFocus, setWeekStart: setWeekStart, rotateProfile: rotateProfile, DOW_ABS: DOW_ABS, DOW_LONG_ABS: DOW_LONG_ABS, fitnessReadings: fitnessReadings, latestReading: latestReading, ltSpeedToPace: ltSpeedToPace, matchGarmin: matchGarmin, readiness: readiness, recommend: recommend, nutrition: nutrition, liftAdvice: liftAdvice,
