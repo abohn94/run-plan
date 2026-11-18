@@ -163,7 +163,7 @@ VIEWS.preview = function () {
   var warns = E.weekIntensity(w, st().profile);
   html += '<div class="sechead"><h2>Check</h2></div>' + (warns.length ? '<div class="stack tight">' + warns.map(function (x) { return '<div class="banner ' + (x.level === 'warn' ? 'warn' : 'info') + ' small">' + esc(x.text) + (x.fix ? '<div class="btns" style="margin-top:8px"><button class="btn sm" data-act="edfix" data-arg="' + jattr(x.fix) + '">' + esc(x.fix.label) + '</button></div>' : '') + '</div>'; }).join('') + '</div>' : '<div class="banner small"><b style="color:var(--green)">Looks balanced.</b> Hard days are spaced out, there is a rest day, and no heavy legs before the long run.</div>');
   var lfp = []; w.days.forEach(function (d) { d.parts.forEach(function (x) { if (x.lf) lfp.push(x); }); });
-  if (lfp.length) html += '<div class="banner info small" style="margin-top:8px"><b>Training balance.</b> ' + esc(lfp[0].note || '') + ' <a href="#/you">See load focus</a></div>';
+  if (lfp.length) html += '<div class="banner info small" style="margin-top:8px"><b>Training balance.</b> ' + esc(lfp[0].note || '') + ' <a href="#/progress/load">See load focus</a></div>';
   var hasArr = Object.keys(st().arr || {}).some(function (k) { var d0 = k.split('|')[0]; return d0 >= w.start && d0 <= w.end; });
   var reviewed = ((st().prefs || {}).reviewed || {})[w.start];
   html += '<div class="btns pvfoot"><button class="btn primary" data-act="pv-ok" data-arg="' + jattr({ s: w.start }) + '">' + (reviewed ? 'Done' : 'Looks good') + '</button>' + (hasArr ? '<button class="btn ghost" data-act="ed-reset" data-arg="' + jattr({ start: w.start, end: w.end }) + '">Reset to plan</button>' : '') + '</div>';
