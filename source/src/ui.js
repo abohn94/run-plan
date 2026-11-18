@@ -1072,7 +1072,7 @@ SHEETS.cross = function (a) {
 };
 SHEETS.checkin = function () {
   var c = E.checkinFor(Store.state, App.today) || {};
-  sheetCtx.ci = { feel: c.feel != null ? c.feel : null, sore: c.sore || 0, stress: c.stress || 1, sleep: c.sleep != null ? c.sleep : null, sleepQ: c.sleepQ != null ? c.sleepQ : null, mood: c.mood != null ? c.mood : null, motiv: c.motiv != null ? c.motiv : null, ill: !!c.ill, pain: !!c.pain, where: c.where || '' };
+  sheetCtx.ci = { feel: c.feel != null ? c.feel : null, sore: c.sore || 0, stress: c.stress || 1, sleep: c.sleep != null ? c.sleep : null, sleepQ: c.sleepQ != null ? c.sleepQ : null, mood: c.mood != null ? c.mood : null, motiv: c.motiv != null ? c.motiv : null, ill: !!c.ill, pain: !!c.pain, where: c.where || '', painLvl: c.painLvl != null ? c.painLvl : null, painWhen: c.painWhen || '' };
   var ci = sheetCtx.ci;
   function chips(k, opts) { return '<div class="chips">' + opts.map(function (o) { return '<button type="button" class="chip" data-ci="' + k + '" data-v="' + esc(o[0]) + '" aria-pressed="' + (String(ci[k]) === String(o[0])) + '">' + o[1] + '</button>'; }).join('') + '</div>'; }
   return '<h3>How do you feel today?</h3><p class="small muted">Fifteen seconds. Your coach reads it with your Garmin data and tells you right away if today should change.</p>' +
@@ -1083,7 +1083,7 @@ SHEETS.checkin = function () {
     '<label class="f">Mood' + chips('mood', [[1, 'Low'], [2, 'Meh'], [3, 'OK'], [4, 'Good'], [5, 'Great']]) + '</label>' +
     '<label class="f">Motivation to train' + chips('motiv', [[1, 'None'], [2, 'Low'], [3, 'OK'], [4, 'Keen'], [5, 'Fired up']]) + '</label>' +
     (!(Store.garmin && Store.garmin.days && Store.garmin.days[App.today] && Store.garmin.days[App.today].sleepH) ? '<label class="f">Sleep last night' + chips('sleep', [[1, 'Poor'], [2, 'Short'], [3, 'OK'], [4, 'Great']]) + '</label>' : '') +
-    '<label class="check"><input type="checkbox" id="ci-pain"' + (ci.pain ? ' checked' : '') + '> Something hurts</label><label class="f" id="ci-wherew"' + (ci.pain ? '' : ' hidden') + '>Where?' + chips('where', [['shin', 'Shin'], ['calf', 'Calf / Achilles'], ['knee', 'Knee'], ['hip', 'Hip / hamstring'], ['foot', 'Foot'], ['other', 'Other']]) + '</label>' +
+    '<label class="check"><input type="checkbox" id="ci-pain"' + (ci.pain ? ' checked' : '') + '> Something hurts</label><label class="f" id="ci-wherew"' + (ci.pain ? '' : ' hidden') + '>Where?' + chips('where', [['shin', 'Shin'], ['calf', 'Calf / Achilles'], ['knee', 'Knee'], ['hip', 'Hip / hamstring'], ['foot', 'Foot'], ['other', 'Other']]) + '<span class="tiny muted cisub">How bad, 1–10?</span>' + chips('painLvl', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (n) { return [n, String(n)]; })).replace('class="chips"', 'class="chips painlvl"') + '<span class="tiny muted cisub">When does it hurt?</span>' + chips('painWhen', [['during', 'During runs'], ['after', 'After runs'], ['morning', 'Next morning'], ['always', 'Even walking']]) + '<span class="tiny muted cisub">0–2: fine to train · 3–5: back off · over 5: stop running</span></label>' +
     '<label class="check"><input type="checkbox" id="ci-ill"' + (ci.ill ? ' checked' : '') + '> I feel sick</label>' +
     '<label class="f">Anything coming up or on your mind?<input class="i" id="ci-note" placeholder="e.g. night shift tomorrow, travel Friday" value="' + esc(c.note || '') + '"></label>' + sheetBtns('Save check-in');
 };
@@ -1165,7 +1165,8 @@ function saveSheet() {
   if (k === 'checkin') {
     var ci = sheetCtx.ci;
     if (ci.feel == null) return fail('Pick your energy level.');
-    var c = { id: App.today, date: App.today, t: new Date().toISOString(), feel: +ci.feel, sore: +ci.sore, stress: +ci.stress, sleep: ci.sleep != null ? +ci.sleep : null, sleepQ: ci.sleepQ != null ? +ci.sleepQ : null, mood: ci.mood != null ? +ci.mood : null, motiv: ci.motiv != null ? +ci.motiv : null, ill: $('#ci-ill').checked, pain: $('#ci-pain').checked, where: $('#ci-pain').checked ? ci.where : '', note: $('#ci-note').value.trim() };
+    if ($('#ci-pain').checked && ci.painLvl == null) return fail('How bad is the pain, 1–10?');
+    var c = { id: App.today, date: App.today, t: new Date().toISOString(), feel: +ci.feel, sore: +ci.sore, stress: +ci.stress, sleep: ci.sleep != null ? +ci.sleep : null, sleepQ: ci.sleepQ != null ? +ci.sleepQ : null, mood: ci.mood != null ? +ci.mood : null, motiv: ci.motiv != null ? +ci.motiv : null, ill: $('#ci-ill').checked, pain: $('#ci-pain').checked, where: $('#ci-pain').checked ? ci.where : '', painLvl: $('#ci-pain').checked && ci.painLvl != null ? +ci.painLvl : null, painWhen: $('#ci-pain').checked ? ci.painWhen || '' : '', note: $('#ci-note').value.trim() };
     Store.edit('checkins', c.id, function (s) { s.checkins = s.checkins.filter(function (x) { return x.id !== c.id; }); s.checkins.push(c); if (s.checkins.length > 400) s.checkins = s.checkins.slice(-400); });
     closeSheet();
     recompute();

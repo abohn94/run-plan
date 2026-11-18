@@ -11,11 +11,11 @@ function planEffect(action, p) {
   return action === 'easy' ? 'Today\'s ' + p.title + ' becomes an easy run of about ' + mi(m * (p.type === 'long' ? 0.8 : 0.85)) + ' mi. The key session is skipped, not moved; the rest of the week stays.' :
     action === 'short' ? 'Today\'s run drops to about ' + mi(m * 0.7) + ' mi at easy effort. The rest of the week stays.' :
     action === 'rest' ? 'Today becomes a rest day; this week loses ' + mi(m) + ' mi. Nothing is added later to make it up.' :
-    action === 'cross' ? 'Today\'s run becomes a brisk treadmill walk at a 4–8% incline: aerobic work with almost no impact.' : '';
+    action === 'cross' || action === 'tread' ? 'Today\'s run becomes a brisk treadmill walk at a 4–8% incline: aerobic work with almost no impact.' : '';
 }
 function expectFor(action, why) {
   return action === 'rest' ? 'One day off costs no fitness. Expect to feel noticeably better within 24–48 hours.' :
-    action === 'cross' ? 'The sore spot gets a break while you keep your aerobic base. Most niggles calm within 3–7 days when load drops early.' :
+    action === 'cross' || action === 'tread' ? 'The sore spot gets a break while you keep your aerobic base. Most niggles calm within 3–7 days when load drops early.' :
     action === 'easy' ? 'You keep the aerobic benefit without digging the hole deeper. If tomorrow\'s check-in is back to normal, the plan continues as written.' :
     action === 'short' ? 'A short, easy run often leaves you feeling better than none at all, and it keeps the week\'s rhythm.' : '';
 }

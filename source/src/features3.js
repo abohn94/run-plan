@@ -71,12 +71,13 @@ SHEETS.event = function (a) {
     '<div class="grid2" id="ev-goalw"' + (k === 'distance' ? ' hidden' : '') + '><label class="f">Goal time<input class="i" id="ev-goal" placeholder="1:45:00" value="' + esc(e.goal || '') + '"></label><label class="f">or goal pace /mi<input class="i" id="ev-pace" placeholder="8:00" value="' + (g > 0 ? pace(g / mi0) : '') + '"></label></div>' +
     '<p class="tiny muted" id="ev-goalh"' + (k === 'distance' ? ' hidden' : '') + '>Fill in either one and the other follows. Leave both empty to just finish.</p>' +
     '<label class="f" id="ev-priw">Priority<div class="chips">' + [['A', 'A — full build and taper'], ['B', 'B — tune-up'], ['C', 'C — for fun']].map(function (d) { return '<button type="button" class="chip" data-evp="' + d[0] + '" aria-pressed="' + ((e.priority || 'A') === d[0]) + '">' + d[1] + '</button>'; }).join('') + '</div></label>' +
+    '<div id="ev-coursew"' + (k === 'race' ? '' : ' hidden') + '><label class="f">Course<div class="chips">' + [['flat', 'Flat'], ['rolling', 'Rolling'], ['hilly', 'Hilly']].map(function (d) { return '<button type="button" class="chip" data-act="ev-course" data-arg="' + jattr({ v: d[0] }) + '" aria-pressed="' + (e.course === d[0]) + '">' + d[1] + '</button>'; }).join('') + '</div></label><label class="f">Expected race-morning temperature (°F, optional)<input class="i" id="ev-temp" type="number" inputmode="numeric" min="-20" max="110" placeholder="e.g. 55" value="' + esc(e.temp != null ? e.temp : '') + '"></label><p class="tiny muted">Your coach adds hill or heat preparation in the weeks before.</p></div>' +
     '<p class="tiny muted">Training for several races? Make each one you want to peak for an A. The plan builds toward the first, recovers, then builds toward the next. Races within about 5 weeks of a bigger one work best as B tune-ups.</p>' + sheetBtns('Save', !!a.id);
 };
 ACTIONS.evkind = function (a) {
   sheetCtx.ev.kind = a.v;
   $$('[data-act="evkind"]').forEach(function (b) { b.setAttribute('aria-pressed', String(JSON.parse(b.dataset.arg).v === a.v)); });
-  $('#ev-kindh').textContent = KIND[a.v][1] + '.'; $('#ev-goalw').hidden = a.v === 'distance'; $('#ev-goalh').hidden = a.v === 'distance';
+  $('#ev-kindh').textContent = KIND[a.v][1] + '.'; $('#ev-goalw').hidden = a.v === 'distance'; $('#ev-goalh').hidden = a.v === 'distance'; if ($('#ev-coursew')) $('#ev-coursew').hidden = a.v !== 'race';
 };
 document.addEventListener('change', function (e) { if (e.target.id === 'ev-dist') { $('#ev-miw').hidden = e.target.value !== 'custom'; evSyncPace('time'); } });
 function evSyncPace(from) {
@@ -87,7 +88,7 @@ function evSyncPace(from) {
 document.addEventListener('input', function (e) { if (e.target.id === 'ev-pace') evSyncPace('pace'); else if (e.target.id === 'ev-goal' || e.target.id === 'ev-mi') evSyncPace('time'); });
 SAVE2.event = function () {
   var ev = sheetCtx.ev, a = sheetCtx.a, err = $('#shErr');
-  ev.name = $('#ev-name').value.trim(); ev.date = $('#ev-date').value; ev.dist = $('#ev-dist').value;
+  ev.name = $('#ev-name').value.trim(); ev.date = $('#ev-date').value; ev.dist = $('#ev-dist').value; var tmpE = $('#ev-temp'); ev.temp = tmpE && tmpE.value !== '' ? +tmpE.value : null;
   if (ev.dist === 'custom') { ev.mi = +$('#ev-mi').value || null; if (!(ev.mi >= 0.5 && ev.mi <= 100)) { err.textContent = 'Enter the distance in miles.'; return; } } else delete ev.mi;
   if (!ev.date) { err.textContent = 'Pick a date.'; return; }
   if (ev.kind === 'distance') ev.goal = '';
