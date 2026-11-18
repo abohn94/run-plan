@@ -23,6 +23,7 @@ function download(name, data, mime) {
   document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
 }
 var IC = {
+  more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>',
   menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg>',
   today: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
@@ -82,7 +83,7 @@ function applyGarmin() {
 
 /* ---------------- routing ---------------- */
 var TITLES = { today: 'Today', plan: 'Training plan', day: 'Session', coach: 'Coach', progress: 'Progress', strength: 'Strength', cross: 'Gym days', you: 'You', shins: 'Shins & prehab', warmup: 'Warm-up & cool-down', nutrition: 'Nutrition', zones: 'Pace & HR zones', goals: 'Goals & races', settings: 'Plan settings', style: 'Training style', sync: 'Garmin & sync', data: 'Your data', about: 'About & terms', setup: 'Set up your plan' };
-var TOP = { today: 1, plan: 1, coach: 1, progress: 1, you: 1, setup: 1 };
+var TOP = { today: 1, plan: 1, coach: 1, progress: 1, you: 1, more: 1, setup: 1 };
 function route(keep) {
   var h = (location.hash || '#/today').replace(/^#\/?/, '');
   var parts = h.split('/');
@@ -100,7 +101,7 @@ function render() {
   $('#title').textContent = top ? '' : (TITLES[App.view] || 'Personal Run');
   $('#backBtn').hidden = top; $('#backSpacer').hidden = !top;
   document.body.classList.toggle('onboarding', App.view === 'setup');
-  var tab = (typeof TABOF !== 'undefined' && TABOF[App.view]) || (TOP[App.view] ? App.view : 'you');
+  var tab = (typeof TABOF !== 'undefined' && TABOF[App.view]) || (TOP[App.view] ? App.view : 'more');
   $$('.tabbar a').forEach(function (a) { a.setAttribute('aria-current', a.dataset.v === tab ? 'page' : 'false'); });
   var fn = VIEWS[App.view] || VIEWS.today;
   var html;
@@ -1288,7 +1289,7 @@ var ACTIONS = {
   disconnect: function () { askUI({ title: 'Disconnect this device?', text: 'Your data stays in GitHub. You can reconnect any time.', ok: 'Disconnect', danger: true }).then(function (ok) { if (ok) { Store.disconnect(); render(); } }); },
   export: function (a) { exportData(a.kind); },
   'reset-plan': function () { askUI({ title: 'Re-run setup?', text: 'Your logs are kept.', ok: 'Re-run setup' }).then(function (ok) { if (ok) { App.wiz = null; Store.edit('profile', null, function (s) { s.profile = null; }); go('#/setup'); } }); },
-  'wiz-back': function () { var z = App.wiz; if (z.step <= (Store.state.profile ? 1 : 0)) { if (Store.state.profile) { App.wiz = null; go('#/you'); } return; } z.step--; render(); window.scrollTo(0, 0); },
+  'wiz-back': function () { var z = App.wiz; if (z.step <= (Store.state.profile ? 1 : 0)) { if (Store.state.profile) { App.wiz = null; go('#/more'); } return; } z.step--; render(); window.scrollTo(0, 0); },
   'wiz-next': function () { App.wiz.step = Math.min(WIZ_STEPS.length - 1, App.wiz.step + 1); render(); window.scrollTo(0, 0); },
   'wiz-finish': function () {
     var z = App.wiz, p = z.profile;

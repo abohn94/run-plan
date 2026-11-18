@@ -160,7 +160,7 @@ dashHero = function () {
   var hv = x.hrv && x.hrv[Object.keys(x.hrv).sort().pop()]; if (hv && hv.status) chips.push(['HRV', String(hv.status).charAt(0) + String(hv.status).slice(1).toLowerCase().replace(/_/g, ' ')]);
   var acts = (Store.garmin && Store.garmin.activities) || [], cut = E.addD(App.today, -28), m4 = acts.filter(function (a) { return a.run && a.date > cut; }).reduce(function (s, a) { return s + a.distM / E.MI_M; }, 0);
   if (m4) chips.push(['Avg week', mi(m4 / 4) + ' mi']);
-  return '<a class="dashhero" href="#/dash"><div class="spread"><div><div class="eyebrow">Deep dive</div><h2>Training dashboard</h2></div><span class="dh-go" aria-hidden="true">›</span></div>' +
+  return '<a class="dashhero" href="#/you"><div class="spread"><div><div class="eyebrow">Deep dive</div><h2>Training dashboard</h2></div><span class="dh-go" aria-hidden="true">›</span></div>' +
     (chips.length ? '<div class="dh-row">' + chips.slice(0, 3).map(function (c) { return '<div><b>' + esc(String(c[1])) + '</b><span>' + c[0] + '</span></div>'; }).join('') + '</div>' : '') +
     '<p class="small muted">Load, fitness, recovery, running form and strength trends, week by week.</p></a>';
 };

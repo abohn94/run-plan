@@ -264,11 +264,11 @@ VIEWS.dash = function () {
 
 var _render3 = render;
 render = function () {
-  document.body.classList.toggle('wide', App.view === 'dash');
+  document.body.classList.toggle('wide', App.view === 'dash' || App.view === 'you');
   _render3();
 };
 /* on a computer, open on the dashboard */
-if (window.matchMedia && window.matchMedia('(min-width: 1024px)').matches && (!location.hash || location.hash === '#/today' || location.hash === '#/')) { try { history.replaceState(null, '', '#/dash'); } catch (e) { /* ignore */ } }
+if (window.matchMedia && window.matchMedia('(min-width: 1024px)').matches && (!location.hash || location.hash === '#/today' || location.hash === '#/')) { try { history.replaceState(null, '', '#/you'); } catch (e) { /* ignore */ } }
 var _you3 = VIEWS.you;
 VIEWS.you = function () {
   var h = _you3(), at = h.indexOf('<div class="tiles');
@@ -284,7 +284,7 @@ function dashHero() {
   var acts = (Store.garmin && Store.garmin.activities) || [], cut = E.addD(App.today, -28), m4 = acts.filter(function (a) { return a.run && a.date > cut; }).reduce(function (s, a) { return s + a.distM / E.MI_M; }, 0);
   if (m4) chips.push(['Avg week', mi(m4 / 4) + ' mi']);
   var inside = ['Training load', 'Aerobic efficiency', 'Weekly miles', 'Intensity mix', 'HRV & resting HR', 'Sleep', 'Race predictions', 'VO2 max trend', 'Running dynamics', 'Long-run progression', 'Strength'];
-  return '<a class="dashhero" href="#/dash"><div class="spread"><div><div class="eyebrow">Deep dive</div><h2>Training dashboard</h2></div><span class="dh-go" aria-hidden="true">›</span></div>' +
+  return '<a class="dashhero" href="#/you"><div class="spread"><div><div class="eyebrow">Deep dive</div><h2>Training dashboard</h2></div><span class="dh-go" aria-hidden="true">›</span></div>' +
     '<p class="small">Every trend in one place: how your fitness, load, recovery and running form are moving week to week.</p>' +
     (chips.length ? '<div class="dh-chips">' + chips.slice(0, 4).map(function (c) { return '<div><span>' + c[0] + '</span><b>' + esc(String(c[1])) + '</b></div>'; }).join('') + '</div>' : '') +
     '<div class="dh-list">' + inside.map(function (t) { return '<span>' + t + '</span>'; }).join('') + '</div><span class="btn sm primary dh-btn">Open dashboard</span></a>';

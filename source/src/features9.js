@@ -193,7 +193,7 @@ VIEWS.progress = function () {
   var h = _progress9(); if ((App.args[0] || 'overview') !== 'performance') return h;
   var lf = App.an && App.an.loadFocus, x = GX(), ratio = x.status && x.status.acwr;
   var rows = [['Training load', ratio ? 'Load ratio ' + ratio + (ratio > 1.3 ? ': ramping fast' : ratio < 0.8 ? ': lighter than usual' : ': in the safe range') : 'Short-term against long-term load'], ['Aerobic efficiency', 'Distance per heartbeat on easy runs: rising means fitter'], ['Long-run durability', 'How much your heart rate drifts late in long runs'], ['Goal odds', 'Your chance of each goal, from predictions and recent training']];
-  var c = '<a class="card anlink" href="#/dash"><div class="spread"><div><div class="eyebrow">Analysis</div><h3 style="margin-top:2px">Training dashboard</h3></div><span class="chev">›</span></div><div class="anrows">' + rows.map(function (r) { return '<div><b>' + r[0] + '</b><span>' + esc(r[1]) + '</span></div>'; }).join('') + '</div></a>';
+  var c = '<a class="card anlink" href="#/you"><div class="spread"><div><div class="eyebrow">Analysis</div><h3 style="margin-top:2px">Training dashboard</h3></div><span class="chev">›</span></div><div class="anrows">' + rows.map(function (r) { return '<div><b>' + r[0] + '</b><span>' + esc(r[1]) + '</span></div>'; }).join('') + '</div></a>';
   var t = h.indexOf('class="tabs"'), i = t > 0 ? h.indexOf('</div>', t) : -1;
   return i > 0 ? h.slice(0, i + 6) + c + h.slice(i + 6) : h + c;
 };

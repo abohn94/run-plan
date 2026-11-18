@@ -114,13 +114,13 @@ function tipOffer() {
   var pr = st().prefs || {}, lvl = (st().profile || {}).level || 'some', seen = st().seen || {};
   if (pr.tips || seen['tips-offer']) return '';
   var b = function (lbl, arg, cls) { return '<button class="btn sm ' + (cls || '') + '" data-act="tips-set" data-arg="' + jattr(arg) + '">' + lbl + '</button>'; };
-  if (lvl === 'exp' || lvl === 'elite') return '<section class="card tipc"><div class="eyebrow">Good to know</div><p class="small" style="margin-top:4px">Running form tips and strategy for every race distance and workout type are in <b>You → Running guides</b>, and each session page has a "How to run it" section.</p><div class="btns" style="margin-top:8px">' + b('Got it', { off: 1 }, 'ghost') + '<a class="btn sm" href="#/guides">Open guides</a></div></section>';
+  if (lvl === 'exp' || lvl === 'elite') return '<section class="card tipc"><div class="eyebrow">Good to know</div><p class="small" style="margin-top:4px">Running form tips and strategy for every race distance and workout type are in <b>More → Running guides</b>, and each session page has a "How to run it" section.</p><div class="btns" style="margin-top:8px">' + b('Got it', { off: 1 }, 'ghost') + '<a class="btn sm" href="#/guides">Open guides</a></div></section>';
   if (lvl === 'new') return '<section class="card tipc"><div class="eyebrow">New to running?</div><h3 style="margin-top:2px">Want a running-form tip each day?</h3><p class="small muted" style="margin-top:4px">Short, practical cues to run more easily and protect your shins, plus how to run each workout and race.</p><div class="btns" style="margin-top:8px">' + b('Yes, form and strategy tips', { form: 1, strat: 1 }, 'primary') + b('Just strategy', { strat: 1 }) + b('No thanks', { off: 1 }, 'ghost') + '</div></section>';
   return '<section class="card tipc"><div class="eyebrow">Tips</div><h3 style="margin-top:2px">Want a tip for each workout?</h3><p class="small muted" style="margin-top:4px">How today\'s run should feel and the common mistakes, plus race-day strategy as your race gets close.</p><div class="btns" style="margin-top:8px">' + b('Yes please', { strat: 1 }, 'primary') + b('Add form tips too', { form: 1, strat: 1 }) + b('No thanks', { off: 1 }, 'ghost') + '</div></section>';
 }
 ACTIONS['tips-set'] = function (a) {
   Store.editMany([['prefs', 'tips'], ['seen', 'tips-offer']], function (S) { S.prefs = S.prefs || {}; S.seen = S.seen || {}; S.seen['tips-offer'] = 1; S.prefs.tips = a.off ? { off: 1 } : { form: !!a.form, strat: !!a.strat }; });
-  toast(a.off ? 'Guides stay in You → Running guides' : 'Tips on. Change this in You → Running guides');
+  toast(a.off ? 'Guides stay in More → Running guides' : 'Tips on. Change this in More → Running guides');
 };
 function tipCard() {
   var t = (st().prefs || {}).tips; if (!t || t.off) return '';

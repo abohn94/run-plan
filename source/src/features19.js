@@ -58,7 +58,7 @@ function eliteWarnHTML() {
 /* the setup wizard asks before choosing sub-elite, too */
 var _wizSet19 = ACTIONS['wiz-set'];
 ACTIONS['wiz-set'] = function (a) {
-  if (a && a.k === 'level' && a.v === 'elite' && !ASK({ icon: '⚠', title: 'Sub-elite training?', text: 'This plan builds to high mileage with two or more hard sessions a week and long runs up to 22 miles. Pick it only if you already run 50+ miles a week injury-free. You can change it any time under You → Runner type.', ok: 'Yes, that\'s me', cancel: 'Pick another' }, ACTIONS['wiz-set'], this, arguments)) return;
+  if (a && a.k === 'level' && a.v === 'elite' && !ASK({ icon: '⚠', title: 'Sub-elite training?', text: 'This plan builds to high mileage with two or more hard sessions a week and long runs up to 22 miles. Pick it only if you already run 50+ miles a week injury-free. You can change it any time under More → Runner type.', ok: 'Yes, that\'s me', cancel: 'Pick another' }, ACTIONS['wiz-set'], this, arguments)) return;
   return _wizSet19.apply(this, arguments);
 };
 
@@ -109,7 +109,7 @@ function runnerHintCard() {
   return '<section class="card offer rthint"><div class="eyebrow">Runner type</div><p class="small" style="margin:2px 0 0"><b>' + esc(rtName(h.to)) + ' may fit you better.</b> ' + esc(h.why) + '</p><div class="btns"><button class="btn sm primary" data-act="rt-hint-yes" data-arg="' + jattr({ to: h.to }) + '">Review</button><button class="btn sm ghost" data-act="rt-hint-no" data-arg="' + jattr({ k: hintKey(h) }) + '">Keep ' + esc(rtName(runnerType()).toLowerCase()) + '</button></div></section>';
 }
 ACTIONS['rt-hint-yes'] = function (a) { openSheet('runnertype', { pre: a.to }); if (a.to === 'elite') setTimeout(function () { var ew = $('#rt-elite'); if (ew) { ew.hidden = false; ew.innerHTML = eliteWarnHTML(); } }, 0); };
-ACTIONS['rt-hint-no'] = function (a) { Store.edit('seen', a.k, function (S) { S.seen = S.seen || {}; S.seen[a.k] = App.today; }); toast('Kept. You can change it any time under You → Runner type.'); };
+ACTIONS['rt-hint-no'] = function (a) { Store.edit('seen', a.k, function (S) { S.seen = S.seen || {}; S.seen[a.k] = App.today; }); toast('Kept. You can change it any time under More → Runner type.'); };
 /* the suggestion sits right under the runner type card on You and in Plan settings */
 var _you19 = VIEWS.you;
 VIEWS.you = function () { var h = _you19(), c = runnerHintCard(); if (!c) return h; var i = h.indexOf('<div class="sechead"><h2>Your plan</h2>'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h; };
