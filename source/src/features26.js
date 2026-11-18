@@ -221,7 +221,6 @@ VIEWS.progress = function () {
     var w = frag('<div class="c12">' + safe(wellnessCard) + '</div>'), hs = safe(hrvStabCard);
     var ptabs = root.querySelector('.ptabs'); w.forEach(function (n) { ptabs && ptabs.nextSibling ? root.insertBefore(n, ptabs.nextSibling) : root.appendChild(n); });
     if (hs) { var hrvCard = Array.prototype.filter.call(root.children, function (c) { return /^HRV/i.test(((c.querySelector('h3,.eyebrow,.hm-l') || {}).textContent || '').trim()) || /HRV \(OVERNIGHT\)/i.test(c.textContent.slice(0, 80)); })[0]; frag('<div class="c12">' + hs + '</div>').forEach(function (n) { hrvCard && hrvCard.nextSibling ? root.insertBefore(n, hrvCard.nextSibling) : root.appendChild(n); }); }
-    after(folder('rec-blood', 'Bloodwork', 'Ferritin · vitamin D · hemoglobin', [safe(bloodCard)]));
   }
   return box.innerHTML;
 };
