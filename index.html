@@ -3446,7 +3446,8 @@ function readiness(st, garmin, date) {
   var flags = {};
   if (c) {
     if (c.ill) { add('ill', 3, 'You reported feeling sick.'); flags.ill = true; }
-    if (c.pain) { add('pain', 2, 'You reported pain' + (c.where ? ' (' + c.where + ')' : '') + '.'); flags.pain = c.where || true; }
+    if (c.pain && c.painLvl != null && +c.painLvl <= 2) add('pain', 0, 'Low pain (' + c.painLvl + '/10' + (c.where ? ', ' + c.where : '') + '): fine to train if it settles as you warm up.');
+    else if (c.pain) { add('pain', 2, 'You reported pain' + (c.painLvl != null ? ' at ' + c.painLvl + '/10' : '') + (c.where ? ' (' + c.where + ')' : '') + '.'); flags.pain = c.where || true; }
     if (c.feel != null) { if (c.feel <= 1) add('feel', 2, 'You feel rough today.'); else if (c.feel === 2) add('feel', 1, 'You feel a bit flat today.'); else add('feel', 0, null); }
     if (c.sore >= 2) add('sore', 1, 'Your legs are sore.');
     if (c.stress >= 3) add('stress', 1, 'Life stress is high today.');
@@ -13509,20 +13510,20 @@ function pnFindings() {
     var runs = daysAhead(3, function (p) { return E.isRun(p); }, App.today === last.date ? 0 : 1), hard = runs.filter(function (x) { return isHardP(x.p); }), xt = ikXT();
     var tail = where === 'shin' ? ' Do the shin routine today unless it makes the pain worse.' : '';
     if (lvl >= 5 || (last.painWhen === 'always' && lvl >= 4)) {
-      out.push({ id: 'pain', pri: 11, tone: 'act', title: 'Stop running for now', seen: 'Your ' + where + ' pain is ' + lvl + '/10' + (last.painWhen ? ', ' + PN_WHEN[last.painWhen] : '') + '. Above 5 is the stop line in the pain-monitoring model' + (last.painWhen === 'always' ? ', and pain while walking means the tissue isn\'t coping with everyday load' : '') + '.',
+      out.push({ id: 'pain-stop-' + last.date, pri: 11, tone: 'act', title: 'Stop running for now', seen: 'Your ' + where + ' pain is ' + lvl + '/10' + (last.painWhen ? ', ' + PN_WHEN[last.painWhen] : '') + '. Above 5 is the stop line in the pain-monitoring model' + (last.painWhen === 'always' ? ', and pain while walking means the tissue isn\'t coping with everyday load' : '') + '.',
         change: 'No running until it\'s under 3/10 and walking is pain-free. Cross-train instead (' + xt.join(', ') + ': whatever doesn\'t hurt). See a doctor or physical therapist if it\'s one pinpoint spot on the bone, hurts at night or makes you limp: those can be signs of a stress fracture.' + tail,
         plan: runs.length ? 'Your ' + plural(runs.length, 'run') + ' in the next 3 days become cross-training. If it\'s still 3 or more after that, log it as an injury and the return ladder takes over.' : 'No runs in the next 3 days anyway. If it\'s still 3 or more by then, log it as an injury and the return ladder takes over.',
         expect: 'Caught at this stage, most overuse pain settles in 1–2 weeks of reduced load. Running through it is how a 2-week problem becomes a 2-month one.',
         act: runs.length ? { ov: runs.map(function (x) { return [x.date, 'cross']; }) } : { sheet: 'life' }, label: runs.length ? 'Switch to cross-training' : 'Log it as an injury' });
     } else if (lvl >= 3 || rising || mornWorse) {
       var r0 = runs[0];
-      out.push({ id: 'pain', pri: 10, tone: 'act', title: rising || mornWorse ? 'Pain is going the wrong way' : 'Pain is above the safe line', seen: 'Your ' + where + ' pain is ' + lvl + '/10' + (last.painWhen ? ', ' + PN_WHEN[last.painWhen] : '') + (prev ? ', up from ' + prev.painLvl + ' on ' + fmtD(prev.date, { weekday: 'long' }) : '') + '. ' + (mornWorse ? 'Pain that\'s worse the next morning means the last run was more than the tissue could take.' : 'The 3–5 band means keep moving but reduce the load.'),
+      out.push({ id: 'pain-off-' + last.date, pri: 10, tone: 'act', title: rising || mornWorse ? 'Pain is going the wrong way' : 'Pain is above the safe line', seen: 'Your ' + where + ' pain is ' + lvl + '/10' + (last.painWhen ? ', ' + PN_WHEN[last.painWhen] : '') + (prev ? ', up from ' + prev.painLvl + ' on ' + fmtD(prev.date, { weekday: 'long' }) : '') + '. ' + (mornWorse ? 'Pain that\'s worse the next morning means the last run was more than the tissue could take.' : 'The 3–5 band means keep moving but reduce the load.'),
         change: (r0 ? 'Make ' + dlab(r0.date) + '\'s ' + partLine(r0) + ' about a third shorter and fully easy, on a soft surface or treadmill' : 'Keep the next run short and easy') + (hard.filter(function (x) { return !r0 || x.date !== r0.date; }).length ? ', and run ' + hard.filter(function (x) { return !r0 || x.date !== r0.date; }).map(function (x) { return dlab(x.date) + '\'s ' + x.p.title.toLowerCase(); }).join(' and ') + ' easy' : '') + '. Stop if it goes above 3 during the run.' + tail,
         plan: 'Miles drop a little for the next few days; no speed work until pain is 2 or less. When you\'ve had 3 days at 2 or less, the plan goes back to normal.',
         expect: 'Pain back to 2 or less within about a week. If it\'s still 3+ after a week of reduced load, get it looked at.',
         act: r0 || hard.length ? { ov: (r0 ? [[r0.date, 'short']] : []).concat(hard.filter(function (x) { return !r0 || x.date !== r0.date; }).map(function (x) { return [x.date, 'easy']; })) } : null, label: r0 || hard.length ? 'Back off' : 'Got it' });
     } else if (lvl > 0) {
-      out.push({ id: 'pain', pri: 5, tone: 'watch', title: 'Low pain, okay to train', seen: 'Your ' + where + ' pain is ' + lvl + '/10' + (last.painWhen ? ', ' + PN_WHEN[last.painWhen] : '') + '. That\'s in the acceptable zone.',
+      out.push({ id: 'pain-ok-' + last.date, pri: 5, tone: 'watch', title: 'Low pain, okay to train', seen: 'Your ' + where + ' pain is ' + lvl + '/10' + (last.painWhen ? ', ' + PN_WHEN[last.painWhen] : '') + '. That\'s in the acceptable zone.',
         change: 'Train as planned. The rule: up to 2/10 is fine if it\'s settled by the next morning and isn\'t creeping up. Keep scoring it in your check-in so I can see the trend.' + tail,
         plan: 'No change.', expect: 'Low, stable pain usually fades as the tissue adapts. If it climbs to 3 or is worse the next morning, I\'ll pull the load back.', act: null, label: 'Got it' });
     }
@@ -13534,7 +13535,7 @@ function pnFindings() {
 }
 
 /* ---------- the coach's new rules ---------- */
-function ikPlanPeak(until) { var W = (App.plan && App.plan.weeks) || []; return Math.max.apply(null, W.filter(function (w) { return !until || w.start <= until; }).map(function (w) { return w.tot ? w.tot.mi : 0; }).concat([0])); }
+function ikPlanPeak(until) { var W = (App.plan && App.plan.weeks) || []; return Math.max.apply(null, W.filter(function (w) { return !until || w.start <= until; }).map(function (w) { var m = 0; w.days.forEach(function (d) { d.parts.forEach(function (p) { if (E.isRun(p) && p.type !== 'race') m += +p.mi || 0; }); }); return Math.round(m * 10) / 10; }).concat([0])); }
 function ikFindings() {
   var out = [], I = INTK(), prof = st().profile || {}, prefs = st().prefs || {}, an = App.an || {};
   var aEv = ((App.plan && App.plan.aEvents) || []).filter(function (e) { return e.date >= App.today; });
@@ -13553,7 +13554,8 @@ function ikFindings() {
       act: { peak: tgt }, label: 'Cap at ' + tgt + ' mi' });
   }
   /* after the race the coach set a cap for: time to raise it */
-  if (prefs.peakByCoach && cur && cur === prefs.peakByCoach.v && prefs.peakByCoach.ev && prefs.peakByCoach.ev < App.today && ikSustainedPeak() >= cur * 0.85) {
+  var raced = prefs.peakByCoach && (st().events || []).some(function (e) { return (e.priority || 'A') === 'A' && e.date >= prefs.peakByCoach.at && e.date < App.today && E.diffD(e.date, App.today) <= 42; });
+  if (prefs.peakByCoach && cur && cur === prefs.peakByCoach.v && raced && ikSustainedPeak() >= cur * 0.85) {
     var up = Math.round(cur * 1.2);
     out.push({ id: 'peakup', pri: 4, tone: 'act', title: 'Ready for a higher peak', seen: 'You held about ' + ikSustainedPeak() + ' mi a week through the last block, near the ' + cur + ' mi cap we set.', change: 'Raise the peak to ' + up + ' mi a week for this block.', plan: 'The next build climbs a little higher at the top; the early weeks don\'t change.', expect: 'More aerobic volume is the biggest driver of marathon fitness once the body has proven it can handle the last level.', act: { peak: up }, label: 'Raise to ' + up + ' mi' });
   }
@@ -13591,7 +13593,7 @@ coachFindings = function () {
     var base = (_cf27safe() || []).slice(), ws = wkStart(App.today), prefs = st().prefs || {}, no = prefs.cfNo || {}, acc = prefs.cfAcc || {}, I = INTK();
     var extra = []; try { extra = pnFindings(); } catch (e) { console.warn(e); } try { extra = extra.concat(ikFindings()); } catch (e) { console.warn(e); }
     extra.forEach(function (f) { f.id = f.id + ':' + ws; });
-    if (extra.some(function (f) { return /^pain:/.test(f.id); })) base = base.filter(function (f) { return !/^shin:/.test(f.id); });
+    if (extra.some(function (f) { return /^pain-/.test(f.id); })) base = base.filter(function (f) { return !/^shin:/.test(f.id); });
     if (I.hrMed) base = base.filter(function (f) { return !/^easycap:/.test(f.id); });
     return base.concat(extra.filter(function (f) { return !no[f.id] && !acc[f.id]; })).sort(function (a, b) { return b.pri - a.pri; });
   });
@@ -13608,17 +13610,31 @@ applyCoachAct = function (f) {
   }
   return _apply32(f);
 };
-/* race-day lines on the run itself: hills, heat, threshold test, effort instead of bpm */
-var _hero32 = heroHTML;
-heroHTML = function (x, date, zz) {
-  var h = _hero32(x, date, zz), p = st().prefs || {}, I = INTK(), add = '';
-  if (partDone(date, x)) return h;
-  if (I.hrMed) { h = h.replace(/<p class="small capline">Keep heart rate under[\s\S]*?<\/p>/, ''); if (x.type === 'easy' || x.type === 'long' || x.type === 'recovery') add += '<p class="small capline">Run by effort: <b>2–3 of 10</b>, full sentences, nose breathing. Heart rate isn\'t reliable on your medication.</p>'; }
+/* the coach's notes on a run: hills, heat, fueling, threshold test, heart-rate cap or effort. Shown on Today and on the day page. */
+function coachRunLines(x, date) {
+  var p = st().prefs || {}, I = INTK(), add = '';
+  if (!E.isRun(x) || partDone(date, x)) return '';
+  var easyish = x.type === 'easy' || x.type === 'long' || x.type === 'recovery';
+  if (I.hrMed && easyish) add += '<p class="small capline">Run by effort: <b>2–3 of 10</b>, full sentences, nose breathing. Heart rate isn\'t reliable on your medication.</p>';
+  else if (p.easyCap && easyish) add += '<p class="small capline">Keep heart rate under <b>' + p.easyCap + ' bpm</b>. Slow down or walk hills to stay there.</p>';
+  if (p.fuelLong && x.type === 'long') add += '<p class="small capline">First 3 miles 15–20 s/mi slower · drink every 15–20 min · carbs every 30–40 min after the first hour.</p>';
   if (p.hillPrep && x.type === 'long') add += '<p class="small capline">Choose a hilly route like your race course. Relaxed, quick steps downhill.</p>';
   if (p.heatPrep && (x.type === 'easy' || x.type === 'recovery')) add += '<p class="small capline">Heat prep: run in the warmest part of the day or add a layer. Slower pace is fine.</p>';
   if (p.ltTest === date && x.type === 'speed') add += '<p class="small capline"><b>Threshold test:</b> 15 min warm-up, then 30 min as hard as you can hold evenly, chest strap on. Your last-20-minute average heart rate ≈ your threshold.</p>';
+  return add;
+}
+var _hero32 = heroHTML;
+heroHTML = function (x, date, zz) {
+  var h = _hero32(x, date, zz).replace(/<p class="small capline">[\s\S]*?<\/p>/g, ''), add = coachRunLines(x, date);
   if (!add) return h;
   var i = h.lastIndexOf('<span class="btn primary"'); return i > 0 ? h.slice(0, i) + add + h.slice(i) : h + add;
+};
+var _day32 = VIEWS.day;
+VIEWS.day = function () {
+  var h = _day32(), d = App.args[0] || App.today, day = dayOf(d); if (!day) return h;
+  var add = day.parts.map(function (x) { var l = coachRunLines(x, d); return l ? (day.parts.filter(E.isRun).length > 1 ? '<p class="tiny muted">' + esc(x.title) + '</p>' : '') + l : ''; }).join('');
+  if (!add) return h;
+  var c = '<section class="card coachnotes"><div class="eyebrow">Coach notes</div>' + add + '</section>', i = h.indexOf('<section'); return i >= 0 ? h.slice(0, i) + c + h.slice(i) : h + c;
 };
 
 /* ---------- where it shows up ---------- */

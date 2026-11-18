@@ -1930,7 +1930,8 @@ function readiness(st, garmin, date) {
   var flags = {};
   if (c) {
     if (c.ill) { add('ill', 3, 'You reported feeling sick.'); flags.ill = true; }
-    if (c.pain) { add('pain', 2, 'You reported pain' + (c.where ? ' (' + c.where + ')' : '') + '.'); flags.pain = c.where || true; }
+    if (c.pain && c.painLvl != null && +c.painLvl <= 2) add('pain', 0, 'Low pain (' + c.painLvl + '/10' + (c.where ? ', ' + c.where : '') + '): fine to train if it settles as you warm up.');
+    else if (c.pain) { add('pain', 2, 'You reported pain' + (c.painLvl != null ? ' at ' + c.painLvl + '/10' : '') + (c.where ? ' (' + c.where + ')' : '') + '.'); flags.pain = c.where || true; }
     if (c.feel != null) { if (c.feel <= 1) add('feel', 2, 'You feel rough today.'); else if (c.feel === 2) add('feel', 1, 'You feel a bit flat today.'); else add('feel', 0, null); }
     if (c.sore >= 2) add('sore', 1, 'Your legs are sore.');
     if (c.stress >= 3) add('stress', 1, 'Life stress is high today.');
