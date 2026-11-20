@@ -71,7 +71,7 @@ ACTIONS['ik-injs'] = function (a) { var D = ikRead(); if (D.inj[a.k]) D.inj[a.k]
 ACTIONS['ik-tog'] = function (a) { var D = ikRead(), L = D[a.f], i = L.indexOf(a.k); if (i >= 0) L.splice(i, 1); else L.push(a.k); ikRerender(); };
 ACTIONS['ik-save'] = function () {
   var D = ikRead();
-  for (var k in D.pr) { if (D.pr[k].t && !(E.parseClock(D.pr[k].t) > 0)) { toast('Check the ' + ikName(IK_PR, k) + ' time (h:mm:ss)'); return; } }
+  for (var k in D.pr) { if (!D.pr[k].t) continue; var tt = E.parseClock(D.pr[k].t), dd = IK_PR.filter(function (x) { return x[0] === k; })[0], vv = tt > 0 ? E.vdotOf(dd[2], tt) : 0; if (!(tt > 0) || vv < 15 || vv > 90) { toast('Check the ' + ikName(IK_PR, k) + ' time: use mm:ss for under an hour (e.g. 20:00), h:mm:ss above'); return; } }
   var I = Object.assign({}, D, { at: new Date().toISOString() }), low = ikLowerLeg(I).length, wasProne = !!(st().profile || {}).injuryProne, prone = low ? !!D.prone : wasProne;
   Store.editMany([['intake', null], ['profile', null]], function (S) { S.intake = I; if (S.profile) S.profile.injuryProne = prone; });
   App.ui.ik = null;
@@ -241,6 +241,43 @@ function pnFindings() {
     expect: wasStop ? 'Mild soreness the next day means hold that step; pain over 2/10 means drop back a step for two days.' : '', act: wasStop ? { nav: '#/shins' } : null, label: wasStop ? 'Got it' : 'Nice' });
   return out;
 }
+/* check-ins written before the 1–10 score existed: read "2-3/10" and "walking" from the note */
+function pnFromNote(c) {
+  if (!c || !c.pain || c.painLvl != null || !c.note) return null;
+  var m = /(\d+(?:\.\d+)?)\s*(?:(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*\/\s*10/.exec(c.note); if (!m) return null;
+  var lvl = Math.round(Math.max(+m[1], m[2] ? +m[2] : 0)); if (!(lvl >= 0 && lvl <= 10)) return null;
+  return { painLvl: lvl, painWhen: /walk|stairs|standing|house|all day|at rest/i.test(c.note) ? 'always' : /morning/i.test(c.note) ? 'morning' : /after/i.test(c.note) ? 'after' : /during|running|run\b/i.test(c.note) ? 'during' : '' };
+}
+function pnMigrate() {
+  var C = st().checkins || [], fix = C.filter(function (c) { return pnFromNote(c); });
+  if (!fix.length) return false;
+  Store.editMany(fix.map(function (c) { return ['checkins', c.id]; }), function (S) { S.checkins.forEach(function (c) { var f = pnFromNote(c); if (f) { c.painLvl = f.painLvl; if (!c.painWhen) c.painWhen = f.painWhen; c.painFromNote = true; } }); });
+  return true;
+}
+var _applyG32b = applyGarmin;
+applyGarmin = function () { var m = false; try { m = pnMigrate(); } catch (e) { m = false; } var r = _applyG32b(); return r || m; };
+/* the first run back after pain this week: ease into it */
+function pnBackFinding() {
+  var C = (st().checkins || []).slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }), last = C.filter(function (c) { return E.diffD(c.date, App.today) <= 1; }).pop();
+  if (!last || (last.pain && last.painLvl > 0)) return null;
+  var recent = C.filter(function (c) { var g = E.diffD(c.date, App.today); return g >= 1 && g <= 7 && c.pain && c.painLvl != null; });
+  if (!recent.length) return null;
+  var worst = null; recent.forEach(function (c) { var b = pnBand(c); if (b && (!worst || (b.band === 'stop' ? 2 : b.band === 'mod' ? 1 : 0) > (worst.band === 'stop' ? 2 : worst.band === 'mod' ? 1 : 0))) { worst = b; worst.c = c; } });
+  if (!worst || worst.band === 'ok') return null;
+  var lastPain = recent[recent.length - 1], free = C.filter(function (c) { return c.date > lastPain.date && !(c.pain && c.painLvl > 0); }).length;
+  if (free >= 3) return null;   /* the "pain has settled" message takes over */
+  var nx = daysAhead(1, function (p) { return E.isRun(p); }, 0)[0]; if (!nx) return null;
+  var where = PN_AREA[worst.c.where] || 'sore spot', R = worst.R, isLong = nx.p.type === 'long', hard = nx.p.type === 'speed', stop = worst.band === 'stop';
+  var cut = stop ? (isLong ? 0.65 : 0.7) : (isLong ? 0.8 : 1), newMi = Math.round((nx.p.mi || 0) * cut * 2) / 2;
+  return { id: 'painback-' + nx.date, pri: 10, tone: 'act', title: 'First run back: ease into it', seen: 'Your ' + where + ' was ' + worst.lvl + '/10 on ' + fmtD(worst.c.date, { weekday: 'long' }) + (worst.c.painWhen ? ' (' + PN_WHEN[worst.c.painWhen] + ')' : '') + ', and it\'s been pain-free for ' + plural(free, 'check-in') + '. ' + (stop ? 'Pain at that level' + (worst.c.painWhen === 'always' ? ', while walking,' : '') + ' means the tissue needs a gradual return, not your longest run of the week straight away.' : 'It\'s settling, so keep this run gentle.'),
+    change: (stop ? 'Before you run: walk briskly for 5–10 minutes, then do 15 single-leg hops on the sore side. If either hurts, swap the run for a pain-free incline walk or bike. If both are pain-free, run ' : 'Run ') + dlab(nx.date) + '\'s ' + nx.p.title.toLowerCase() + (cut < 1 ? ' as about ' + mi(newMi) + ' mi instead of ' + mi(nx.p.mi) : '') + ', fully easy (the slow end of your easy pace), on flat ground or a treadmill' + (hard ? ', with no speed work' : '') + '. Stop and walk if it goes above ' + R.ok + '/10 or changes your stride.',
+    plan: cut < 1 ? 'That run drops to about ' + mi(newMi) + ' mi. If tomorrow morning is pain-free, the rest of the week goes ahead as planned.' : 'No change to the distance. Tomorrow morning\'s check-in decides the next run.',
+    expect: 'Pain-free during the run and the next morning means the tissue handled it and you can carry on. Soreness the next morning means hold at this level for a few more days.',
+    act: cut < 1 || hard ? { ov: [[nx.date, cut < 1 ? 'short' : 'easy']] } : null, label: cut < 1 || hard ? 'Ease into it' : 'Got it' };
+}
+var _pnF32b = pnFindings;
+pnFindings = function () { var out = _pnF32b(), b = null; try { b = pnBackFinding(); } catch (e) { b = null; } if (b) out.push(b); return out; };
+
 /* ---------- the coach's new rules ---------- */
 function ikPlanPeak(until) { var W = (App.plan && App.plan.weeks) || []; return Math.max.apply(null, W.filter(function (w) { return !until || w.start <= until; }).map(function (w) { var m = 0; w.days.forEach(function (d) { d.parts.forEach(function (p) { if (E.isRun(p) && p.type !== 'race') m += +p.mi || 0; }); }); return Math.round(m * 10) / 10; }).concat([0])); }
 function ikFindings() {
