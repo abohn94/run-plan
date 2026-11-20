@@ -13968,6 +13968,51 @@ var _acts32 = activities;
 activities = function () { var r = _acts32(); r.forEach(function (x) { if (x.g && x.g.walk && /run/i.test(x.name || '')) x.name = gLabel(x.g.type); }); return r; };
 App.p32.fixWalkLogs = fixWalkLogs;
 
+/* ================= Your own schedule changes stay under the coach's eye ================= */
+/* moving a session takes the coach's change for that day with it (a shortened or easy run stays shortened or easy) */
+var _mv32 = ACTIONS['do-move'];
+ACTIONS['do-move'] = function (a) {
+  var ov = (st().overrides || {})[a.from], fromDay = dayOf(a.from), runMoved = fromDay && fromDay.parts.some(function (p) { return E.isRun(p) || p.type === 'cross'; });
+  _mv32(a);
+  if (ov && runMoved && !(st().overrides || {})[a.to]) {
+    Store.editMany([['overrides', a.from], ['overrides', a.to]], function (S) { S.overrides = S.overrides || {}; S.overrides[a.to] = Object.assign({}, ov, { movedFrom: a.from }); delete S.overrides[a.from]; });
+    toast('Moved, with your coach\'s change for that day');
+  }
+};
+/* two hard days in a row after a move */
+function schedFindings() {
+  var out = [], D = [];
+  for (var i = 0; i <= 7; i++) { var d = E.addD(App.today, i), day = dayOf(d); if (day) D.push({ d: d, p: day.parts.filter(function (p) { return (p.type === 'speed' || p.type === 'long') && !partDone(d, p); })[0] }); }
+  for (var j = 1; j < D.length; j++) {
+    var a = D[j - 1], b = D[j]; if (!a.p || !b.p) continue;
+    var tg = b.p.type === 'long' && a.p.type !== 'long' ? a : b;   /* keep the long run; soften the other one */
+    out.push({ id: 'b2b-' + b.d, pri: 7, tone: 'act', title: 'Two hard days in a row', seen: dlab(a.d) + '\'s ' + partLine({ p: a.p }) + ' and ' + dlab(b.d) + '\'s ' + partLine({ p: b.p }) + ' are back to back. Hard sessions need a day of easy running or rest between them, or the second one is run on tired legs' + ((st().profile || {}).injuryProne ? ' and your shins take two big loads in a row' : '') + '.',
+      change: 'Make ' + dlab(tg.d) + '\'s ' + tg.p.title.toLowerCase() + ' an easy run' + (tg === a ? ' so the long run gets fresh legs' : '') + ', or move one of them so there\'s an easy or rest day between.', plan: 'Accepting turns ' + dlab(tg.d) + '\'s session into an easy run of about ' + mi((tg.p.mi || 0) * (tg.p.type === 'long' ? 0.8 : 0.85)) + ' mi.', expect: 'Each hard session gets done on fresh legs, which is where the training benefit comes from.', act: { ov: [[tg.d, 'easy']] }, label: 'Make ' + dlab(tg.d) + '\'s easy' });
+  }
+  return out;
+}
+var _pnF32c = pnFindings;
+pnFindings = function () { var out = _pnF32c(); try { out = out.concat(schedFindings()); } catch (e) { console.warn(e); } return out; };
+
+/* ================= Reminders: what was actually sent, so a missing one can be traced ================= */
+function remHistory(cb) { if (Store.mode !== 'github' || !Store.getFile) return cb(null); Store.getFile('garmin/notify.json', true).then(function (f) { var j = null; try { j = JSON.parse(f.text); } catch (e) { j = null; } cb(j); }).catch(function () { cb(null); }); }
+var _notify32b = VIEWS.notify;
+VIEWS.notify = function () {
+  var h = _notify32b(), H = App.ui.remHist;
+  if (H === undefined) { App.ui.remHist = null; remHistory(function (j) { App.ui.remHist = j || false; if (App.view === 'notify') render(); }); }
+  var rows = H && H.hist ? H.hist.slice(-8).reverse() : [];
+  var c = '<section class="card stack"><h3>Recently sent</h3>' + (rows.length ? '<ul class="plain small wkl">' + rows.map(function (x) { var d = new Date(x.t); return '<li>' + (x.ok ? '✓ ' : '✗ ') + esc(x.title) + ' · ' + d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + (x.ok ? '' : ' (ntfy refused it)') + '</li>'; }).join('') + '</ul><p class="tiny muted">✓ means ntfy.sh accepted it. If one shows here but never reached your phone, the problem is on the phone: check that notifications are allowed for ntfy, that a Focus or Do Not Disturb mode isn\'t hiding them, and that ntfy is subscribed to your topic on ntfy.sh. "Send a test" checks the whole path.</p>' : '<p class="small muted">' + (H === false || H === null ? 'Nothing recorded yet.' : 'Loading…') + '</p>') + '</section>';
+  var i = h.indexOf('<label class="check"><input type="checkbox" id="ntOn"'); return i > 0 ? h.slice(0, i) + c + h.slice(i) : h + c;
+};
+/* the week editor's drag-to-another-day does the same: the coach's change for the day follows the run */
+var _edMove32 = edMove;
+edMove = function (key, to) {
+  var cur = (st().arr || {})[key] || key.split('|')[0], ov = (st().overrides || {})[cur], isRun = /\|run$/.test(key);
+  _edMove32(key, to);
+  if (ov && isRun && cur !== to && !(st().overrides || {})[to]) Store.editMany([['overrides', cur], ['overrides', to]], function (S) { S.overrides = S.overrides || {}; S.overrides[to] = Object.assign({}, ov, { movedFrom: cur }); delete S.overrides[cur]; });
+};
+App.p32.edMove = function (k, t) { edMove(k, t); };
+
 
 /* ---------------- Garmin polling ---------------- */
 function pollGarmin(n) {
