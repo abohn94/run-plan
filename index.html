@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.github.com https://ntfy.sh https://api.open-meteo.com https://geocoding-api.open-meteo.com; img-src 'self' data: blob:; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.github.com https://ntfy.sh https://api.open-meteo.com https://geocoding-api.open-meteo.com; img-src 'self' data: blob:; manifest-src 'self'; media-src 'self' blob:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#09090b">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14026,6 +14026,94 @@ VIEWS.notify = function () {
 /* a test always goes to the saved topic, after saving what's on screen */
 var _ntTest32 = ACTIONS['nt-test'];
 ACTIONS['nt-test'] = function () { var n = ntRead(); Store.edit('prefs', 'notify', function (S) { S.prefs = S.prefs || {}; S.prefs.notify = n; }); _ntTest32(); };
+
+/* ================= Rest timer on the lock screen (and an option to keep the screen on) =================
+   Phones won't let a web page draw on the lock screen, but they do show media controls there. During a rest the app
+   plays silence and publishes the rest as a "track": the lock screen shows "Rest 1:30 · Next: Back squat, set 3 of 4"
+   with a progress bar that runs down on its own, plus −15 s / +15 s buttons. A chime and a buzz mark the end. */
+function wkPrefs() { var p = st().prefs || {}; return { lock: p.restLock !== false, wake: !!p.wakeWorkout }; }
+var RL = { audio: null, ctx: null, cur: null, doneAt: 0, wake: null };
+function rlSilence() {
+  if (RL.url) return RL.url;
+  var sr = 8000, n = sr * 10, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = function (o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+  for (var i = 0; i < n; i++) v.setInt16(44 + i * 2, (i % 2 ? 1 : -1), true);   /* inaudible, but not digital silence (some phones drop pure silence) */
+  RL.url = URL.createObjectURL(new Blob([b], { type: 'audio/wav' })); return RL.url;
+}
+function rlNext() {
+  var w = App.wk; if (!w || !w.ex) return '';
+  for (var i = 0; i < w.ex.length; i++) { var x = w.ex[i]; if (x.kind === 'wu' || !x.sets) continue; for (var j = 0; j < x.sets.length; j++) if (!x.sets[j].done) return 'Next: ' + (x.n || 'next set') + ', set ' + (j + 1) + ' of ' + x.sets.length; }
+  return 'Last set done';
+}
+function rlChime() {
+  try { var C = RL.ctx || (RL.ctx = new (window.AudioContext || window.webkitAudioContext)()); if (C.state === 'suspended') C.resume(); [0, 0.28].forEach(function (t0) { var o = C.createOscillator(), g = C.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(0.0001, C.currentTime + t0); g.gain.exponentialRampToValueAtTime(0.4, C.currentTime + t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, C.currentTime + t0 + 0.22); o.connect(g); g.connect(C.destination); o.start(C.currentTime + t0); o.stop(C.currentTime + t0 + 0.25); }); } catch (e) { /* no audio */ }
+  try { if (navigator.vibrate) navigator.vibrate([300, 120, 300, 120, 300]); } catch (e) { /* ignore */ }
+}
+function rlStart() {
+  if (!('mediaSession' in navigator)) return;
+  if (!RL.audio) { RL.audio = new Audio(rlSilence()); RL.audio.loop = true; RL.audio.volume = 0.01; }
+  try { RL.ctx = RL.ctx || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { RL.ctx = null; }
+  var p = RL.audio.play(); if (p && p.catch) p.catch(function () { /* the phone refused; the in-app timer still works */ });
+  var ms = navigator.mediaSession, adj = function (s) { return function () { if (App.rest) { App.rest.end += s * 1000; App.rest.total = Math.max(1, App.rest.total + s); rlUpdate(true); } }; };
+  try { ms.setActionHandler('seekbackward', adj(-15)); ms.setActionHandler('seekforward', adj(15)); ms.setActionHandler('previoustrack', adj(-15)); ms.setActionHandler('nexttrack', adj(15)); ms.setActionHandler('pause', function () { App.rest = null; rlStop(); var b = $('#restBar'); if (b) b.hidden = true; }); ms.setActionHandler('play', function () {}); } catch (e) { /* older browsers */ }
+  rlUpdate(true);
+}
+function rlUpdate(force) {
+  if (!App.rest || !('mediaSession' in navigator)) return;
+  var total = App.rest.total || 60, left = Math.max(0, (App.rest.end - Date.now()) / 1000), title = 'Rest ' + mmss(left);
+  if (force || RL.title !== title) {
+    RL.title = title;
+    try { navigator.mediaSession.metadata = new MediaMetadata({ title: title, artist: rlNext(), album: 'Personal Run · ' + (App.wk && App.wk.key && E.LIFT[App.wk.key] ? 'Strength ' + App.wk.key + ': ' + E.LIFT[App.wk.key].name : 'Workout'), artwork: [{ src: 'pr-192.png', sizes: '192x192', type: 'image/png' }, { src: 'pr-512.png', sizes: '512x512', type: 'image/png' }] }); } catch (e) { /* ignore */ }
+    try { navigator.mediaSession.playbackState = 'playing'; navigator.mediaSession.setPositionState({ duration: Math.max(total, 1), position: Math.min(total, Math.max(0, total - left)), playbackRate: 1 }); } catch (e) { /* ignore */ }
+  }
+}
+function rlStop(done) {
+  if (done) {
+    try { navigator.mediaSession.metadata = new MediaMetadata({ title: 'Rest done: go', artist: rlNext(), album: 'Personal Run', artwork: [{ src: 'pr-192.png', sizes: '192x192', type: 'image/png' }] }); navigator.mediaSession.setPositionState({ duration: 1, position: 1, playbackRate: 1 }); } catch (e) { /* ignore */ }
+    rlChime(); RL.doneAt = Date.now(); return;
+  }
+  RL.doneAt = 0;
+  try { if (RL.audio) RL.audio.pause(); navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = 'none'; } catch (e) { /* ignore */ }
+}
+/* follow the in-app rest timer: start, adjust, finish */
+setInterval(function () {
+  var on = wkPrefs().lock, r = App.rest;
+  if (r && on) {
+    if (RL.cur !== r) { RL.cur = r; RL.doneAt = 0; rlStart(); }
+    else rlUpdate(false);
+    if (r.end - Date.now() <= 250 && !RL.doneAt) rlStop(true);
+  } else if (RL.cur) {
+    var finished = RL.cur.end <= Date.now() + 1000;
+    if (finished && !RL.doneAt) rlStop(true);
+    if (!finished || Date.now() - RL.doneAt > 8000) { RL.cur = null; rlStop(false); }
+  }
+}, 500);
+/* keep the screen on during a workout, if you want it */
+function wakeSync() {
+  var want = wkPrefs().wake && App.view === 'workout' && App.wk && document.visibilityState === 'visible';
+  if (want && !RL.wake && navigator.wakeLock) navigator.wakeLock.request('screen').then(function (l) { RL.wake = l; l.addEventListener('release', function () { RL.wake = null; }); }).catch(function () { RL.wake = null; });
+  else if (!want && RL.wake) { try { RL.wake.release(); } catch (e) { /* ignore */ } RL.wake = null; }
+}
+document.addEventListener('visibilitychange', wakeSync); setInterval(wakeSync, 3000);
+/* the two switches, at the bottom of the workout page */
+var _workout32 = VIEWS.workout;
+VIEWS.workout = function () {
+  var h = _workout32(); if (!App.wk || App.wk.edit) return h;
+  var p = wkPrefs(), ms = 'mediaSession' in navigator, wl = !!navigator.wakeLock;
+  var c = '<section class="card stack rlset"><h3>Rest timer</h3>' +
+    (ms ? '<label class="check"><input type="checkbox" id="rl-lock"' + (p.lock ? ' checked' : '') + '> <span><b>Show the rest timer on the lock screen</b><br><span class="small muted">When your screen turns off between sets, the lock screen shows the time left and your next set, with −15 s / +15 s buttons, and chimes and buzzes when it\'s time to go. It appears as a media player.</span></span></label>' : '') +
+    (wl ? '<label class="check"><input type="checkbox" id="rl-wake"' + (p.wake ? ' checked' : '') + '> <span><b>Keep the screen on during workouts</b><br><span class="small muted">The screen stays on while this page is open. Uses more battery.</span></span></label>' : '') +
+    (!ms && !wl ? '<p class="small muted">This browser can\'t show a lock-screen timer; keep the app open between sets.</p>' : '') + '</section>';
+  var i = h.lastIndexOf('</section>'); return i > 0 ? h.slice(0, i + 10) + c + h.slice(i + 10) : h + c;
+};
+document.addEventListener('change', function (e) {
+  var t = e.target; if (!t || (t.id !== 'rl-lock' && t.id !== 'rl-wake')) return;
+  var k = t.id === 'rl-lock' ? 'restLock' : 'wakeWorkout', v = t.checked;
+  Store.edit('prefs', k, function (S) { S.prefs = S.prefs || {}; S.prefs[k] = v; });
+  if (k === 'restLock' && !v) { RL.cur = null; rlStop(false); }
+  wakeSync(); toast(v ? 'On' : 'Off');
+});
+App.p32.rl = RL;
 
 
 /* ---------------- Garmin polling ---------------- */
