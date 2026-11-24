@@ -649,3 +649,17 @@ edMove = function (key, to) {
   if (ov && isRun && cur !== to && !(st().overrides || {})[to]) Store.editMany([['overrides', cur], ['overrides', to]], function (S) { S.overrides = S.overrides || {}; S.overrides[to] = Object.assign({}, ov, { movedFrom: cur }); delete S.overrides[cur]; });
 };
 App.p32.edMove = function (k, t) { edMove(k, t); };
+
+/* ================= Reminders: one topic, saved the moment it's made, and a one-tap subscribe ================= */
+var _notify32c = VIEWS.notify;
+VIEWS.notify = function () {
+  var saved = ((st().prefs || {}).notify || {}).topic;
+  if (!saved) { var t = App.ui.newTopic || (App.ui.newTopic = ntfyTopic()); Store.edit('prefs', 'notify', function (S) { S.prefs = S.prefs || {}; S.prefs.notify = Object.assign({ on: false, hour: 18, tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC') }, S.prefs.notify || {}, { topic: t }); }); }
+  var h = _notify32c(), topic = ((st().prefs || {}).notify || {}).topic || '';
+  var sub = '<div class="btns" style="margin-top:8px"><a class="btn sm primary" href="ntfy://ntfy.sh/' + encodeURIComponent(topic) + '">Subscribe in ntfy</a></div><p class="tiny muted" style="margin-top:6px">Android: opens ntfy ready to subscribe. Your phone must be subscribed to exactly <b>' + esc(topic) + '</b>. If ntfy shows a different runplan-… topic, unsubscribe from it: that one never gets reminders.</p>';
+  var i = h.indexOf('<button class="btn sm" data-act="nt-copy">Copy</button></div>'); if (i > 0) { var j = i + '<button class="btn sm" data-act="nt-copy">Copy</button></div>'.length; h = h.slice(0, j) + sub + h.slice(j); }
+  return h;
+};
+/* a test always goes to the saved topic, after saving what's on screen */
+var _ntTest32 = ACTIONS['nt-test'];
+ACTIONS['nt-test'] = function () { var n = ntRead(); Store.edit('prefs', 'notify', function (S) { S.prefs = S.prefs || {}; S.prefs.notify = n; }); _ntTest32(); };
