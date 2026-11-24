@@ -14115,6 +14115,77 @@ document.addEventListener('change', function (e) {
 });
 App.p32.rl = RL;
 
+/* ================= Adding an exercise mid-session (and putting back one you removed) ================= */
+/* an added exercise lands in the section you're on, with the right logging type, so it shows up and gets saved */
+var _exaddSave32 = SAVE2.exadd;
+SAVE2.exadd = function () {
+  var w = App.wk; if (!w) return _exaddSave32();
+  var swap = sheetCtx.swap, keepSec = swap != null && w.ex[swap] ? w.ex[swap].sec : w.cur, before = w.ex.length;
+  _exaddSave32();
+  var x = swap != null ? w.ex[swap] : w.ex.length > before ? w.ex[w.ex.length - 1] : null; if (!x) return;
+  if (x.sec == null) x.sec = keepSec;
+  if (!x.kind) x.kind = kindOf(x.n, x.rx);
+  if (!x.rest) x.rest = 75;
+  if (w.removed) w.removed = w.removed.filter(function (r) { return r.n !== x.n; });
+  wkSave(); render();
+};
+/* removing keeps a copy, so it can be put back in one tap */
+var _wkRemove32 = ACTIONS['wk-remove'];
+ACTIONS['wk-remove'] = function (a) { var w = App.wk, x = w && w.ex[a.i]; if (x) { w.removed = (w.removed || []).filter(function (r) { return r.n !== x.n; }).concat([JSON.parse(JSON.stringify(x))]); } _wkRemove32(a); };
+ACTIONS['wk-restore'] = function (a) {
+  var w = App.wk; if (!w || !w.removed) return; var k = -1; w.removed.forEach(function (r, i) { if (r.n === a.n) k = i; }); if (k < 0) return;
+  var x = w.removed.splice(k, 1)[0]; x.sec = w.cur; w.ex.push(x); w.touched = true; wkSave(); closeSheet(); render(); toast(x.n + ' is back');
+};
+var _exaddSheet32 = SHEETS.exadd;
+SHEETS.exadd = function (a) {
+  var h = _exaddSheet32(a), rm = (App.wk && App.wk.removed) || [];
+  if (!rm.length || a.swap != null) return h;
+  return h.replace('</h3>', '</h3><div class="stack tight"><span class="tiny muted">Put back one you removed</span><div class="chips">' + rm.map(function (r) { return '<button type="button" class="chip" data-act="wk-restore" data-arg="' + jattr({ n: r.n }) + '">↺ ' + esc(r.n) + '</button>'; }).join('') + '</div><span class="tiny muted">or add any exercise:</span></div>');
+};
+/* the Add exercise button on every section, not only the last */
+var _workout32b = VIEWS.workout;
+VIEWS.workout = function () {
+  var h = _workout32b(); if (!App.wk) return h;
+  if (h.indexOf('{&quot;sheet&quot;:&quot;exadd&quot;}') >= 0 || h.indexOf('"sheet":"exadd"') >= 0) return h;
+  var btn = '<div class="btns"><button class="btn sm ghost" data-act="sheet" data-arg="' + jattr({ sheet: 'exadd' }) + '">+ Add exercise</button></div>';
+  var i = h.indexOf('<div class="secnav">'); return i > 0 ? h.slice(0, i) + btn + h.slice(i) : h + btn;
+};
+
+/* ================= Lifts added for you after the fact (e.g. by your coach from a message) =================
+   state.liftAdds: [{ id, date, n, s: [{w, r}], note }]. Merged into that day's saved workout once it exists,
+   or into the workout you're doing right now, then cleared. Never overwrites an exercise you logged yourself. */
+function liftAddsApply() {
+  var A = st().liftAdds || []; if (!A.length) return false;
+  var done = [], changed = false, logs = st().logs || {};
+  A.forEach(function (a) {
+    var l = (logs[a.date] || {}).lift;
+    if (l && l.ex) {
+      if (!l.ex[a.n]) {
+        var ss = a.s.map(function (s) { return { w: +s.w || 0, r: +s.r || 0 }; }), best = ss.reduce(function (b, s) { return e1rm(s.w, s.r) > e1rm(b.w, b.r) ? s : b; }, ss[0]);
+        Store.edit('logs', a.date, function (S) { var L = S.logs[a.date].lift; L.ex = L.ex || {}; L.ex[a.n] = { w: best.w, reps: best.r, sets: ss.length, s: ss }; L.vol = Math.round((L.vol || 0) + setsVolume(ss)); });
+        changed = true;
+      }
+      done.push(a.id);
+    } else if (App.wk && App.wk.date === a.date && !App.wk.edit) {
+      if (!App.wk.ex.some(function (x) { return x.n === a.n; })) {
+        var near = App.wk.ex.filter(function (x) { return /row/i.test(x.n); })[0];
+        App.wk.ex.push({ n: a.n, sec: near ? near.sec : App.wk.cur, kind: 'wt', rx: a.s.length + '×' + a.s[0].r, rest: 75, cue: a.note || '', sets: a.s.map(function (s) { return { w: s.w, r: s.r, done: true }; }) });
+        App.wk.touched = true; wkSave(); changed = true;
+      }
+      done.push(a.id);
+    }
+  });
+  if (done.length) Store.edit('liftAdds', null, function (S) { S.liftAdds = (S.liftAdds || []).filter(function (a) { return done.indexOf(a.id) < 0; }); });
+  return changed;
+}
+var _applyG32c = applyGarmin;
+applyGarmin = function () { var r = _applyG32c(); var m = false; try { m = liftAddsApply(); } catch (e) { m = false; } return r || m; };
+var _wkEnd32 = ACTIONS['wk-end'];
+ACTIONS['wk-end'] = function () { _wkEnd32.apply(this, arguments); try { if (liftAddsApply()) render(); } catch (e) { /* ignore */ } };
+ACTIONS['wk-finish'] = ACTIONS['wk-end'];
+var _wkView32 = VIEWS.workout;
+VIEWS.workout = function () { var h = _wkView32(); try { if (App.wk && (st().liftAdds || []).some(function (a) { return a.date === App.wk.date; })) { if (liftAddsApply()) return _wkView32(); } } catch (e) { /* ignore */ } return h; };
+
 
 /* ---------------- Garmin polling ---------------- */
 function pollGarmin(n) {
