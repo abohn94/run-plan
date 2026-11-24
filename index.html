@@ -14030,7 +14030,7 @@ ACTIONS['nt-test'] = function () { var n = ntRead(); Store.edit('prefs', 'notify
 /* ================= Rest timer on the lock screen (and an option to keep the screen on) =================
    Phones won't let a web page draw on the lock screen, but they do show media controls there. During a rest the app
    plays silence and publishes the rest as a "track": the lock screen shows "Rest 1:30 · Next: Back squat, set 3 of 4"
-   with a progress bar that runs down on its own, plus −15 s / +15 s buttons. A chime and a buzz mark the end. */
+   with a progress bar that runs down on its own, plus −15 s / +15 s buttons. A buzz marks the end (no sound, so your music keeps playing). */
 function wkPrefs() { var p = st().prefs || {}; return { lock: p.restLock !== false, wake: !!p.wakeWorkout }; }
 var RL = { audio: null, ctx: null, cur: null, doneAt: 0, wake: null };
 function rlSilence() {
@@ -14045,14 +14045,12 @@ function rlNext() {
   for (var i = 0; i < w.ex.length; i++) { var x = w.ex[i]; if (x.kind === 'wu' || !x.sets) continue; for (var j = 0; j < x.sets.length; j++) if (!x.sets[j].done) return 'Next: ' + (x.n || 'next set') + ', set ' + (j + 1) + ' of ' + x.sets.length; }
   return 'Last set done';
 }
-function rlChime() {
-  try { var C = RL.ctx || (RL.ctx = new (window.AudioContext || window.webkitAudioContext)()); if (C.state === 'suspended') C.resume(); [0, 0.28].forEach(function (t0) { var o = C.createOscillator(), g = C.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(0.0001, C.currentTime + t0); g.gain.exponentialRampToValueAtTime(0.4, C.currentTime + t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, C.currentTime + t0 + 0.22); o.connect(g); g.connect(C.destination); o.start(C.currentTime + t0); o.stop(C.currentTime + t0 + 0.25); }); } catch (e) { /* no audio */ }
+function rlChime() {   /* no sound: a tone would interrupt your music. A buzz only. */
   try { if (navigator.vibrate) navigator.vibrate([300, 120, 300, 120, 300]); } catch (e) { /* ignore */ }
 }
 function rlStart() {
   if (!('mediaSession' in navigator)) return;
   if (!RL.audio) { RL.audio = new Audio(rlSilence()); RL.audio.loop = true; RL.audio.volume = 0.01; }
-  try { RL.ctx = RL.ctx || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { RL.ctx = null; }
   var p = RL.audio.play(); if (p && p.catch) p.catch(function () { /* the phone refused; the in-app timer still works */ });
   var ms = navigator.mediaSession, adj = function (s) { return function () { if (App.rest) { App.rest.end += s * 1000; App.rest.total = Math.max(1, App.rest.total + s); rlUpdate(true); } }; };
   try { ms.setActionHandler('seekbackward', adj(-15)); ms.setActionHandler('seekforward', adj(15)); ms.setActionHandler('previoustrack', adj(-15)); ms.setActionHandler('nexttrack', adj(15)); ms.setActionHandler('pause', function () { App.rest = null; rlStop(); var b = $('#restBar'); if (b) b.hidden = true; }); ms.setActionHandler('play', function () {}); } catch (e) { /* older browsers */ }
@@ -14101,7 +14099,7 @@ VIEWS.workout = function () {
   var h = _workout32(); if (!App.wk || App.wk.edit) return h;
   var p = wkPrefs(), ms = 'mediaSession' in navigator, wl = !!navigator.wakeLock;
   var c = '<section class="card stack rlset"><h3>Rest timer</h3>' +
-    (ms ? '<label class="check"><input type="checkbox" id="rl-lock"' + (p.lock ? ' checked' : '') + '> <span><b>Show the rest timer on the lock screen</b><br><span class="small muted">When your screen turns off between sets, the lock screen shows the time left and your next set, with −15 s / +15 s buttons, and chimes and buzzes when it\'s time to go. It appears as a media player.</span></span></label>' : '') +
+    (ms ? '<label class="check"><input type="checkbox" id="rl-lock"' + (p.lock ? ' checked' : '') + '> <span><b>Show the rest timer on the lock screen</b><br><span class="small muted">When your screen turns off between sets, the lock screen shows the time left and your next set, with −15 s / +15 s buttons, and buzzes when it\'s time to go. It appears as a media player.</span></span></label>' : '') +
     (wl ? '<label class="check"><input type="checkbox" id="rl-wake"' + (p.wake ? ' checked' : '') + '> <span><b>Keep the screen on during workouts</b><br><span class="small muted">The screen stays on while this page is open. Uses more battery.</span></span></label>' : '') +
     (!ms && !wl ? '<p class="small muted">This browser can\'t show a lock-screen timer; keep the app open between sets.</p>' : '') + '</section>';
   var i = h.lastIndexOf('</section>'); return i > 0 ? h.slice(0, i + 10) + c + h.slice(i + 10) : h + c;
