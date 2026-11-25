@@ -1321,3 +1321,21 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .cs-grid b { display: block; font-size: 1.05rem; }
 .cs-grid span { display: block; font-size: .7rem; color: var(--muted); }
 .fl-sum { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; }
+
+/* goal celebration */
+.cele { position: fixed; inset: 0; z-index: 80; display: flex; align-items: safe center; overflow-y: auto; justify-content: center; padding: calc(24px + var(--safe-t)) 20px calc(24px + var(--safe-b)); background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--gold) 28%, var(--bg)) 0%, var(--bg) 70%); overflow: hidden; }
+.cele-card { position: relative; z-index: 2; width: 100%; max-width: 420px; text-align: center; display: grid; gap: 14px; }
+.cele-trophy { width: 112px; height: 112px; margin: 0 auto; filter: drop-shadow(0 10px 30px color-mix(in srgb, var(--gold) 55%, transparent)); animation: celePop .7s cubic-bezier(.2,1.6,.4,1) both; }
+.cele h1 { font-size: 2.6rem; line-height: 1.05; margin: 0; letter-spacing: -.02em; }
+.cele .cele-goal { font-size: 1.25rem; font-weight: 800; color: var(--gold); }
+.cele .cele-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.cele .cele-stats div { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 8px; }
+.cele .cele-stats span { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 800; }
+.cele .cele-stats b { display: block; font-size: 1.3rem; margin-top: 2px; }
+.cele .cele-next { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px; text-align: left; }
+.cele .btns { justify-content: center; }
+.cele-conf { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.cele-conf i { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; opacity: .9; animation: celeFall linear infinite; }
+@keyframes celeFall { 0% { transform: translateY(-20px) rotate(0); } 100% { transform: translateY(110vh) rotate(720deg); } }
+@keyframes celePop { 0% { transform: scale(.3) rotate(-12deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .cele-conf { display: none; } .cele-trophy { animation: none; } }
