@@ -677,51 +677,81 @@ function rlSilence() {
   for (var i = 0; i < n; i++) v.setInt16(44 + i * 2, (i % 2 ? 1 : -1), true);   /* inaudible, but not digital silence (some phones drop pure silence) */
   RL.url = URL.createObjectURL(new Blob([b], { type: 'audio/wav' })); return RL.url;
 }
-function rlNext() {
-  var w = App.wk; if (!w || !w.ex) return '';
-  for (var i = 0; i < w.ex.length; i++) { var x = w.ex[i]; if (x.kind === 'wu' || !x.sets) continue; for (var j = 0; j < x.sets.length; j++) if (!x.sets[j].done) return 'Next: ' + (x.n || 'next set') + ', set ' + (j + 1) + ' of ' + x.sets.length; }
-  return 'Last set done';
-}
 function rlChime() {   /* no sound: a tone would interrupt your music. A buzz only. */
   try { if (navigator.vibrate) navigator.vibrate([300, 120, 300, 120, 300]); } catch (e) { /* ignore */ }
 }
-function rlStart() {
-  if (!('mediaSession' in navigator)) return;
-  if (!RL.audio) { RL.audio = new Audio(rlSilence()); RL.audio.loop = true; RL.audio.volume = 0.01; }
-  var p = RL.audio.play(); if (p && p.catch) p.catch(function () { /* the phone refused; the in-app timer still works */ });
-  var ms = navigator.mediaSession, adj = function (s) { return function () { if (App.rest) { App.rest.end += s * 1000; App.rest.total = Math.max(1, App.rest.total + s); rlUpdate(true); } }; };
-  try { ms.setActionHandler('seekbackward', adj(-15)); ms.setActionHandler('seekforward', adj(15)); ms.setActionHandler('previoustrack', adj(-15)); ms.setActionHandler('nexttrack', adj(15)); ms.setActionHandler('pause', function () { App.rest = null; rlStop(); var b = $('#restBar'); if (b) b.hidden = true; }); ms.setActionHandler('play', function () {}); } catch (e) { /* older browsers */ }
+/* exercises in order, with supersets paired (the app marks the first lift "Superset: alternate with the next lift") */
+function wkGroups(w) {
+  var xs = w.ex.map(function (x, i) { return { x: x, i: i }; }).filter(function (o) { return o.x.kind !== 'wu' && o.x.sets && o.x.sets.length; }), G = [];
+  for (var k = 0; k < xs.length; k++) { var o = xs[k], nx = xs[k + 1]; if (/superset/i.test(o.x.cue || '') && nx && nx.x.sec === o.x.sec) { G.push([o, nx]); k++; } else G.push([o]); }
+  return G;
+}
+/* the set you're on: current section first; in a superset, alternate A, B, A, B */
+function wkNextSet() {
+  var w = App.wk; if (!w || !w.ex) return null;
+  var G = wkGroups(w), ord = G.filter(function (g) { return g[0].x.sec === w.cur; }).concat(G.filter(function (g) { return g[0].x.sec > w.cur; }), G.filter(function (g) { return g[0].x.sec < w.cur; }));
+  for (var a = 0; a < ord.length; a++) {
+    var c = ord[a].map(function (o) { var j = -1; o.x.sets.forEach(function (q, k) { if (j < 0 && !q.done) j = k; }); return { o: o, j: j, d: o.x.sets.filter(function (q) { return q.done; }).length }; }).filter(function (c) { return c.j >= 0; });
+    if (!c.length) continue;
+    c.sort(function (p, q) { return p.d - q.d; });
+    return { i: c[0].o.i, j: c[0].j, x: c[0].o.x, s: c[0].o.x.sets[c[0].j], ss: ord[a].length > 1, part: ord[a].length > 1 ? (ord[a][0].i === c[0].o.i ? 'A' : 'B') : '' };
+  }
+  return null;
+}
+function nsLabel(n) { return n ? (n.ss ? 'Superset ' + n.part + ': ' : '') + n.x.n + ' · set ' + (n.j + 1) + ' of ' + n.x.sets.length : 'All sets done'; }
+function nsDetail(n) { if (!n) return 'End the workout in the app'; var s = n.s, wt = n.x.kind === 'wt' || n.x.kind === 'timedw'; return (wt ? (s.w !== '' && s.w != null ? s.w + ' lb' : 'weight not set') + ' × ' : '') + (s.r ? s.r + ' reps' : n.x.kind === 'timed' || n.x.kind === 'timedw' ? 'timed' : 'reps not set'); }
+function rlArt() { return [{ src: 'pr-192.png', sizes: '192x192', type: 'image/png' }, { src: 'pr-512.png', sizes: '512x512', type: 'image/png' }]; }
+function rlMeta(t, a, al) { var key = t + '|' + a + '|' + al; if (RL.key === key) return; RL.key = key; try { navigator.mediaSession.metadata = new MediaMetadata({ title: t, artist: a, album: al, artwork: rlArt() }); } catch (e) { /* ignore */ } }
+/* log the set you're on, from the lock screen */
+function rlLog() {
+  var n = wkNextSet(); if (!n || !App.wk) return;
+  if (App.wk.cur !== n.x.sec) App.wk.cur = n.x.sec;
+  ACTIONS['wk-done']({ i: n.i, j: n.j });
+  if (n.s.done) { RL.msg = 'Logged ' + n.x.n + ' set ' + (n.j + 1); RL.msgAt = Date.now(); try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) { /* ignore */ } }
+  else { RL.msg = 'Set the weight and reps in the app first'; RL.msgAt = Date.now(); }
   rlUpdate(true);
 }
+function rlSkip() { App.rest = null; RL.cur = null; RL.doneAt = 0; var b = $('#restBar'); if (b) b.hidden = true; rlUpdate(true); }
+function rlMain() { if (App.rest) rlSkip(); else rlLog(); }
+function rlAdj(sec) { return function () { if (App.rest) { App.rest.end += sec * 1000; App.rest.total = Math.max(1, (App.rest.total || 60) + sec); rlUpdate(true); } }; }
+function rlBegin() {
+  if (!('mediaSession' in navigator) || RL.live) return;
+  if (!RL.audio) { RL.audio = new Audio(rlSilence()); RL.audio.loop = true; RL.audio.volume = 0.01; }
+  var p = RL.audio.play(); if (p && p.catch) p.catch(function () { RL.live = false; });
+  RL.live = true; RL.key = '';
+  var ms = navigator.mediaSession, keep = function () { try { RL.audio.play(); ms.playbackState = 'playing'; } catch (e) { /* ignore */ } };
+  try {
+    ms.setActionHandler('previoustrack', rlAdj(-15)); ms.setActionHandler('seekbackward', rlAdj(-15)); ms.setActionHandler('seekforward', rlAdj(15));
+    ms.setActionHandler('nexttrack', rlMain); ms.setActionHandler('pause', function () { rlMain(); keep(); }); ms.setActionHandler('play', keep);
+  } catch (e) { /* older browsers */ }
+  rlUpdate(true);
+}
+function rlEnd() { RL.live = false; RL.cur = null; RL.doneAt = 0; RL.key = ''; try { if (RL.audio) RL.audio.pause(); navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = 'none'; } catch (e) { /* ignore */ } }
 function rlUpdate(force) {
-  if (!App.rest || !('mediaSession' in navigator)) return;
-  var total = App.rest.total || 60, left = Math.max(0, (App.rest.end - Date.now()) / 1000), title = 'Rest ' + mmss(left);
-  if (force || RL.title !== title) {
-    RL.title = title;
-    try { navigator.mediaSession.metadata = new MediaMetadata({ title: title, artist: rlNext(), album: 'Personal Run · ' + (App.wk && App.wk.key && E.LIFT[App.wk.key] ? 'Strength ' + App.wk.key + ': ' + E.LIFT[App.wk.key].name : 'Workout'), artwork: [{ src: 'pr-192.png', sizes: '192x192', type: 'image/png' }, { src: 'pr-512.png', sizes: '512x512', type: 'image/png' }] }); } catch (e) { /* ignore */ }
-    try { navigator.mediaSession.playbackState = 'playing'; navigator.mediaSession.setPositionState({ duration: Math.max(total, 1), position: Math.min(total, Math.max(0, total - left)), playbackRate: 1 }); } catch (e) { /* ignore */ }
+  if (!RL.live || !('mediaSession' in navigator)) return;
+  if (force) RL.key = '';
+  var n = wkNextSet(), w = App.wk, name = w && w.key && E.LIFT[w.key] ? 'Strength ' + w.key + ': ' + E.LIFT[w.key].name : 'Workout', msg = RL.msg && Date.now() - RL.msgAt < 6000 ? RL.msg : '';
+  var ms = navigator.mediaSession;
+  if (App.rest) {
+    var total = App.rest.total || 60, left = Math.max(0, (App.rest.end - Date.now()) / 1000);
+    rlMeta('Rest ' + mmss(left) + ' · next: ' + (n ? n.x.n : 'done'), msg || nsLabel(n).replace(/ · /, ', ') + ' · ' + nsDetail(n), '⏭ skip rest · ⏪ ⏩ 15 s · ' + name);
+    try { ms.playbackState = 'playing'; ms.setPositionState({ duration: Math.max(total, 1), position: Math.min(total, Math.max(0, total - left)), playbackRate: 1 }); } catch (e) { /* ignore */ }
+  } else {
+    var el = w ? Math.max(0, (Date.now() - w.start) / 1000) : 0, done = RL.doneAt && Date.now() - RL.doneAt < 8000;
+    rlMeta((done ? 'Go: ' : '') + nsLabel(n), msg || nsDetail(n) + (n ? ' · ⏭ when done to log it' : ''), 'Workout ' + Math.floor(el / 60) + ' min · ' + name);
+    try { ms.playbackState = 'playing'; if (force) ms.setPositionState({ duration: Math.max(el + 1800, 3600), position: Math.min(el, Math.max(el + 1800, 3600)), playbackRate: 1 }); } catch (e) { /* ignore */ }
   }
 }
-function rlStop(done) {
-  if (done) {
-    try { navigator.mediaSession.metadata = new MediaMetadata({ title: 'Rest done: go', artist: rlNext(), album: 'Personal Run', artwork: [{ src: 'pr-192.png', sizes: '192x192', type: 'image/png' }] }); navigator.mediaSession.setPositionState({ duration: 1, position: 1, playbackRate: 1 }); } catch (e) { /* ignore */ }
-    rlChime(); RL.doneAt = Date.now(); return;
-  }
-  RL.doneAt = 0;
-  try { if (RL.audio) RL.audio.pause(); navigator.mediaSession.metadata = null; navigator.mediaSession.playbackState = 'none'; } catch (e) { /* ignore */ }
-}
-/* follow the in-app rest timer: start, adjust, finish */
+/* the lock-screen card lives for the whole workout once you've started it; it follows the in-app rest timer */
+document.addEventListener('click', function () { if (App.view === 'workout' && App.wk && !App.wk.edit && wkPrefs().lock && !RL.live) rlBegin(); }, true);
 setInterval(function () {
-  var on = wkPrefs().lock, r = App.rest;
-  if (r && on) {
-    if (RL.cur !== r) { RL.cur = r; RL.doneAt = 0; rlStart(); }
-    else rlUpdate(false);
-    if (r.end - Date.now() <= 250 && !RL.doneAt) rlStop(true);
-  } else if (RL.cur) {
-    var finished = RL.cur.end <= Date.now() + 1000;
-    if (finished && !RL.doneAt) rlStop(true);
-    if (!finished || Date.now() - RL.doneAt > 8000) { RL.cur = null; rlStop(false); }
-  }
+  var w = App.wk && !App.wk.edit ? App.wk : null;
+  if (!wkPrefs().lock || !w) { if (RL.live) rlEnd(); return; }
+  if (!RL.live) return;
+  if (App.rest && RL.cur !== App.rest) { RL.cur = App.rest; RL.doneAt = 0; rlUpdate(true); return; }
+  if (App.rest && App.rest.end - Date.now() <= 250 && !RL.doneAt) { RL.doneAt = Date.now(); rlChime(); }
+  if (!App.rest && RL.cur) { if (RL.cur.end <= Date.now() + 1000 && !RL.doneAt) { RL.doneAt = Date.now(); rlChime(); } RL.cur = null; rlUpdate(true); return; }
+  rlUpdate(false);
 }, 500);
 /* keep the screen on during a workout, if you want it */
 function wakeSync() {
@@ -736,7 +766,7 @@ VIEWS.workout = function () {
   var h = _workout32(); if (!App.wk || App.wk.edit) return h;
   var p = wkPrefs(), ms = 'mediaSession' in navigator, wl = !!navigator.wakeLock;
   var c = '<section class="card stack rlset"><h3>Rest timer</h3>' +
-    (ms ? '<label class="check"><input type="checkbox" id="rl-lock"' + (p.lock ? ' checked' : '') + '> <span><b>Show the rest timer on the lock screen</b><br><span class="small muted">When your screen turns off between sets, the lock screen shows the time left and your next set, with −15 s / +15 s buttons, and buzzes when it\'s time to go. It appears as a media player.</span></span></label>' : '') +
+    (ms ? '<label class="check"><input type="checkbox" id="rl-lock"' + (p.lock ? ' checked' : '') + '> <span><b>Workout controls on the lock screen</b><br><span class="small muted">Once you start, the lock screen shows your exercise, set, weight and reps. Between sets it counts down your rest: ⏪ ⏩ change it by 15 s and ⏭ skips it. During a set, ⏭ logs it. It buzzes when rest is over and appears as a media player.</span></span></label>' : '') +
     (wl ? '<label class="check"><input type="checkbox" id="rl-wake"' + (p.wake ? ' checked' : '') + '> <span><b>Keep the screen on during workouts</b><br><span class="small muted">The screen stays on while this page is open. Uses more battery.</span></span></label>' : '') +
     (!ms && !wl ? '<p class="small muted">This browser can\'t show a lock-screen timer; keep the app open between sets.</p>' : '') + '</section>';
   var i = h.lastIndexOf('</section>'); return i > 0 ? h.slice(0, i + 10) + c + h.slice(i + 10) : h + c;
@@ -745,7 +775,7 @@ document.addEventListener('change', function (e) {
   var t = e.target; if (!t || (t.id !== 'rl-lock' && t.id !== 'rl-wake')) return;
   var k = t.id === 'rl-lock' ? 'restLock' : 'wakeWorkout', v = t.checked;
   Store.edit('prefs', k, function (S) { S.prefs = S.prefs || {}; S.prefs[k] = v; });
-  if (k === 'restLock' && !v) { RL.cur = null; rlStop(false); }
+  if (k === 'restLock' && !v) rlEnd();
   wakeSync(); toast(v ? 'On' : 'Off');
 });
 App.p32.rl = RL;
@@ -820,3 +850,4 @@ ACTIONS['wk-end'] = function () { _wkEnd32.apply(this, arguments); try { if (lif
 ACTIONS['wk-finish'] = ACTIONS['wk-end'];
 var _wkView32 = VIEWS.workout;
 VIEWS.workout = function () { var h = _wkView32(); try { if (App.wk && (st().liftAdds || []).some(function (a) { return a.date === App.wk.date; })) { if (liftAddsApply()) return _wkView32(); } } catch (e) { /* ignore */ } return h; };
+App.p32.rlMain = rlMain; App.p32.rlAdj = rlAdj; App.p32.wkNextSet = wkNextSet;
