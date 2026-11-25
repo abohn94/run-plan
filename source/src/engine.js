@@ -778,6 +778,7 @@ function generate(state) {
       return Object.assign({}, p, { timed: true, min: reps * 10, title: (p.type === 'long' ? 'Long run' : p.type === 'recovery' ? 'Recovery run' : 'Easy run') + ', run-walk', steps: [{ k: 'rep', n: reps, work: { min: 9 }, z: 'E', rec: { min: 1, walk: true }, effort: 'easy, then a 1-minute walk' }], note: 'Run 9 minutes, walk 1, ' + reps + ' times. Walk breaks lower the impact without costing fitness.' });
     }); });
   });
+  runnerGoalSlots(prof);
   if (prof.sp && prof.sp.on) applyProgram(weeks, prof);
   if (prof.focus === 'fitness') fitnessCardio(weeks, prof);
   if (prof.cswap) applySwaps(weeks, prof);
@@ -1386,6 +1387,7 @@ function adapt(plan, st, analysis) {
   applyLadder(plan, st);
   plan.statusByWeek = stat;
   plan.mult = mult;
+  if (st && st.profile && st.profile.sp && st.profile.sp.on) progInterfere(plan, st.profile);
   return plan;
 }
 /* Busy weekdays (profile.weekdayMin): easy runs Monday to Friday fit inside your limit; weekends and workouts are left alone */
@@ -2510,7 +2512,7 @@ function applyDaylight(w, st, zz) {
 
 /* ---------------- exports ---------------- */
 var api = {
-  SP_GOALS: SP_GOALS, SP_EMPH: SP_EMPH, SP_POOL: SP_POOL, SP_SPLIT: SP_SPLIT, CARDIO: CARDIO, buildProgram: buildProgram, programOf: programOf, spDefaults: spDefaults, cardioSwap: cardioSwap, progNext: progNext, calFor: calFor, calPending: calPending, spStartLb: spStartLb, ladderNext: ladderNext,
+  SP_GOALS: SP_GOALS, SP_EMPH: SP_EMPH, SP_POOL: SP_POOL, SP_SPLIT: SP_SPLIT, CARDIO: CARDIO, buildProgram: buildProgram, programOf: programOf, spDefaults: spDefaults, cardioSwap: cardioSwap, progNext: progNext, calFor: calFor, calPending: calPending, GOAL_LIFTS: GOAL_LIFTS, spStartLb: spStartLb, ladderNext: ladderNext,
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
   ds: ds, pd: pd, addD: addD, dow: dow, monday: monday, diffD: diffD, today: today, fmtDate: fmtDate,
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,

@@ -19,12 +19,12 @@ var SP_GOALS = {
 };
 var SP_EMPH = { balanced: 'Balanced', glutes: 'Glutes & Legs', upper: 'Upper Body', legs: 'Legs' };
 /* exercise pools, best first. eq: gym > db > band > bw ('bar' needs a pull-up bar). no: limits that rule it out. lad: a calisthenics ladder rung */
-function pe(n, eq, no, cue, lad) { return { n: n, eq: eq, no: no || '', cue: cue, lad: lad || 0, iso: /kickback|Frog pump|Banded hip thrust|abduction|clamshell|side walk|lateral raise|curl$|fly$|pushdown/i.test(n) }; }
+function pe(n, eq, no, cue, lad, goalOnly) { return { n: n, eq: eq, no: no || '', cue: cue, lad: lad || 0, gonly: !!goalOnly, iso: /kickback|Frog pump|Banded hip thrust|abduction|clamshell|side walk|lateral raise|curl$|fly$|pushdown/i.test(n) }; }
 var SP_POOL = {
   squat: [pe('Back squat', 'gym', 'back', 'Brace, sit between the hips, knees track over the toes.'), pe('Leg press', 'gym', '', 'Lower until the hips start to curl, press through the whole foot.'), pe('Front squat', 'gym', 'back', 'Elbows high, sit straight down.'), pe('Goblet squat', 'db', '', 'Hold the bell at the chest, elbows inside the knees at the bottom.'), pe('Heel-elevated goblet squat', 'db', '', 'Heels on a plate, upright torso, deep knee bend for the quads.'), pe('Banded squat', 'band', '', 'Band under the feet and over the shoulders, sit back and stand tall.'),
     pe('Bodyweight squat', 'bw', '', 'Sit back and down, chest up, 3 s lowering.', 1), pe('Split squat', 'bw', 'knees', 'Long stance, back knee lowers straight down.', 2), pe('Bulgarian split squat', 'bw', 'knees', 'Rear foot on a bench, most weight on the front leg.', 3), pe('Shrimp squat', 'bw', 'knees', 'Hold the back foot, lower the back knee to the floor under control.', 4)],
-  hinge: [pe('Barbell Romanian deadlift', 'gym', 'back', 'Soft knees, push the hips back, bar slides down the thighs.'), pe('Trap-bar deadlift', 'gym', '', 'Push the floor away, hips and shoulders rise together.'), pe('45° back extension', 'gym', '', 'Round slightly over the pad, squeeze the glutes to come up.'), pe('Dumbbell Romanian deadlift', 'db', '', 'Hips back, dumbbells close to the legs, flat back.'), pe('Dumbbell single-leg Romanian deadlift', 'db', '', 'Reach the free leg long, hips square.'), pe('Banded good morning', 'band', 'back', 'Band behind the neck, hinge at the hips with a flat back.'),
-    pe('Single-leg Romanian deadlift (bodyweight)', 'bw', '', 'Reach long and slow, 3 s down.', 1), pe('Sliding leg curl', 'bw', '', 'Hips up, slide the heels in and out on a towel.', 2), pe('Nordic hamstring curl', 'bw', 'knees', 'Anchor the ankles, lower as slowly as you can.', 3)],
+  hinge: [pe('Barbell Romanian deadlift', 'gym', 'back', 'Soft knees, push the hips back, bar slides down the thighs.'), pe('Trap-bar deadlift', 'gym', '', 'Push the floor away, hips and shoulders rise together.'),  pe('45° back extension', 'gym', '', 'Round slightly over the pad, squeeze the glutes to come up.'), pe('Dumbbell Romanian deadlift', 'db', '', 'Hips back, dumbbells close to the legs, flat back.'), pe('Dumbbell single-leg Romanian deadlift', 'db', '', 'Reach the free leg long, hips square.'), pe('Banded good morning', 'band', 'back', 'Band behind the neck, hinge at the hips with a flat back.'),
+    pe('Single-leg Romanian deadlift (bodyweight)', 'bw', '', 'Reach long and slow, 3 s down.', 1), pe('Sliding leg curl', 'bw', '', 'Hips up, slide the heels in and out on a towel.', 2), pe('Nordic hamstring curl', 'bw', 'knees', 'Anchor the ankles, lower as slowly as you can.', 3), pe('Conventional deadlift', 'gym', 'back', 'Bar over mid-foot, lats tight, push the floor away.', 0, 1)],
   glute: [pe('Barbell hip thrust', 'gym', '', 'Shoulders on the bench, chin tucked, drive the hips up and squeeze 1 s.'), pe('B-stance hip thrust', 'gym', '', 'One foot forward does most of the work; squeeze at the top.'), pe('Cable kickback', 'gym', '', 'Slight hinge, kick back and up, no lower-back arch.'), pe('Dumbbell hip thrust', 'db', '', 'Dumbbell on the hips, pause 1 s at the top.'), pe('Banded hip thrust', 'band', '', 'Band across the hips, pinned under the hands or the bench.'), pe('Frog pump', 'bw', '', 'Soles together, knees out, short fast squeezes.'),
     pe('Glute bridge', 'bw', '', 'Squeeze at the top for 2 s, ribs down.', 1), pe('Single-leg glute bridge', 'bw', '', 'One knee hugged in, drive through the working heel.', 2), pe('Single-leg hip thrust', 'bw', '', 'Shoulders on a bench or couch, full range, 1 s squeeze.', 3)],
   lunge: [pe('Dumbbell Bulgarian split squat', 'db', 'knees', 'Rear foot up, lean slightly forward for more glute.'), pe('Dumbbell walking lunge', 'db', 'knees', 'Long steps, back knee kisses the floor.'), pe('Dumbbell step-up', 'db', '', 'Whole foot on the box, drive through the heel, slow down.'), pe('Dumbbell reverse lunge', 'db', '', 'Step back long, front shin vertical.'), pe('Reverse lunge', 'bw', '', 'Step back, tall torso, push through the front heel.'), pe('Step-up', 'bw', '', 'Use a sturdy step or bench, lower slowly.')],
@@ -88,6 +88,7 @@ function spDefaults(sp) {
 function spPick(pat, sp, k, used, role) {
   var eqOK = SP_EQ[sp.equip] || SP_EQ.gym, lim = sp.limits || [], calis = sp.style === 'calis';
   var ok = (SP_POOL[pat] || []).filter(function (e) {
+    if (e.gonly) return false;
     var eq = e.eq === 'bar' ? (sp.equip === 'gym' || sp.bar) : eqOK.indexOf(e.eq) >= 0;
     return eq && !lim.some(function (l) { return e.no.indexOf(l) >= 0; });
   });
@@ -139,16 +140,92 @@ function buildProgram(spIn, prof) {
     var name = T[0] + (split.length > 3 && seen ? ' (2)' : '');
     return { key: 'P' + (di + 1), name: name, focus: g.short + ' · ' + SP_EMPH[sp.emph].toLowerCase() + ': ' + exs.filter(function (x) { return x.role === 'main' || x.role === 'pow'; }).map(function (x) { return x.n.toLowerCase(); }).join(', ') + '.', blocks: blocks, prog: true, tmpl: tk };
   });
+  var gl = tailorGoals(days, split, sp, prof);
+  /* keep each session within its time: drop accessories first, then the last non-goal lift */
+  days.forEach(function (d) {
+    var cnt = function () { return d.blocks.reduce(function (a, b) { return a + b.ex.filter(function (x) { return !x.wu; }).length; }, 0) - (d.blocks[0] && d.blocks[0].t === 'Warm-up' ? 0 : 0); };
+    var lim = n + (g.power ? 1 : 0), acc = d.blocks.filter(function (b) { return b.t === 'Accessories'; })[0], main = d.blocks.filter(function (b) { return b.t === 'Main lifts'; })[0];
+    var lastFree = function (arr) { for (var i = arr.length - 1; i >= 0; i--) if (!arr[i].goal && !arr[i].helper) return i; return -1; };
+    while (cnt() > lim) { if (acc && lastFree(acc.ex) >= 0) acc.ex.splice(lastFree(acc.ex), 1); else if (main) { var j = -1; main.ex.forEach(function (x, i) { if (!x.goal && !x.helper) j = i; }); if (j < 0) break; main.ex.splice(j, 1); } else break; }
+    d.blocks = d.blocks.filter(function (b) { return b.ex.length; });
+    if (main) { var RK = { gH: 0, gV: 1, main: 2, sec: 3 }; main.ex = main.ex.map(function (x, i) { return [x, i]; }).sort(function (a, b) { return ((RK[a[0].role] != null ? RK[a[0].role] : 4) - (RK[b[0].role] != null ? RK[b[0].role] : 4)) || a[1] - b[1]; }).map(function (a) { return a[0]; }); }
+  });
+  days.forEach(function (d) { d.focus = d.focus.replace(/: [^:]*$/, ': ' + d.blocks.reduce(function (a, b) { return a.concat(b.ex.filter(function (x) { return x.role === 'main' || x.role === 'pow' || x.role === 'gH' || x.role === 'gV'; })); }, []).map(function (x) { return x.n.toLowerCase(); }).join(', ') + '.'); });
   /* weekly hard sets per muscle (direct work; compound lifts count for each muscle listed) */
   var vol = {};
   days.forEach(function (d) { d.blocks.forEach(function (b) { b.ex.forEach(function (x) { if (!x.pat) return; var s = +(String(x.rx[0]).split('×')[0]) || 0; (SP_MUSC[x.pat] || '').split(' ').filter(Boolean).forEach(function (m) { vol[m] = (vol[m] || 0) + s; }); }); }); });
   var nm = (sp.style === 'calis' ? 'Calisthenics ' : '') + (sp.emph !== 'balanced' ? SP_EMPH[sp.emph] + ' ' : '') + g.name;
-  return { name: nm, goal: sp.goal, sp: sp, days: days, vol: vol, desc: g.d };
+  return { name: nm, goal: sp.goal, sp: sp, days: days, vol: vol, desc: g.d, goals: gl };
+}
+/* ---- lifting goals: build the program around them ----
+   profile.lgoals = [{id, k, n (exercise), w (target lb), r (reps, 1 = one-rep max), by (optional date)}] */
+var GOAL_LIFTS = {
+  bench: { label: 'Bench press', n: 'Barbell bench press', alt: 'Dumbbell bench press', pat: 'hpush', up: 1 },
+  squat: { label: 'Squat', n: 'Back squat', alt: 'Goblet squat', pat: 'squat' },
+  deadlift: { label: 'Deadlift', n: 'Conventional deadlift', alt: 'Trap-bar deadlift', pat: 'hinge' },
+  ohp: { label: 'Overhead press', n: 'Standing barbell overhead press', alt: 'Seated dumbbell overhead press', pat: 'vpush', up: 1 },
+  hipthrust: { label: 'Hip thrust', n: 'Barbell hip thrust', alt: 'Dumbbell hip thrust', pat: 'glute' },
+  pullup: { label: 'Pull-up', n: 'Pull-up', alt: 'Negative pull-up', pat: 'vpull', up: 1 },
+  frontsquat: { label: 'Front squat', n: 'Front squat', alt: 'Goblet squat', pat: 'squat' },
+  rdl: { label: 'Romanian deadlift', n: 'Barbell Romanian deadlift', alt: 'Dumbbell Romanian deadlift', pat: 'hinge' }
+};
+function poolEntry(n) { var out = null; Object.keys(SP_POOL).forEach(function (k) { SP_POOL[k].forEach(function (e) { if (!out && e.n === n) out = { e: e, pat: k }; }); }); return out; }
+function goalUsable(e, sp) { var eqOK = SP_EQ[sp.equip] || SP_EQ.gym, ok = e.eq === 'bar' ? (sp.equip === 'gym' || sp.bar) : eqOK.indexOf(e.eq) >= 0; return ok && !(sp.limits || []).some(function (l) { return e.no.indexOf(l) >= 0; }); }
+var RISKY = { bench: 1, squat: 1, frontsquat: 1, ohp: 1 };
+var SOLO_HELP = { hpush: 'Dumbbell bench press', squat: 'Leg press', vpush: 'Seated dumbbell overhead press' };
+/* liftSetup: {spot: 'partner'|'safeties'|'solo', pdows: [weekdays you lift with a partner]} — unknown counts as alone */
+function liftSafe(setup, dow, k) {
+  setup = setup || {};
+  if (setup.spot === 'partner') return !setup.pdows || !setup.pdows.length || setup.pdows.indexOf(dow) >= 0 || (setup.rack && k !== 'ohp');
+  if (setup.spot === 'safeties') return k !== 'ohp';
+  return false;
+}
+var UPPER_T = ['U1', 'U2', 'PU', 'PL', 'AR', 'GU'], LOWER_T = ['L1', 'L2', 'LG', 'GL', 'GL2'];
+function tailorGoals(days, split, sp, prof) {
+  var goals = ((prof && prof.lgoals) || []).filter(function (g) { return g && g.n && g.on !== false; }), out = [], race = prof && prof.focus === 'both', heavyLow = {}, setup = (prof && prof.liftSetup) || {};
+  goals.forEach(function (g) {
+    var G = GOAL_LIFTS[g.k] || {}, pe0 = poolEntry(g.n), pat = (pe0 && pe0.pat) || G.pat; if (!pat) { out.push({ id: g.id, n: g.n, status: 'unknown' }); return; }
+    var use = pe0 && goalUsable(pe0.e, sp) ? pe0.e : null;
+    if (!use && G.alt) { var a = poolEntry(G.alt); if (a && goalUsable(a.e, sp)) use = a.e; }
+    if (!use) { out.push({ id: g.id, n: g.n, status: 'blocked' }); return; }
+    var lower = !G.up && /squat|hinge|glute|lunge/.test(pat), heavy, vol;
+    /* how you lift decides how heavy the low-rep work gets: near-max sets only with a spotter (or safety bars on rack lifts) */
+    var risky = RISKY[g.k] || /bench|squat|overhead/i.test(use.n), safeDay = function (di) { return !risky || liftSafe(setup, sp.dows[di], g.k); };
+    if (sp.exp === 'new') { heavy = '3×5–8'; vol = '2×8–10'; }
+    else if (race && lower) { heavy = '3×3–5'; vol = '2×6–8'; }
+    else { heavy = '4×3–5'; vol = '3×6–8'; }
+    var soloHeavy = sp.exp === 'new' ? '3×6–10' : race && lower ? '3×6–8' : '4×6–8', soloVol = sp.exp === 'new' ? '2×10–12' : '3×8–12';
+    var rxA = function (r) { var n = +r.split('×')[0]; return [r, r, r, Math.max(2, n - 1) + '×' + r.split('×')[1]]; };
+    /* days that already train this movement get the goal lift; make sure it's trained at least twice a week */
+    var hits = [];
+    days.forEach(function (d, di) { d.blocks.forEach(function (b) { b.ex.forEach(function (x, xi) { if (x.pat === pat && !x.goal && hits.filter(function (h) { return h.di === di; }).length === 0) hits.push({ di: di, b: b, xi: xi }); }); }); });
+    if (hits.length < 2) {
+      var pref = days.map(function (d, di) { return di; }).filter(function (di) { return !hits.some(function (h) { return h.di === di; }) && (G.up ? LOWER_T.indexOf(split[di]) < 0 : UPPER_T.indexOf(split[di]) < 0); });
+      pref.slice(0, 2 - hits.length).forEach(function (di) { var b = days[di].blocks.filter(function (x) { return x.t === 'Main lifts'; })[0]; if (!b) return; b.ex.push(ex(use.n, use.cue, ['x', 'x', 'x', 'x'], '2:30')); b.ex[b.ex.length - 1].pat = pat; hits.push({ di: di, b: b, xi: b.ex.length - 1 }); var acc = days[di].blocks.filter(function (x) { return x.t === 'Accessories'; })[0]; if (acc && acc.ex.length > 1) acc.ex.pop(); });
+    }
+    /* two lower-body goals (squat and deadlift) take their heavy day on different days */
+    var hk = 0; if (lower && hits.length > 1) { var best = 1e9; hits.forEach(function (h, k) { var c = heavyLow[h.di] || 0; if (c < best) { best = c; hk = k; } }); }
+    if (risky && !safeDay(hits[hk].di)) { var sk = hits.findIndex(function (h) { return safeDay(h.di); }); if (sk >= 0) hk = sk; }   /* heavy day on a day you have a spotter */
+    hits.forEach(function (h, k) {
+      var heavyDay = k === hk || (hits.length > 2 && k === (hk + 2) % hits.length);
+      if (heavyDay && lower) heavyLow[h.di] = (heavyLow[h.di] || 0) + 1;
+      var safe = safeDay(h.di), rxs = heavyDay ? (safe ? heavy : soloHeavy) : (safe ? vol : soloVol);
+      var cue = use.cue + (heavyDay ? (safe ? ' Goal lift: heavy day, last rep at RPE 8.' + (risky ? ' Have your spotter ready or the safety bars set.' : '') : ' Goal lift, lifting alone: stop every set with 2 good reps left. Set the safety arms just below the bottom position if your rack has them. Progress by adding reps, then weight.') : ' Goal lift: volume day, crisp reps at RPE 7.' + (!safe && risky ? ' Stop 2 reps short when lifting alone.' : ''));
+      var it = ex(use.n, cue, rxA(rxs), heavyDay ? (lower ? '3:00' : '2:30') : '2:00');
+      it.pat = pat; it.role = heavyDay ? 'gH' : 'gV'; it.goal = g.id; it.solo = !safe;
+      h.b.ex.splice(h.xi, 1); var mb = days[h.di].blocks.filter(function (x) { return x.t === 'Main lifts'; })[0] || h.b; mb.ex.unshift(it);
+    });
+        /* lifting alone on this lift: add a dumbbell or machine version you can push hard safely, on the volume day */
+    var solo = hits.some(function (h) { return !safeDay(h.di); }), helper = null;
+    if (solo && risky && SOLO_HELP[pat]) { var hp = poolEntry(SOLO_HELP[pat]); var vd = hits.filter(function (h, k) { return k !== hk; })[0]; if (hp && goalUsable(hp.e, sp) && vd) { var acc = days[vd.di].blocks.filter(function (x) { return x.t === 'Accessories'; })[0] || days[vd.di].blocks.filter(function (x) { return x.t === 'Main lifts'; })[0]; if (acc && !acc.ex.some(function (x) { return x.n === hp.e.n; })) { var he = ex(hp.e.n, hp.e.cue + ' Safe to push close to failure without a spotter: this is where you add the heavy effort.', rxA('3×6–10'), '2:00'); he.pat = pat; he.role = 'sec'; he.helper = g.id; acc.ex.unshift(he); helper = hp.e.n; } } }
+    out.push({ id: g.id, n: g.n, use: use.n, status: use.n === g.n ? 'in' : 'alt', days: hits.map(function (h) { return h.di; }), heavyDi: hits[hk] && hits[hk].di, heavy: safeDay(hits[hk].di) ? heavy : soloHeavy, vol: hits.length > 1 && safeDay(hits[(hk + 1) % hits.length].di) ? vol : soloVol, lower: lower, solo: solo && risky, helper: helper });
+  });
+  return out;
 }
 var _progCache = { k: null, p: null };
 function programOf(prof) {
   if (!prof || !prof.sp || !prof.sp.on) return null;
-  var k = JSON.stringify([prof.sp, prof.weightKg]); if (_progCache.k === k) return _progCache.p;
+  var k = JSON.stringify([prof.sp, prof.weightKg, prof.lgoals || null, prof.focus || '', prof.liftSetup || null]); if (_progCache.k === k) return _progCache.p;
   var p = buildProgram(prof.sp, prof); p.days.forEach(function (d) { LIFT[d.key] = d; }); _progCache = { k: k, p: p }; return p;
 }
 /* place the program's sessions on the chosen weekdays, replacing the plan's standard lifts */
@@ -160,8 +237,8 @@ function applyProgram(weeks, prof) {
     w.days.forEach(function (d) { var keep = d.parts.filter(function (p) { return p.type !== 'strength'; }); d.parts = keep.length ? keep : [restPart()]; });
     dows.forEach(function (dw, j) {
       var d = w.days.filter(function (x) { return pd(x.date).getDay() === dw; })[0]; if (!d) return;
-      var day = P.days[j], lp = light || raceWk ? 3 : 0;
-      var part = { type: 'strength', role: 'lift', key: day.key, v: 0, lp: lp, title: day.name, min: P.sp.len, note: (lp === 3 ? (raceWk ? 'Race week: lighter session, one fewer set. ' : 'Deload week: one fewer set and about 10% lighter, so you come back stronger. ') : '') + day.focus, prog: true };
+      var day = P.days[j], lp = light || raceWk ? 3 : 0, why = lp === 3 ? (raceWk ? 'Race week: lighter session, one fewer set. ' : 'Deload week: one fewer set and about 10% lighter, so you come back stronger. ') : '';
+      var part = { type: 'strength', role: 'lift', key: day.key, v: 0, lp: lp, title: day.name, min: P.sp.len, note: why + day.focus, prog: true };
       if (d.parts.length === 1 && d.parts[0].type === 'rest') d.parts = [part]; else d.parts.push(part);
     });
     w.tot = totals(w.days); w.progLight = light;
@@ -192,6 +269,7 @@ var PN_LOWER = /squat|deadlift|lunge|leg press|hip thrust|rdl|romanian|step.?up|
 /* double progression for a rep range ("3×8–12"): h = [{date, sets:[{w, r}]}] oldest first */
 function progNext(n, rx, h, lp, c) {
   var m = /(\d+)\s*×\s*(\d+)\s*[–-]\s*(\d+)/.exec(String(rx || '')); c = c || {}; if (!m) return null;
+  if (/light/i.test(rx)) lp = 3;   /* lighter-legs day before a key run */
   var sets = +m[1], lo = +m[2], hi = +m[3], inc = PN_DB.test(n) ? 5 : PN_LOWER.test(n) ? 10 : 5, per = PN_DB.test(n) ? ' per hand' : '';
   var out = { text: '', w: null, r: lo, kind: 'start' };
   if (!h || !h.length) {
@@ -232,3 +310,66 @@ function calFor(cal, prefs) {
   return out;
 }
 function calPending(cal, prefs) { var src = (prefs && prefs.calSrc) || {}; return cal && cal.by ? cal.by.filter(function (b) { return !src[b.key] || src[b.key].mine == null; }) : []; }
+
+/* running comes first for race training (run after the plan has been adjusted for shifts and moves):
+   no lifting on race day or the day before, taper weeks hold strength, heavy legs stay off the day before a key run.
+   Concurrent training doesn't blunt max strength or muscle growth (Schumann et al. 2022), but fatigue carries into key runs. */
+function progInterfere(plan, prof) {
+  var P = programOf(prof); if (!P || prof.focus === 'fitness') return;
+  var races = [], days = [];
+  plan.weeks.forEach(function (w) { w.days.forEach(function (d) { days.push(d); d.parts.forEach(function (q) { if (q.type === 'race' && q.priority !== 'C') races.push(d.date); }); }); });
+  days.forEach(function (d, i) {
+    var parts = d.parts, nx = days[i + 1], ch = false;
+    d.parts = parts.map(function (p) {
+      if (!p.prog) return p;
+      var day = P.days.filter(function (x) { return x.key === p.key || x.key + 'L' === p.key; })[0]; if (!day) return p;
+      var toRace = races.filter(function (r) { return r >= d.date; }).map(function (r) { return diffD(d.date, r); })[0];
+      if (toRace != null && toRace <= 1) { ch = true; return null; }
+      if (p.lp === 3 && !/Deload/.test(p.note || '')) return p;
+      var key = nx && nx.parts.filter(function (q) { return q.type === 'long' || q.type === 'speed' || q.type === 'race'; })[0];
+      var legs = day.blocks.some(function (b) { return b.ex.some(function (x) { return /main|sec|gH|gV/.test(x.role || '') && /squat|hinge|lunge|glute/.test(x.pat || ''); }); });
+      if (toRace != null && toRace <= 14) { ch = true; return Object.assign({}, p, { lp: 3, note: 'Taper: strength is held, not built, so your legs are fresh for race day. One fewer set, about 10% lighter. ' + day.focus }); }
+      var same = d.parts.filter(function (q) { return q.type === 'long' || q.type === 'speed'; })[0];
+      if (same && legs && !/Run first/.test(p.note || '')) { ch = true; p = Object.assign({}, p, { note: 'Run first, then lift: ideally 3+ hours after your ' + same.title.toLowerCase() + ', so your legs aren\'t tired for the run and your strength gains aren\'t blunted. ' + (p.note || '') }); }
+      if (key && legs && p.lp !== 3) {
+        /* only the leg work gets lighter (deload sets and weights); upper-body and goal lifts for the upper body stay as written */
+        var lk = day.key + 'L';
+        if (!LIFT[lk] || LIFT[lk]._src !== day) {
+          var LOWP = /squat|hinge|lunge|glute|quad_iso|ham_iso|abd|calf|power/;
+          LIFT[lk] = { key: lk, name: day.name, focus: day.focus, prog: true, _src: day, blocks: day.blocks.map(function (b) { return Object.assign({}, b, { ex: b.ex.map(function (x) { if (x.wu || !LOWP.test(x.pat || '')) return x; var r = x.rx[3] + ' light'; return Object.assign({}, x, { rx: [r, r, r, r], cue: 'Lighter today because of tomorrow\'s key run: about 10% under your usual weight. ' + x.cue }); }) }); }) };
+        }
+        ch = true; return Object.assign({}, p, { key: lk, legsLight: true, note: 'Lighter legs today: tomorrow is your ' + key.title.toLowerCase() + '. Upper body as written. ' + day.focus });
+      }
+      return p;
+    }).filter(Boolean);
+    if (!d.parts.length) d.parts = [restPart('Rest & recover', 'No lifting this close to your race.')];
+  });
+  plan.weeks.forEach(function (w) { w.tot = totals(w.days); });
+}
+
+/* ---- lifting goals inside the standard runner sessions (no program) ----
+   The goal lift takes the matching heavy slot in Strength A or B: same sets, phases and finishers (calf and shin work
+   stays), so the running plan is unchanged. Heavier in base and build, held in peak and taper. */
+var RUN_GOAL_SLOT = { squat: ['A', 0], frontsquat: ['A', 0], bench: ['A', 1], deadlift: ['B', 0], rdl: ['B', 0], ohp: ['B', 1], pullup: ['B', 2] };
+var CUR_LG = null, CUR_SETUP = {};
+function runnerGoalSlots(prof) { CUR_SETUP = (prof && prof.liftSetup) || {}; CUR_LG = prof && !(prof.sp && prof.sp.on) && prof.lgoals && prof.lgoals.length ? prof.lgoals.filter(function (g) { return RUN_GOAL_SLOT[g.k]; }) : null; }
+var _liftMod0 = liftMod;
+liftMod = function (key, v, mix) {
+  var m = _liftMod0(key, v, mix); if (!CUR_LG || !CUR_LG.length || !m || !m.blocks) return m;
+  var keys = [key].concat(mix ? [mix] : []), ch = false;
+  var blocks = m.blocks.map(function (b) {
+    if (!/heavy/i.test(b.t)) return b;
+    var exs = b.ex.slice();
+    CUR_LG.forEach(function (g) {
+      var s = RUN_GOAL_SLOT[g.k]; if (keys.indexOf(s[0]) < 0 || !exs[s[1]]) return;
+      var have = exs.findIndex(function (x) { return x.n === g.n; });
+      if (have >= 0) { if (!exs[have].goal) { var al = RISKY[g.k] && !liftSafe(CUR_SETUP, -1, g.k); exs[have] = Object.assign({}, exs[have], { cue: 'Your goal lift. ' + exs[have].cue + (al ? ' Lifting alone: stop with 2 good reps left and set the safety arms if your rack has them.' : ''), goal: g.id }); ch = true; } return; }
+      var pe0 = poolEntry(g.n), x = exs[s[1]];
+      if (mix) { var re = { squat: /squat/i, frontsquat: /squat/i, bench: /bench|push-up|press$/i, deadlift: /deadlift/i, rdl: /deadlift/i, ohp: /overhead|push press|landmine|arnold/i, pullup: /pull|chin/i }[g.k], j = exs.findIndex(function (y) { return re.test(y.n); }); if (j < 0) return; x = exs[j]; s = [s[0], j]; }
+      var alone = RISKY[g.k] && !liftSafe(CUR_SETUP, -1, g.k);
+      exs[s[1]] = Object.assign({}, x, { n: g.n, cue: 'Your goal lift. ' + (pe0 ? pe0.e.cue : x.cue) + (alone ? ' Lifting alone: stop with 2 good reps left and set the safety arms if your rack has them.' : ''), goal: g.id }); ch = true;
+    });
+    return ch ? Object.assign({}, b, { ex: exs }) : b;
+  });
+  return ch ? Object.assign({}, m, { blocks: blocks }) : m;
+};
