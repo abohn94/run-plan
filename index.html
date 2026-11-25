@@ -3100,9 +3100,14 @@ function compliance(plan, st) {
     w.days.forEach(function (d) {
       var l = logs[d.date] || {};
       ['run', 'xrun'].forEach(function (k) { var r = l[k]; if (r && !r.skip && +r.mi > 0) { act += +r.mi; runs++; long = Math.max(long, +r.mi); } });
-      d.parts.forEach(function (p) { if (isRun(p)) { planned += p.mi || 0; if (p.type === 'long' || p.type === 'speed') { keyP++; if (l.run && !l.run.skip && +l.run.mi > 0) keyD++; } } });
+      var ov = (st.overrides || {})[d.date], f = !ov ? 1 : /^(cross|rest|tread)$/.test(ov.action) ? 0 : ov.action === 'short' ? 0.7 : 1;   /* miles the coach took out don't count as missed */
+      d.parts.forEach(function (p) { if (isRun(p)) { planned += (p.mi || 0) * f; if ((p.type === 'long' || p.type === 'speed') && f > 0 && !(ov && ov.action === 'easy')) { keyP++; if (l.run && !l.run.skip && +l.run.mi > 0) keyD++; } } });
     });
-    weeks.push({ n: w.n, start: w.start, planned: round1(planned), act: round1(act), pct: planned ? act / planned : 1, long: round1(long), runs: runs, keyP: keyP, keyD: keyD });
+    /* a key run you moved to another day still counts: match by what you ran, not by the original date */
+    var keyRan = 0; for (var dd = w.start; dd <= w.end; dd = addD(dd, 1)) { var lr = (logs[dd] || {}).run; if (lr && !lr.skip && +lr.mi > 0 && /^(speed|long|race)$/.test(lr.ptype || '')) keyRan++; }
+    keyD = Math.min(keyP, Math.max(keyD, keyRan));
+    var painWk = ((st.checkins || []).filter(function (c) { return c.date >= w.start && c.date <= w.end && c.pain && (+c.painLvl >= 3 || /walk/i.test(c.note || '')); })).length;
+    weeks.push({ n: w.n, start: w.start, planned: round1(planned), act: round1(act), pct: planned ? act / planned : 1, long: round1(long), runs: runs, keyP: keyP, keyD: keyD, pain: painWk });
     if (weeks.length >= 2) break;
   }
   if (!weeks.length) return null;
@@ -4843,14 +4848,14 @@ VIEWS.plan = function () {
   /* week pager */
   var act2 = weekActual(w), pct = w.tot.mi ? Math.min(100, Math.round(act2 / w.tot.mi * 100)) : 0;
   var mod = w.mod;
-  var modTxt = mod && mod.phase === 'compliance' ? 'Capped at ' + mi(mod.capMi) + ' mi to match what you have been running' : mod ? (mod.phase === 'status' ? E.STATUS[mod.kind].label + ' · ' + E.STATUS[mod.kind].levels[mod.level].label : 'Ramping back, step ' + mod.step + ' of ' + mod.of + ' (' + Math.round(mod.m * 100) + '% of planned miles)') : '';
+  var modTxt = mod && mod.phase === 'compliance' ? 'Set at ' + mi(Math.min(mod.capMi, w.tot.mi)) + ' mi to match what you have been running' : mod ? (mod.phase === 'status' ? E.STATUS[mod.kind].label + ' · ' + E.STATUS[mod.kind].levels[mod.level].label : 'Ramping back, step ' + mod.step + ' of ' + mod.of + ' (' + Math.round(mod.m * 100) + '% of planned miles)') : '';
   html += '<section class="card stack"><div class="pager"><button class="iconbtn" aria-label="Previous week" data-act="nav" data-arg="' + jattr({ to: '#/plan/' + (sel - 1), replace: true }) + '"' + (sel <= 1 ? ' disabled' : '') + '>‹</button>' +
     '<div><div class="ph">' + esc(w.phase.name) + (w.cut ? ' · cutback' : '') + (sel === cur ? ' · this week' : '') + '</div><h2>Week ' + w.n + ' <span class="muted" style="font-size:1rem;font-weight:700">of ' + p.weeks.length + '</span></h2><div class="small muted">' + E.fmtDate(w.start) + ' – ' + E.fmtDate(w.end) + '</div></div>' +
     '<button class="iconbtn" aria-label="Next week" data-act="nav" data-arg="' + jattr({ to: '#/plan/' + (sel + 1), replace: true }) + '"' + (sel >= p.weeks.length ? ' disabled' : '') + '>›</button></div>' +
     '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
     '<div class="grid4"><div class="metric"><span>Planned</span><b>' + mi(w.tot.mi) + ' mi</b></div><div class="metric"><span>Logged</span><b>' + mi(act2) + ' mi</b></div><div class="metric"><span>Runs</span><b>' + w.tot.runs + '</b></div><div class="metric"><span>Gym</span><b>' + w.tot.lifts + '</b></div></div>' +
     (w.notes.length ? '<p class="small muted">' + w.notes.map(esc).join(' ') + '</p>' : '<p class="small muted">' + esc(w.phase.focus) + '</p>') +
-    (mod ? '<div class="banner warn small"><b>' + esc(modTxt) + '.</b> ' + esc(mod.phase === 'compliance' ? 'Your last two weeks came in well under plan, so this week builds from what you actually ran instead of jumping back to the full plan. Hit these runs and next week grows again.' : mod.phase === 'status' ? E.STATUS[mod.kind].levels[mod.level].text : 'Miles are reduced while you rebuild. No catching up on missed runs.') + '</div>' : '') +
+    (mod ? '<div class="banner warn small"><b>' + esc(modTxt) + '.</b> ' + esc(mod.phase === 'compliance' ? 'Recent weeks came in under plan, so this week builds from what you actually ran instead of jumping back to the full plan. Hit these runs and next week grows again.' : mod.phase === 'status' ? E.STATUS[mod.kind].levels[mod.level].text : 'Miles are reduced while you rebuild. No catching up on missed runs.') + '</div>' : '') +
     (sel !== cur ? '<div class="btns"><a class="btn sm" href="#/plan/' + cur + '">Back to this week</a></div>' : '') + '</section>';
   if (typeof advCard === 'function') html += advCard(w);
   /* the days */
@@ -6979,7 +6984,7 @@ function honestCard() {
   var c = App.plan && App.plan.compliance;
   if (!c || c.level === 'ok') return '';
   var wk = c.weeks.slice().reverse();
-  var lines = wk.map(function (x) { return 'Week ' + x.n + ': ' + mi(x.act) + ' of ' + mi(x.planned) + ' mi (' + Math.round(x.pct * 100) + '%)' + (x.keyP ? ', ' + x.keyD + ' of ' + x.keyP + ' key runs' : ''); });
+  var lines = wk.map(function (x) { return 'Week ' + x.n + ': ' + mi(x.act) + ' of ' + mi(x.planned) + ' mi (' + Math.round(x.pct * 100) + '%)' + (x.keyP ? ', ' + x.keyD + ' of ' + x.keyP + ' key runs' : '') + (x.pain ? ', with shin pain' : ''); });
   var cap = c.cap;
   var ev = nextRace(), msg = '';
   if (ev && ev.goal && App.an) {
@@ -6987,8 +6992,8 @@ function honestCard() {
     var gap = (pr - g) / g;
     if (gap > 0.03) msg = 'Today\'s fitness predicts ' + E.clock(pr) + ' for ' + esc(ev.name || d.label) + ' against your ' + esc(ev.goal) + ' goal. ' + wksLeft + ' weeks is enough to close that gap only if most weeks get done. ' + (c.level === 'verylow' && wksLeft < 20 ? 'If the next few weeks look like the last two, it is worth moving the goal to around ' + E.clock(Math.round(pr * 0.985 / 60) * 60) + '.' : 'Consistency matters more than any single workout.');
   }
-  return '<section class="card honest"><div class="eyebrow">Honest check-in</div><h3 style="margin-top:2px">' + (c.level === 'verylow' ? 'You are running well under the plan' : 'You are a bit behind the plan') + '</h3><ul class="plain small" style="margin-top:6px">' + lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>' +
-    '<p class="small" style="margin-top:8px">' + (cap ? 'Jumping straight back to the full plan is how shin splints start, so this week is capped at <b>' + mi(cap.mi) + ' mi</b> (planned ' + mi(cap.planned) + ')' + (cap.long ? ' and the long run at <b>' + cap.long + ' mi</b>' : '') + '. Hit these and next week builds again.' : 'This week is already within a safe step of what you have been running. Aim to get every run in.') + '</p>' +
+  return '<section class="card honest"><div class="eyebrow">Honest check-in</div><h3 style="margin-top:2px">' + (c.weeks.some(function (x) { return x.pain; }) ? 'Easing back in after your shin' : c.level === 'verylow' ? 'You are running well under the plan' : 'You are a bit behind the plan') + '</h3><ul class="plain small" style="margin-top:6px">' + lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>' +
+    '<p class="small" style="margin-top:8px">' + (cap ? 'Jumping straight back to the full plan is how shin splints start, so this week is set at <b>' + mi(Math.min(cap.mi, App.week ? App.week.tot.mi : cap.mi)) + ' mi</b> (the full plan had ' + mi(cap.planned) + ')' + (cap.long ? ' and the long run at <b>' + cap.long + ' mi</b>' : '') + '. Hit these and next week builds again.' : 'This week is already within a safe step of what you have been running. Aim to get every run in.') + '</p>' +
     (msg ? '<p class="small muted" style="margin-top:6px">' + msg + '</p>' : '') +
     '<div class="btns" style="margin-top:10px"><a class="btn sm" href="#/editweek/' + (App.week ? App.week.n : 1) + '">Rearrange this week</a><a class="btn sm ghost" href="#/settings">Fewer run days</a>' + (msg ? '<a class="btn sm ghost" href="#/goals">Review goal</a>' : '') + '</div><p class="tiny muted" style="margin-top:8px">The app sizes your next weeks from what you have been running. <a href="#/settings" data-act="goto-volume">Turn this off</a></p></section>';
 }
@@ -14315,6 +14320,19 @@ VIEWS.today = function () {
   });
 };
 App.p33 = { sysProblems: sysProblems, sysHealth: sysHealth };
+
+/* ================= Effort vs Garmin load: compare like with like =================
+   Lifting has a high felt effort but almost no heart-rate load, so mixing lifts in made runs look "170% harder than
+   the work". Compare only runs, and only runs that have both your rating and Garmin's load. */
+weekEffort = function (ws) {
+  var we = E.addD(ws, 6), srpe = 0, gl = 0, n = 0, rated = 0;
+  activities().forEach(function (a) {
+    if (a.date < ws || a.date > we || a.date > App.today || a.kind !== 'run') return;
+    n++; var r = rpeOf(a), m = sessMin(a), l = loadOf(a);
+    if (r && m && l) { srpe += r * m; gl += l; rated++; }
+  });
+  return { ws: ws, srpe: Math.round(srpe), garmin: Math.round(gl), n: n, rated: rated };
+};
 
 
 /* ---------------- Garmin polling ---------------- */

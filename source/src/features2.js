@@ -303,7 +303,7 @@ function honestCard() {
   var c = App.plan && App.plan.compliance;
   if (!c || c.level === 'ok') return '';
   var wk = c.weeks.slice().reverse();
-  var lines = wk.map(function (x) { return 'Week ' + x.n + ': ' + mi(x.act) + ' of ' + mi(x.planned) + ' mi (' + Math.round(x.pct * 100) + '%)' + (x.keyP ? ', ' + x.keyD + ' of ' + x.keyP + ' key runs' : ''); });
+  var lines = wk.map(function (x) { return 'Week ' + x.n + ': ' + mi(x.act) + ' of ' + mi(x.planned) + ' mi (' + Math.round(x.pct * 100) + '%)' + (x.keyP ? ', ' + x.keyD + ' of ' + x.keyP + ' key runs' : '') + (x.pain ? ', with shin pain' : ''); });
   var cap = c.cap;
   var ev = nextRace(), msg = '';
   if (ev && ev.goal && App.an) {
@@ -311,8 +311,8 @@ function honestCard() {
     var gap = (pr - g) / g;
     if (gap > 0.03) msg = 'Today\'s fitness predicts ' + E.clock(pr) + ' for ' + esc(ev.name || d.label) + ' against your ' + esc(ev.goal) + ' goal. ' + wksLeft + ' weeks is enough to close that gap only if most weeks get done. ' + (c.level === 'verylow' && wksLeft < 20 ? 'If the next few weeks look like the last two, it is worth moving the goal to around ' + E.clock(Math.round(pr * 0.985 / 60) * 60) + '.' : 'Consistency matters more than any single workout.');
   }
-  return '<section class="card honest"><div class="eyebrow">Honest check-in</div><h3 style="margin-top:2px">' + (c.level === 'verylow' ? 'You are running well under the plan' : 'You are a bit behind the plan') + '</h3><ul class="plain small" style="margin-top:6px">' + lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>' +
-    '<p class="small" style="margin-top:8px">' + (cap ? 'Jumping straight back to the full plan is how shin splints start, so this week is capped at <b>' + mi(cap.mi) + ' mi</b> (planned ' + mi(cap.planned) + ')' + (cap.long ? ' and the long run at <b>' + cap.long + ' mi</b>' : '') + '. Hit these and next week builds again.' : 'This week is already within a safe step of what you have been running. Aim to get every run in.') + '</p>' +
+  return '<section class="card honest"><div class="eyebrow">Honest check-in</div><h3 style="margin-top:2px">' + (c.weeks.some(function (x) { return x.pain; }) ? 'Easing back in after your shin' : c.level === 'verylow' ? 'You are running well under the plan' : 'You are a bit behind the plan') + '</h3><ul class="plain small" style="margin-top:6px">' + lines.map(function (l) { return '<li>' + l + '</li>'; }).join('') + '</ul>' +
+    '<p class="small" style="margin-top:8px">' + (cap ? 'Jumping straight back to the full plan is how shin splints start, so this week is set at <b>' + mi(Math.min(cap.mi, App.week ? App.week.tot.mi : cap.mi)) + ' mi</b> (the full plan had ' + mi(cap.planned) + ')' + (cap.long ? ' and the long run at <b>' + cap.long + ' mi</b>' : '') + '. Hit these and next week builds again.' : 'This week is already within a safe step of what you have been running. Aim to get every run in.') + '</p>' +
     (msg ? '<p class="small muted" style="margin-top:6px">' + msg + '</p>' : '') +
     '<div class="btns" style="margin-top:10px"><a class="btn sm" href="#/editweek/' + (App.week ? App.week.n : 1) + '">Rearrange this week</a><a class="btn sm ghost" href="#/settings">Fewer run days</a>' + (msg ? '<a class="btn sm ghost" href="#/goals">Review goal</a>' : '') + '</div><p class="tiny muted" style="margin-top:8px">The app sizes your next weeks from what you have been running. <a href="#/settings" data-act="goto-volume">Turn this off</a></p></section>';
 }

@@ -1571,9 +1571,14 @@ function compliance(plan, st) {
     w.days.forEach(function (d) {
       var l = logs[d.date] || {};
       ['run', 'xrun'].forEach(function (k) { var r = l[k]; if (r && !r.skip && +r.mi > 0) { act += +r.mi; runs++; long = Math.max(long, +r.mi); } });
-      d.parts.forEach(function (p) { if (isRun(p)) { planned += p.mi || 0; if (p.type === 'long' || p.type === 'speed') { keyP++; if (l.run && !l.run.skip && +l.run.mi > 0) keyD++; } } });
+      var ov = (st.overrides || {})[d.date], f = !ov ? 1 : /^(cross|rest|tread)$/.test(ov.action) ? 0 : ov.action === 'short' ? 0.7 : 1;   /* miles the coach took out don't count as missed */
+      d.parts.forEach(function (p) { if (isRun(p)) { planned += (p.mi || 0) * f; if ((p.type === 'long' || p.type === 'speed') && f > 0 && !(ov && ov.action === 'easy')) { keyP++; if (l.run && !l.run.skip && +l.run.mi > 0) keyD++; } } });
     });
-    weeks.push({ n: w.n, start: w.start, planned: round1(planned), act: round1(act), pct: planned ? act / planned : 1, long: round1(long), runs: runs, keyP: keyP, keyD: keyD });
+    /* a key run you moved to another day still counts: match by what you ran, not by the original date */
+    var keyRan = 0; for (var dd = w.start; dd <= w.end; dd = addD(dd, 1)) { var lr = (logs[dd] || {}).run; if (lr && !lr.skip && +lr.mi > 0 && /^(speed|long|race)$/.test(lr.ptype || '')) keyRan++; }
+    keyD = Math.min(keyP, Math.max(keyD, keyRan));
+    var painWk = ((st.checkins || []).filter(function (c) { return c.date >= w.start && c.date <= w.end && c.pain && (+c.painLvl >= 3 || /walk/i.test(c.note || '')); })).length;
+    weeks.push({ n: w.n, start: w.start, planned: round1(planned), act: round1(act), pct: planned ? act / planned : 1, long: round1(long), runs: runs, keyP: keyP, keyD: keyD, pain: painWk });
     if (weeks.length >= 2) break;
   }
   if (!weeks.length) return null;

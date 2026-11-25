@@ -90,3 +90,16 @@ VIEWS.today = function () {
   });
 };
 App.p33 = { sysProblems: sysProblems, sysHealth: sysHealth };
+
+/* ================= Effort vs Garmin load: compare like with like =================
+   Lifting has a high felt effort but almost no heart-rate load, so mixing lifts in made runs look "170% harder than
+   the work". Compare only runs, and only runs that have both your rating and Garmin's load. */
+weekEffort = function (ws) {
+  var we = E.addD(ws, 6), srpe = 0, gl = 0, n = 0, rated = 0;
+  activities().forEach(function (a) {
+    if (a.date < ws || a.date > we || a.date > App.today || a.kind !== 'run') return;
+    n++; var r = rpeOf(a), m = sessMin(a), l = loadOf(a);
+    if (r && m && l) { srpe += r * m; gl += l; rated++; }
+  });
+  return { ws: ws, srpe: Math.round(srpe), garmin: Math.round(gl), n: n, rated: rated };
+};

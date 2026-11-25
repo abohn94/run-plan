@@ -321,14 +321,14 @@ VIEWS.plan = function () {
   /* week pager */
   var act2 = weekActual(w), pct = w.tot.mi ? Math.min(100, Math.round(act2 / w.tot.mi * 100)) : 0;
   var mod = w.mod;
-  var modTxt = mod && mod.phase === 'compliance' ? 'Capped at ' + mi(mod.capMi) + ' mi to match what you have been running' : mod ? (mod.phase === 'status' ? E.STATUS[mod.kind].label + ' · ' + E.STATUS[mod.kind].levels[mod.level].label : 'Ramping back, step ' + mod.step + ' of ' + mod.of + ' (' + Math.round(mod.m * 100) + '% of planned miles)') : '';
+  var modTxt = mod && mod.phase === 'compliance' ? 'Set at ' + mi(Math.min(mod.capMi, w.tot.mi)) + ' mi to match what you have been running' : mod ? (mod.phase === 'status' ? E.STATUS[mod.kind].label + ' · ' + E.STATUS[mod.kind].levels[mod.level].label : 'Ramping back, step ' + mod.step + ' of ' + mod.of + ' (' + Math.round(mod.m * 100) + '% of planned miles)') : '';
   html += '<section class="card stack"><div class="pager"><button class="iconbtn" aria-label="Previous week" data-act="nav" data-arg="' + jattr({ to: '#/plan/' + (sel - 1), replace: true }) + '"' + (sel <= 1 ? ' disabled' : '') + '>‹</button>' +
     '<div><div class="ph">' + esc(w.phase.name) + (w.cut ? ' · cutback' : '') + (sel === cur ? ' · this week' : '') + '</div><h2>Week ' + w.n + ' <span class="muted" style="font-size:1rem;font-weight:700">of ' + p.weeks.length + '</span></h2><div class="small muted">' + E.fmtDate(w.start) + ' – ' + E.fmtDate(w.end) + '</div></div>' +
     '<button class="iconbtn" aria-label="Next week" data-act="nav" data-arg="' + jattr({ to: '#/plan/' + (sel + 1), replace: true }) + '"' + (sel >= p.weeks.length ? ' disabled' : '') + '>›</button></div>' +
     '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
     '<div class="grid4"><div class="metric"><span>Planned</span><b>' + mi(w.tot.mi) + ' mi</b></div><div class="metric"><span>Logged</span><b>' + mi(act2) + ' mi</b></div><div class="metric"><span>Runs</span><b>' + w.tot.runs + '</b></div><div class="metric"><span>Gym</span><b>' + w.tot.lifts + '</b></div></div>' +
     (w.notes.length ? '<p class="small muted">' + w.notes.map(esc).join(' ') + '</p>' : '<p class="small muted">' + esc(w.phase.focus) + '</p>') +
-    (mod ? '<div class="banner warn small"><b>' + esc(modTxt) + '.</b> ' + esc(mod.phase === 'compliance' ? 'Your last two weeks came in well under plan, so this week builds from what you actually ran instead of jumping back to the full plan. Hit these runs and next week grows again.' : mod.phase === 'status' ? E.STATUS[mod.kind].levels[mod.level].text : 'Miles are reduced while you rebuild. No catching up on missed runs.') + '</div>' : '') +
+    (mod ? '<div class="banner warn small"><b>' + esc(modTxt) + '.</b> ' + esc(mod.phase === 'compliance' ? 'Recent weeks came in under plan, so this week builds from what you actually ran instead of jumping back to the full plan. Hit these runs and next week grows again.' : mod.phase === 'status' ? E.STATUS[mod.kind].levels[mod.level].text : 'Miles are reduced while you rebuild. No catching up on missed runs.') + '</div>' : '') +
     (sel !== cur ? '<div class="btns"><a class="btn sm" href="#/plan/' + cur + '">Back to this week</a></div>' : '') + '</section>';
   if (typeof advCard === 'function') html += advCard(w);
   /* the days */
