@@ -410,7 +410,7 @@ function elevSVG(elev) {
 }
 VIEWS.racepace = function () {
   var ev = evById(App.args[0]); if (!ev) return '<section class="card"><p>Race not found.</p></section>';
-  var d = E.distOf(ev), g = E.parseClock(ev.goal), c = ev.course || null;
+  var d = E.distOf(ev), g = E.parseClock(ev.goal), c = ev.course && ev.course.elev ? ev.course : null;
   if (!(g > 0)) return '<section class="card"><h2>Add a goal time first</h2><p class="small muted">The pacing plan is built from your goal.</p><div class="btns"><a class="btn" href="#/goals">Goals</a></div></section>';
   var hz = raceHeat(ev), rp = E.racePacing(d.mi, g, c && c.elev, hz.pct), days = E.diffD(App.today, ev.date);
   var html = '<div class="pagehead"><div class="eyebrow">' + E.fmtDate(ev.date, { weekday: 'long', month: 'long', day: 'numeric' }) + ' · ' + esc(d.label) + '</div><h1>' + esc(ev.name || d.label) + '</h1><p>Even effort for a ' + E.clock(g) + ' finish' + (c ? ' on this course' : ' on a flat course') + ': slower up the hills, a little quicker down them.</p></div>';

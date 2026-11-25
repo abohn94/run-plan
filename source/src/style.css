@@ -1308,3 +1308,16 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .shinrem2 .shinlink { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
 .shinrem2 .shinlink > span:nth-child(2) { display: grid; flex: 1; min-width: 0; }
 .shinrem2 small { color: var(--muted); }
+/* race prep */
+.pt { display: grid; gap: 8px; margin-top: 10px; }
+.pt-row { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; }
+.pt-row b { display: block; font-size: .92rem; }
+.pt-row small { display: block; color: var(--muted); font-size: .8rem; margin-top: 1px; }
+.pt-ck { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: .75rem; font-weight: 800; }
+.pt-row.dn .pt-ck { background: var(--green); border-color: var(--green); color: #0b0b0b; }
+.pt-row.dn b { color: var(--muted); }
+.cs-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.cs-grid > div { background: var(--card2); border-radius: 12px; padding: 8px 6px; text-align: center; }
+.cs-grid b { display: block; font-size: 1.05rem; }
+.cs-grid span { display: block; font-size: .7rem; color: var(--muted); }
+.fl-sum { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 8px; }
