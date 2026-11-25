@@ -778,7 +778,9 @@ function generate(state) {
       return Object.assign({}, p, { timed: true, min: reps * 10, title: (p.type === 'long' ? 'Long run' : p.type === 'recovery' ? 'Recovery run' : 'Easy run') + ', run-walk', steps: [{ k: 'rep', n: reps, work: { min: 9 }, z: 'E', rec: { min: 1, walk: true }, effort: 'easy, then a 1-minute walk' }], note: 'Run 9 minutes, walk 1, ' + reps + ' times. Walk breaks lower the impact without costing fitness.' });
     }); });
   });
+  if (prof.sp && prof.sp.on) applyProgram(weeks, prof);
   if (prof.focus === 'fitness') fitnessCardio(weeks, prof);
+  if (prof.cswap) applySwaps(weeks, prof);
   return { comeback: cbInfo, start: lead[0] || start, weekStart: start, lead: lead, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
 }
 /* General fitness: the plan's run slots become the cardio you chose (runs, treadmill, elliptical, bike, rower, outdoor rides,
@@ -801,7 +803,7 @@ function fitnessCardio(weeks, prof) {
         seen++;
         if (n >= 0 && prof.cardioDays != null && seen > n) return restPart('Rest & recover', 'Full rest or an easy walk. Mobility welcome.');
         var c = CARDIO[types[k++ % types.length]], base = Math.round((p.mi || 3) * 10);
-        if (c.run) return Object.assign({}, p, c.tread ? { treadmill: true, title: p.type === 'long' ? 'Longer treadmill run' : p.title.replace(/^Easy run/, 'Treadmill run') } : {});
+        if (c.run) return Object.assign({}, p, c.tread ? { treadmill: true, title: p.type === 'long' ? 'Longer treadmill run' : /^Easy run/.test(p.title) ? p.title.replace(/^Easy run/, 'Treadmill run') : 'Treadmill ' + p.title.charAt(0).toLowerCase() + p.title.slice(1) } : {});
         var min = p.type === 'long' ? clamp(Math.round(base * c.f / 5) * 5, 35, c.max || 75) : p.type === 'speed' ? clamp(Math.round(base * 0.9 / 5) * 5, 25, 50) : clamp(Math.round(base * c.f / 5) * 5, 20, Math.min(60, c.max || 60));
         var title = c.t + (p.type === 'long' ? ', longer steady' : p.type === 'speed' && c.iv ? ' intervals' : ', easy'), note = p.type === 'speed' && c.iv ? '10 min easy, then ' + c.iv + ', then 5–10 min easy.' : p.type === 'long' ? 'Steady, conversational effort the whole way (RPE 3–4). This is your week\'s endurance session.' : 'Easy, conversational effort (RPE 3–4).';
         return { type: 'cross', role: p.role, title: title, min: min, note: note, cardio: true, ckind: types[(k - 1) % types.length], from: p.title };
@@ -2151,6 +2153,7 @@ function liftAdvice(part, rd, w) {
 
 /* ---------------- Garmin FIT workout export ---------------- */
 /*FIT*/
+/*PROG*/
 var INTENSITY_OF = { wu: 'warmup', cd: 'cooldown', run: 'active' };
 function fitItems(p, zz) {
   var items = [];
@@ -2507,6 +2510,7 @@ function applyDaylight(w, st, zz) {
 
 /* ---------------- exports ---------------- */
 var api = {
+  SP_GOALS: SP_GOALS, SP_EMPH: SP_EMPH, SP_POOL: SP_POOL, SP_SPLIT: SP_SPLIT, CARDIO: CARDIO, buildProgram: buildProgram, programOf: programOf, spDefaults: spDefaults, cardioSwap: cardioSwap,
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
   ds: ds, pd: pd, addD: addD, dow: dow, monday: monday, diffD: diffD, today: today, fmtDate: fmtDate,
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
