@@ -643,6 +643,8 @@ var MIX_SWAP = {
 function generate(state) {
   var prof = Object.assign(defaultProfile(), state.profile || {});
   setWeekStart(prof.weekStart || 0);
+  /* general fitness: size the session slots from the cardio you do, not from running mileage */
+  if (prof.focus === 'fitness') { var cdN = clamp(+prof.cardioDays || 3, 1, 7); prof.runDays = Math.max(3, cdN); prof.mpw = Math.max(+prof.mpw || 0, cdN * 4); prof.longest = Math.max(+prof.longest || 0, 4); prof.goalType = 'fitness'; }
   var elite = prof.level === 'elite';
   var baseM = METHODS[prof.method] || METHODS.balanced;
   /* sub-elite / very experienced: higher peak mileage (about 62 mi for a half, 72 for a marathon in a balanced style), a second key session every week, medium-long runs,
@@ -659,7 +661,7 @@ function generate(state) {
   var otherEvents = events.filter(function (e) { return aEvents.indexOf(e) < 0 && e.date >= start; });
   var last = aEvents.length ? aEvents[aEvents.length - 1].date : addD(start, 7 * 16);
   var nWeeks = Math.max(4, Math.floor(diffD(start, monday(last)) / 7) + 1);
-  if (!aEvents.length) nWeeks = 16;
+  if (!aEvents.length) nWeeks = Math.max(16, Math.floor(diffD(start, today()) / 7) + 13);   /* no race: a rolling plan that always runs at least 12 weeks ahead */
 
   /* fitness at the start */
   var v0 = null;
@@ -776,7 +778,40 @@ function generate(state) {
       return Object.assign({}, p, { timed: true, min: reps * 10, title: (p.type === 'long' ? 'Long run' : p.type === 'recovery' ? 'Recovery run' : 'Easy run') + ', run-walk', steps: [{ k: 'rep', n: reps, work: { min: 9 }, z: 'E', rec: { min: 1, walk: true }, effort: 'easy, then a 1-minute walk' }], note: 'Run 9 minutes, walk 1, ' + reps + ' times. Walk breaks lower the impact without costing fitness.' });
     }); });
   });
+  if (prof.focus === 'fitness') fitnessCardio(weeks, prof);
   return { comeback: cbInfo, start: lead[0] || start, weekStart: start, lead: lead, weeks: weeks, events: events, aEvents: aEvents, method: method, profile: prof, v0: v0 };
+}
+/* General fitness: the plan's run slots become the cardio you chose (runs, treadmill, elliptical, bike, rower, outdoor rides,
+   swims, incline walks), rotated through the week, with the same easy / longer / interval structure and progression. */
+var CARDIO = {
+  run: { t: 'Outdoor run', run: true }, tread: { t: 'Treadmill run', run: true, tread: true },
+  ellip: { t: 'Elliptical', f: 1, iv: '6 × 2 min hard (RPE 7–8) with 2 min easy' }, bike: { t: 'Indoor bike', f: 1, iv: '8 × 1 min hard (RPE 8) with 1 min easy' },
+  row: { t: 'Rower', f: 0.8, iv: '6 × 500 m hard (RPE 7–8) with 2 min easy' }, cycle: { t: 'Outdoor ride', f: 1.6, max: 150, iv: '5 × 3 min hard on a hill or into the wind, 3 min easy' },
+  swim: { t: 'Swim', f: 0.8, iv: '8 × 50 yd hard with 30 s rest' }, walk: { t: 'Incline walk', f: 1.2, iv: '5 × 3 min at a steep incline, 2 min flat' },
+  stairs: { t: 'Stair climber', f: 0.8, iv: '6 × 2 min brisk with 1 min easy' }, hike: { t: 'Hike', f: 2, max: 180, iv: '' }
+};
+function fitnessCardio(weeks, prof) {
+  var types = (prof.cardio && prof.cardio.length ? prof.cardio : ['ellip', 'bike']).filter(function (k) { return CARDIO[k]; }), n = +prof.cardioDays, k = 0;
+  if (!types.length) types = ['ellip'];
+  weeks.forEach(function (w) {
+    var seen = 0;
+    w.days.forEach(function (d) {
+      d.parts = d.parts.map(function (p) {
+        if (!isRun(p) || p.type === 'race') return p;
+        seen++;
+        if (n >= 0 && prof.cardioDays != null && seen > n) return restPart('Rest & recover', 'Full rest or an easy walk. Mobility welcome.');
+        var c = CARDIO[types[k++ % types.length]], base = Math.round((p.mi || 3) * 10);
+        if (c.run) return Object.assign({}, p, c.tread ? { treadmill: true, title: p.type === 'long' ? 'Longer treadmill run' : p.title.replace(/^Easy run/, 'Treadmill run') } : {});
+        var min = p.type === 'long' ? clamp(Math.round(base * c.f / 5) * 5, 35, c.max || 75) : p.type === 'speed' ? clamp(Math.round(base * 0.9 / 5) * 5, 25, 50) : clamp(Math.round(base * c.f / 5) * 5, 20, Math.min(60, c.max || 60));
+        var title = c.t + (p.type === 'long' ? ', longer steady' : p.type === 'speed' && c.iv ? ' intervals' : ', easy'), note = p.type === 'speed' && c.iv ? '10 min easy, then ' + c.iv + ', then 5–10 min easy.' : p.type === 'long' ? 'Steady, conversational effort the whole way (RPE 3–4). This is your week\'s endurance session.' : 'Easy, conversational effort (RPE 3–4).';
+        return { type: 'cross', role: p.role, title: title, min: min, note: note, cardio: true, ckind: types[(k - 1) % types.length], from: p.title };
+      });
+    });
+    w.tot = totals(w.days);
+    var cm = 0, cn = 0; w.days.forEach(function (d) { d.parts.forEach(function (p) { if (p.cardio || (isRun(p) && p.type !== 'race')) { cn++; cm += p.min || Math.round((p.mi || 0) * 10); } }); });
+    w.tot.cardioMin = cm; w.tot.cardio = cn;
+    w.notes = [w.n === 1 ? 'First week. Keep easy sessions conversational and lifting loads around RPE 6–7.' : w.cut ? 'Easier week: shorter sessions so your body absorbs the work.' : 'Sessions build a little each week. Easy days stay easy; the interval day is the only hard cardio.'];
+  });
 }
 
 /* Comeback weeks: runs by time, not distance; walk breaks after a long layoff (or if you asked for them);
@@ -1562,6 +1597,7 @@ function restDayOffer(plan, st, garmin, date, rd) {
   var d = dayAt(w, date); if (!d) return null;
   if (d.parts.some(function (p) { return p.type !== 'rest'; }) || (st.overrides || {})[date]) return null;
   if (rd.level !== 'green' || rd.score < 70) return null;
+  if (st.profile && st.profile.focus === 'fitness') return null;   /* fitness mode: no extra run offers */
   var logs = st.logs || {}, acts = (garmin && garmin.activities) || [], idle = 0;
   for (var i = 1; i <= 4; i++) { var dd = addD(date, -i), l = logs[dd] || {}, active = (l.run && +l.run.mi > 0) || l.lift || acts.some(function (a) { return a.date === dd && (a.run || a.strength); }); if (active) break; idle++; }
   if (idle < 2) return null;

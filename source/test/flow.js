@@ -29,6 +29,7 @@ function gh(route) { const req = route.request(), url = new URL(req.url()), m = 
   log('after connect:', await pg.evaluate(() => location.hash), 'garmin acts', await pg.evaluate(() => (window.Store.garmin || {}).activities.length));
   await pg.goto(U + '#/setup'); await pg.waitForTimeout(400);
   await pg.click('text=Build my plan'); await pg.waitForTimeout(200); await shot('w1');
+  await pg.click('button.opt:has-text("Race training")'); await pg.waitForTimeout(250);
   await pg.click('text=Regular runner'); await pg.waitForTimeout(250); if (await pg.$('text=Continue')) { const h = await pg.innerText('#main'); if (/How would you describe/.test(h)) await pg.click('text=Continue'); }
   await pg.waitForTimeout(200); await pg.click('text=Hit a goal time'); await pg.waitForTimeout(250); if (/What are you training/.test(await pg.innerText('#main'))) await pg.click('text=Continue');
   await pg.waitForTimeout(200);
