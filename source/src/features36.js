@@ -180,7 +180,7 @@ App.p36 = { wizSkip: wizSkip, focusOf: focusOf, cardioHist: cardioHist, raceSetu
 
 /* ---- fitness-mode screens: talk in sessions and minutes, not miles ---- */
 var _recompute36 = recompute;
-recompute = function () { var r = _recompute36.apply(this, arguments); TYPE_LABEL.cross = focusOf() === 'race' ? 'Walk / other' : 'Cardio'; return r; };
+recompute = function () { var r = _recompute36.apply(this, arguments); TYPE_LABEL.cross = focusOf() === 'race' ? 'Walk / other' : 'Cardio'; if (isFitOnly() && App.plan) App.plan.weeks.forEach(function (w) { if (w.phase && w.phase.name !== 'General fitness') w.phase = Object.assign({}, w.phase, { name: 'General fitness', focus: 'Steady cardio, strength that progresses week to week, and enough recovery to absorb it.' }); }); return r; };
 TYPE_LABEL.cross = 'Walk / other';
 function cardioPlan(w) { var n = 0, m = 0; (w && w.days || []).forEach(function (d) { d.parts.forEach(function (p) { if (p.cardio || (E.isRun(p) && p.type !== 'race')) { n++; m += p.min || Math.round((p.mi || 0) * 10); } }); }); return { n: n, min: m }; }
 function cardioWeek(ws) {
@@ -240,4 +240,57 @@ VIEWS.today = function () {
   var h = _today36d(); if (!isFitOnly()) return h;
   h = h.replace(/<section class="card tipc">[\s\S]*?<\/section>/, '').replace(/<section class="card promptcard"><div class="eyebrow">Weekly fitness check<\/div>[\s\S]*?<\/section>/, '');
   return h.replace('ready for the miles ahead', 'ready for the training ahead');
+};
+/* fitness mode: the week header names the training, not a running phase */
+var _plan36c = VIEWS.plan;
+VIEWS.plan = function () { var h = _plan36c.apply(this, arguments); if (!isFitOnly()) return h; return h.replace(/(<div class="ph">)[^<·]*/, '$1General fitness '); };
+/* fitness mode on Today: weekly check-in and report count workouts and cardio minutes, not running miles */
+function fitWeek(ws) {
+  var w = App.plan && E.weekOf(App.plan, ws); if (!w) return null;
+  var p = 0, d = 0, lp = 0, ld = 0;
+  w.days.forEach(function (x) { if (x.date > App.today) return; x.parts.forEach(function (q) { if (q.type === 'rest' || q.type === 'race') return; p++; var ok = false; try { ok = partDone(x.date, q); } catch (e) {} if (ok) d++; if (q.type === 'strength') { lp++; if (ok) ld++; } }); });
+  return { w: w, p: p, d: d, lp: lp, ld: ld, c: cardioWeek(w.start) };
+}
+var OUTDOOR = ['run', 'cycle', 'hike'];
+var _today36e = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today36e(); if (!isFitOnly() || !App.plan) return h;
+  var prof = st().profile || {};
+  h = h.replace(/(<a class="card wkcard"[^>]*>[\s\S]*?<h3>)Week (\d+): [^<]* mi(<\/h3>)/, function (m, a, n, b) { var W = App.plan.weeks[+n - 1], f = W && fitWeek(W.start); return a + 'Week ' + n + (f ? ': ' + f.d + ' of ' + f.p + ' workouts' : '') + b; });
+  h = h.replace(/(<section class="card rpt">[\s\S]*?<div class="eyebrow">Weekly report · [^<]*<\/div>[\s\S]*?<\/div>)([\s\S]*?)(<a class="tiny" href="#\/report\/([\d-]+)">)/, function (m, head, body, link, ws) {
+    var f = fitWeek(ws); if (!f) return m;
+    var nx = App.plan.weeks[f.w.n] ? cardioPlan(App.plan.weeks[f.w.n]) : null;
+    return head + '<div class="spread small"><span>Workouts</span><b>' + f.d + ' of ' + f.p + '</b></div><div class="spread small"><span>Lifts</span><b>' + f.ld + ' of ' + f.lp + '</b></div><div class="spread small"><span>Cardio</span><b>' + f.c.min + ' min</b></div>' +
+      (nx ? '<p class="small" style="margin-top:6px"><b>Next week:</b> ' + plural(nx.n, 'cardio session') + ', about ' + nx.min + ' min' + (App.plan.weeks[f.w.n].cut ? ' (an easier week)' : '') + '.</p>' : '') + link;
+  });
+  h = h.replace(/(<div class="eyebrow">Week \d+ · )[^<]*(<\/div>)/g, '$1General fitness$2').replace(/(<h3[^>]*>Week \d+ · )[^<]*(<\/h3>)/g, '$1General fitness$2');
+  if (!(prof.cardio || []).some(function (k) { return OUTDOOR.indexOf(k) >= 0; })) h = h.replace(/<section class="card cond">[\s\S]*?<\/section>/, '');
+  return h;
+};
+/* fitness mode: weekly report and weekly check-in in workouts and minutes */
+var _rh36 = reportHTML;
+reportHTML = function (r, full) {
+  if (!isFitOnly() || !r || !r.w) return _rh36(r, full);
+  var f = fitWeek(r.w.start); if (!f) return _rh36(r, full);
+  var nw = App.plan.weeks[f.w.n], nx = nw ? cardioPlan(nw) : null, cap = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
+  var good = (r.good || []).filter(function (x) { return !/run|mile|pace|long/i.test(x); });
+  return '<div class="rprow"><span>Workouts</span><b>' + f.d + ' of ' + f.p + '</b></div><div class="rprow"><span>Lifts</span><b>' + f.ld + ' of ' + f.lp + '</b></div><div class="rprow"><span>Cardio</span><b>' + f.c.min + ' min</b></div>' +
+    (good.length ? '<p class="small" style="margin-top:8px"><b>Went well:</b> ' + esc(cap(good.join(', '))) + '.</p>' : '') +
+    (nx ? '<p class="small" style="margin-top:6px"><b>Next week' + (nw.cut ? ' (an easier week)' : '') + ':</b> ' + plural(nx.n, 'cardio session') + ', about ' + nx.min + ' min, and ' + plural(nw.tot.lifts || 0, 'lift') + '.</p>' : '');
+};
+var _rc36 = reportCard;
+reportCard = function () {
+  if (!isFitOnly()) return _rc36();
+  var w = reportWeek(); if (!w || (st().seen || {})['report:' + w.start]) return '';
+  var r = weekReport(w) || {}; r.w = r.w || w; var f = fitWeek(w.start); if (!f || !f.p) return '';
+  return '<section class="card rpt"><div class="spread"><div class="eyebrow">Weekly report · ' + fmtD(w.start, { month: 'short', day: 'numeric' }) + '</div><button class="linkbtn tiny" data-act="report-hide" data-arg="' + jattr({ w: w.start }) + '">Done</button></div>' + reportHTML(r, false) + '<a class="tiny" href="#/report/' + w.start + '">Full report ›</a></section>';
+};
+var _weekly36 = VIEWS.weekly;
+VIEWS.weekly = function () {
+  var h = _weekly36.apply(this, arguments); if (!isFitOnly() || !App.plan) return h;
+  var ws = (h.match(/WEEK \d+|Week (\d+)/) || [])[1], W = ws ? App.plan.weeks[+ws - 1] : null, f = W && fitWeek(W.start); if (!f) return h;
+  var t = function (a, b, c) { return '<div class="tile"><span>' + a + '</span><b>' + b + '</b><em>' + c + '</em></div>'; };
+  h = h.replace(/<div class="tiles">[\s\S]*?<\/div><\/div>(?=<)/, '<div class="tiles">' + t('Workouts', f.d + '/' + f.p, 'done') + t('Lifts', f.ld + '/' + f.lp, 'done') + t('Cardio', f.c.min, 'minutes') + t('Sessions', f.c.n, 'cardio logged') + '</div>');
+  if (!(st().profile.cardio || []).some(function (k) { return k === 'run' || k === 'tread'; })) h = h.replace(/<section class="card"><h3>How training is going<\/h3>[\s\S]*?<\/section>/, '');
+  return h.replace(/ready for the miles ahead/g, 'ready for the training ahead').replace(/<li>[^<]*I still don't know your injury history or past mileage[\s\S]*?<\/li>/, '');
 };

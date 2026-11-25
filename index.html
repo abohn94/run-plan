@@ -3902,8 +3902,8 @@ function spPick(pat, sp, k, used, role) {
   return null;
 }
 function spRx(sp, role, pat, n, bwx) {
-  var g = SP_GOALS[sp.goal] || SP_GOALS.health, r = g.rx[role] || g.rx.acc, sets = r[0] + (role === 'main' || role === 'sec' ? Math.min(2, +sp.vol || 0) : 0);
-  if (sp.exp === 'new' && sets > 3) sets = 3;
+  var g = SP_GOALS[sp.goal] || SP_GOALS.health, r = g.rx[role] || g.rx.acc, sets = sp.exp === 'new' ? Math.min(3, r[0]) : r[0];
+  if (role === 'main' || role === 'sec') sets += Math.min(2, +sp.vol || 0);   /* the coach adds sets once you're consistent */
   if (SP_TIMED.test(n)) { var t = sp.goal === 'endurance' ? 60 : sp.exp === 'new' ? 30 : 45; return [sets + '×' + t + ' s', sets + '×' + t + ' s', sets + '×' + t + ' s', Math.max(2, sets - 1) + '×' + t + ' s']; }
   var lo = r[1], hi = r[2];
   if (bwx && hi < 8) { lo = 5; hi = 8; }   /* bodyweight ladders: 5–8 reps, then move up a rung (Recommended Routine) */
@@ -3979,6 +3979,59 @@ function applySwaps(weeks, prof) {
   var S = prof.cswap; if (!S) return;
   weeks.forEach(function (w) { var ch = false; w.days.forEach(function (d) { d.parts = d.parts.map(function (p) { var k = S[d.date + '|' + (p.role || p.type)]; if (!k || p.type === 'strength' || p.type === 'race' || p.type === 'rest') return p; if (!(p.cardio || p.type === 'cross' || prof.focus === 'fitness')) return p; ch = true; return cardioSwap(p, k, d); }); }); if (ch) w.tot = totals(w.days); });
 }
+
+/* ---- weight suggestions shared by the app and the watch-workout script ---- */
+var SP_START = { 'Barbell hip thrust': [.6, .6], 'B-stance hip thrust': [.3, .3], 'Dumbbell hip thrust': [.25, .25], 'Back squat': [.5, .4], 'Front squat': [.4, .3], 'Leg press': [1, .8], 'Goblet squat': [.2, .15], 'Heel-elevated goblet squat': [.15, .12], 'Barbell Romanian deadlift': [.5, .4], 'Trap-bar deadlift': [.6, .5], 'Dumbbell Romanian deadlift': [.15, .12], 'Dumbbell single-leg Romanian deadlift': [.1, .08], 'Dumbbell Bulgarian split squat': [.08, .06], 'Dumbbell walking lunge': [.08, .06], 'Dumbbell step-up': [.08, .06], 'Dumbbell reverse lunge': [.08, .06], 'Barbell bench press': [.5, .3], 'Dumbbell bench press': [.18, .1], 'Incline dumbbell press': [.15, .08], 'Machine chest press': [.4, .25], 'Seated dumbbell overhead press': [.12, .07], 'Standing barbell overhead press': [.3, .18], 'Landmine press': [.15, .1], 'Dumbbell Arnold press': [.1, .06], 'Seated cable row': [.45, .3], 'Chest-supported dumbbell row': [.15, .1], 'One-arm dumbbell row': [.18, .12], 'Barbell bent-over row': [.4, .25], 'Lat pulldown': [.45, .3], 'Neutral-grip lat pulldown': [.45, .3], 'Dumbbell curl': [.07, .045], 'Hammer curl': [.08, .05], 'Cable curl': [.15, .1], 'Incline dumbbell curl': [.06, .04], 'Cable triceps pushdown': [.2, .12], 'Overhead dumbbell triceps extension': [.12, .07], 'Dumbbell skull crusher': [.06, .04], 'Dumbbell lateral raise': [.05, .03], 'Cable lateral raise': [.04, .03], 'Face pull': [.2, .12], 'Rear-delt dumbbell fly': [.04, .03], 'Cable fly': [.1, .06], 'Dumbbell fly': [.07, .04], 'Leg extension': [.35, .25], 'Seated leg curl': [.3, .2], 'Lying leg curl': [.25, .18], 'Hip abduction machine': [.5, .5], 'Cable hip abduction': [.05, .05], 'Cable kickback': [.06, .06], 'Kettlebell swing': [.15, .12], 'Soleus raise (bent knee)': [.2, .15], 'Cable crunch': [.25, .18] };
+function spStartLb(n, c) {
+  var t = SP_START[n]; c = c || {}; if (!t || !c.bwLb) return null;
+  var w = c.bwLb * t[c.sex === 'F' ? 1 : 0] * ({ new: 1, some: 1.3, exp: 1.6 })[c.exp || 'new'] || 0, step = w < 25 ? 2.5 : 5;
+  return Math.max(step, Math.round(w / step) * step);
+}
+function ladderNext(n) { var out = null; Object.keys(SP_POOL).forEach(function (k) { var L = SP_POOL[k].filter(function (e) { return e.lad; }); L.forEach(function (e, i) { if (e.n === n && L[i + 1] && !out) out = L[i + 1].n; }); }); return out; }
+var PN_LOWER = /squat|deadlift|lunge|leg press|hip thrust|rdl|romanian|step.?up|calf|glute bridge|good morning|hamstring|trap bar/i, PN_DB = /dumbbell|\bdb\b|kettlebell/i;
+/* double progression for a rep range ("3×8–12"): h = [{date, sets:[{w, r}]}] oldest first */
+function progNext(n, rx, h, lp, c) {
+  var m = /(\d+)\s*×\s*(\d+)\s*[–-]\s*(\d+)/.exec(String(rx || '')); c = c || {}; if (!m) return null;
+  var sets = +m[1], lo = +m[2], hi = +m[3], inc = PN_DB.test(n) ? 5 : PN_LOWER.test(n) ? 10 : 5, per = PN_DB.test(n) ? ' per hand' : '';
+  var out = { text: '', w: null, r: lo, kind: 'start' };
+  if (!h || !h.length) {
+    var sw = c.weighted ? spStartLb(n, c) : null; out.w = sw;
+    out.text = sw ? 'First time: start around ' + sw + ' lb' + per + ' for ' + lo + '–' + hi + ' reps (from your body weight and experience). The last rep should feel like a 7 out of 10. Adjust the next set if it\'s much easier or harder.' : c.weighted ? 'First time: pick a weight you could lift about ' + (hi + 2) + ' times, and do ' + lo + '–' + hi + ' reps. Stop with 2 good reps left.' : 'First time: do ' + lo + '–' + hi + ' clean reps per set, stopping 1–2 short of failure.';
+    return out;
+  }
+  var last = h[h.length - 1], topW = last.sets.reduce(function (a, s) { return Math.max(a, +s.w || 0); }, 0), reps = last.sets.map(function (s) { return +s.r || 0; });
+  if (lp >= 3) { out.kind = 'hold'; out.w = topW ? (topW * 0.9 < 25 ? Math.round(topW * 0.9 / 2.5) * 2.5 : Math.round(topW * 0.9 / 5) * 5) : null; out.text = 'Deload: ' + (out.w ? out.w + ' lb, ' : '') + 'one fewer set, stop 3 reps short. Easy on purpose.'; return out; }
+  if (!topW) {
+    out.kind = 'bw'; var all = reps.length >= sets && reps.every(function (r) { return r >= hi; }), nx = ladderNext(n);
+    if (all && nx) { out.next = nx; out.text = 'You hit ' + sets + '×' + hi + '. Time to move up: ' + nx + ', starting at ' + sets + '×' + lo + '.'; }
+    else if (all) { out.r = hi; out.text = 'You hit ' + sets + '×' + hi + '. Hold a dumbbell or a loaded backpack, or slow the lowering to 4 s.'; }
+    else { out.r = Math.min(hi, Math.min.apply(null, reps) + 1); out.text = 'Last time: ' + reps.join(', ') + '. Add a rep per set (aim for ' + out.r + '+), working toward ' + sets + '×' + hi + '.'; }
+    return out;
+  }
+  var top = last.sets.filter(function (s) { return +s.w === topW; }), done = top.length >= sets && top.every(function (s) { return +s.r >= hi; });
+  var tot = function (x) { return x.sets.reduce(function (a, s) { return a + (+s.r || 0); }, 0); }, mx = function (x) { return x.sets.reduce(function (a, s) { return Math.max(a, +s.w || 0); }, 0); };
+  var stuck = 0; for (var i = h.length - 1; i > 0; i--) { if (mx(h[i]) === mx(h[i - 1]) && tot(h[i]) <= tot(h[i - 1])) stuck++; else break; }
+  if (topW < 40) inc = Math.min(inc, 5);
+  if (done) { out.kind = 'up'; out.w = topW + inc; out.r = lo; out.text = 'You reached ' + sets + '×' + hi + ' at ' + topW + ' lb. Go up to ' + out.w + ' lb' + per + ' for ' + lo + '+ reps, then build back to ' + hi + '.'; }
+  else if (stuck >= 2) { out.kind = 'reset'; out.w = Math.round(topW * 0.9 / 5) * 5 || topW; out.r = hi; out.text = 'No rep gains at ' + topW + ' lb for ' + (stuck + 1) + ' sessions. Drop to ' + out.w + ' lb, hit ' + hi + ' clean reps, and build back. Sleep and food matter here too.'; }
+  else { out.kind = 'reps'; out.w = topW; out.r = Math.min(hi, Math.min.apply(null, top.map(function (s) { return +s.r || 0; })) + 1); out.text = 'Stay at ' + topW + ' lb and add a rep per set (last: ' + top.map(function (s) { return s.r; }).join(', ') + '). When every set hits ' + hi + ', add ' + inc + ' lb.'; }
+  return out;
+}
+
+/* ---- whose calendar: only calendars you've confirmed as yours shape your plan ----
+   prefs.calSrc = {calendar key: {mine: true|false, who: 'Steph'}}. Older calendar files (no per-calendar list) are used as they are. */
+var CAL_KEYS = ['shifts', 'busy', 'away', 'starts', 'ends', 'events', 'times'];
+function calFor(cal, prefs) {
+  if (!cal || !cal.by || !cal.by.length) return cal;
+  var src = (prefs && prefs.calSrc) || {}, use = cal.by.filter(function (b) { return src[b.key] && src[b.key].mine === true; });
+  var out = { updated: cal.updated, calendars: use.length, by: cal.by };
+  CAL_KEYS.forEach(function (k) {
+    var m = {}; use.forEach(function (b) { Object.keys(b[k] || {}).forEach(function (d) { var v = b[k][d]; if (k === 'busy' || k === 'events') m[d] = (m[d] || []).concat(v); else if (!(d in m)) m[d] = v; }); });
+    out[k] = m;
+  });
+  return out;
+}
+function calPending(cal, prefs) { var src = (prefs && prefs.calSrc) || {}; return cal && cal.by ? cal.by.filter(function (b) { return !src[b.key] || src[b.key].mine == null; }) : []; }
 
 var INTENSITY_OF = { wu: 'warmup', cd: 'cooldown', run: 'active' };
 function fitItems(p, zz) {
@@ -4220,7 +4273,7 @@ function applyShifts(w, shifts, zz, opts) {
   /* the day after a night shift: easy only */
   w.days.forEach(function (d) {
     var prev = addD(d.date, -1); if (shifts[prev] !== 'night' || d.date < today()) return;
-    d.parts = d.parts.map(function (p) { return p.type === 'speed' ? toEasy(p, 0.8, 'Easy run', 'Easy today: you came off a night shift.') : p; });
+    d.parts = d.parts.map(function (p) { return p.type === 'speed' ? toEasy(p, 0.8, 'Easy run', 'Easy today: you came off a night shift.') : p.cardio && / intervals$/.test(p.title) ? Object.assign({}, p, { title: p.title.replace(/ intervals$/, ', easy'), min: Math.round((p.min || 30) * 0.8 / 5) * 5, note: 'Easy today: you came off a night shift. Conversational effort (RPE 3–4).', changed: true }) : p.prog && p.lp !== 3 ? Object.assign({}, p, { lp: 3, note: 'Lighter today after your night shift: one fewer set, about 10% lighter. ' + (p.note || ''), changed: true }) : p; });
   });
   w.tot = totals(w.days);
 }
@@ -4336,7 +4389,7 @@ function applyDaylight(w, st, zz) {
 
 /* ---------------- exports ---------------- */
 var api = {
-  SP_GOALS: SP_GOALS, SP_EMPH: SP_EMPH, SP_POOL: SP_POOL, SP_SPLIT: SP_SPLIT, CARDIO: CARDIO, buildProgram: buildProgram, programOf: programOf, spDefaults: spDefaults, cardioSwap: cardioSwap,
+  SP_GOALS: SP_GOALS, SP_EMPH: SP_EMPH, SP_POOL: SP_POOL, SP_SPLIT: SP_SPLIT, CARDIO: CARDIO, buildProgram: buildProgram, programOf: programOf, spDefaults: spDefaults, cardioSwap: cardioSwap, progNext: progNext, calFor: calFor, calPending: calPending, spStartLb: spStartLb, ladderNext: ladderNext,
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
   ds: ds, pd: pd, addD: addD, dow: dow, monday: monday, diffD: diffD, today: today, fmtDate: fmtDate,
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
@@ -15024,7 +15077,7 @@ App.p36 = { wizSkip: wizSkip, focusOf: focusOf, cardioHist: cardioHist, raceSetu
 
 /* ---- fitness-mode screens: talk in sessions and minutes, not miles ---- */
 var _recompute36 = recompute;
-recompute = function () { var r = _recompute36.apply(this, arguments); TYPE_LABEL.cross = focusOf() === 'race' ? 'Walk / other' : 'Cardio'; return r; };
+recompute = function () { var r = _recompute36.apply(this, arguments); TYPE_LABEL.cross = focusOf() === 'race' ? 'Walk / other' : 'Cardio'; if (isFitOnly() && App.plan) App.plan.weeks.forEach(function (w) { if (w.phase && w.phase.name !== 'General fitness') w.phase = Object.assign({}, w.phase, { name: 'General fitness', focus: 'Steady cardio, strength that progresses week to week, and enough recovery to absorb it.' }); }); return r; };
 TYPE_LABEL.cross = 'Walk / other';
 function cardioPlan(w) { var n = 0, m = 0; (w && w.days || []).forEach(function (d) { d.parts.forEach(function (p) { if (p.cardio || (E.isRun(p) && p.type !== 'race')) { n++; m += p.min || Math.round((p.mi || 0) * 10); } }); }); return { n: n, min: m }; }
 function cardioWeek(ws) {
@@ -15084,6 +15137,59 @@ VIEWS.today = function () {
   var h = _today36d(); if (!isFitOnly()) return h;
   h = h.replace(/<section class="card tipc">[\s\S]*?<\/section>/, '').replace(/<section class="card promptcard"><div class="eyebrow">Weekly fitness check<\/div>[\s\S]*?<\/section>/, '');
   return h.replace('ready for the miles ahead', 'ready for the training ahead');
+};
+/* fitness mode: the week header names the training, not a running phase */
+var _plan36c = VIEWS.plan;
+VIEWS.plan = function () { var h = _plan36c.apply(this, arguments); if (!isFitOnly()) return h; return h.replace(/(<div class="ph">)[^<·]*/, '$1General fitness '); };
+/* fitness mode on Today: weekly check-in and report count workouts and cardio minutes, not running miles */
+function fitWeek(ws) {
+  var w = App.plan && E.weekOf(App.plan, ws); if (!w) return null;
+  var p = 0, d = 0, lp = 0, ld = 0;
+  w.days.forEach(function (x) { if (x.date > App.today) return; x.parts.forEach(function (q) { if (q.type === 'rest' || q.type === 'race') return; p++; var ok = false; try { ok = partDone(x.date, q); } catch (e) {} if (ok) d++; if (q.type === 'strength') { lp++; if (ok) ld++; } }); });
+  return { w: w, p: p, d: d, lp: lp, ld: ld, c: cardioWeek(w.start) };
+}
+var OUTDOOR = ['run', 'cycle', 'hike'];
+var _today36e = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today36e(); if (!isFitOnly() || !App.plan) return h;
+  var prof = st().profile || {};
+  h = h.replace(/(<a class="card wkcard"[^>]*>[\s\S]*?<h3>)Week (\d+): [^<]* mi(<\/h3>)/, function (m, a, n, b) { var W = App.plan.weeks[+n - 1], f = W && fitWeek(W.start); return a + 'Week ' + n + (f ? ': ' + f.d + ' of ' + f.p + ' workouts' : '') + b; });
+  h = h.replace(/(<section class="card rpt">[\s\S]*?<div class="eyebrow">Weekly report · [^<]*<\/div>[\s\S]*?<\/div>)([\s\S]*?)(<a class="tiny" href="#\/report\/([\d-]+)">)/, function (m, head, body, link, ws) {
+    var f = fitWeek(ws); if (!f) return m;
+    var nx = App.plan.weeks[f.w.n] ? cardioPlan(App.plan.weeks[f.w.n]) : null;
+    return head + '<div class="spread small"><span>Workouts</span><b>' + f.d + ' of ' + f.p + '</b></div><div class="spread small"><span>Lifts</span><b>' + f.ld + ' of ' + f.lp + '</b></div><div class="spread small"><span>Cardio</span><b>' + f.c.min + ' min</b></div>' +
+      (nx ? '<p class="small" style="margin-top:6px"><b>Next week:</b> ' + plural(nx.n, 'cardio session') + ', about ' + nx.min + ' min' + (App.plan.weeks[f.w.n].cut ? ' (an easier week)' : '') + '.</p>' : '') + link;
+  });
+  h = h.replace(/(<div class="eyebrow">Week \d+ · )[^<]*(<\/div>)/g, '$1General fitness$2').replace(/(<h3[^>]*>Week \d+ · )[^<]*(<\/h3>)/g, '$1General fitness$2');
+  if (!(prof.cardio || []).some(function (k) { return OUTDOOR.indexOf(k) >= 0; })) h = h.replace(/<section class="card cond">[\s\S]*?<\/section>/, '');
+  return h;
+};
+/* fitness mode: weekly report and weekly check-in in workouts and minutes */
+var _rh36 = reportHTML;
+reportHTML = function (r, full) {
+  if (!isFitOnly() || !r || !r.w) return _rh36(r, full);
+  var f = fitWeek(r.w.start); if (!f) return _rh36(r, full);
+  var nw = App.plan.weeks[f.w.n], nx = nw ? cardioPlan(nw) : null, cap = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
+  var good = (r.good || []).filter(function (x) { return !/run|mile|pace|long/i.test(x); });
+  return '<div class="rprow"><span>Workouts</span><b>' + f.d + ' of ' + f.p + '</b></div><div class="rprow"><span>Lifts</span><b>' + f.ld + ' of ' + f.lp + '</b></div><div class="rprow"><span>Cardio</span><b>' + f.c.min + ' min</b></div>' +
+    (good.length ? '<p class="small" style="margin-top:8px"><b>Went well:</b> ' + esc(cap(good.join(', '))) + '.</p>' : '') +
+    (nx ? '<p class="small" style="margin-top:6px"><b>Next week' + (nw.cut ? ' (an easier week)' : '') + ':</b> ' + plural(nx.n, 'cardio session') + ', about ' + nx.min + ' min, and ' + plural(nw.tot.lifts || 0, 'lift') + '.</p>' : '');
+};
+var _rc36 = reportCard;
+reportCard = function () {
+  if (!isFitOnly()) return _rc36();
+  var w = reportWeek(); if (!w || (st().seen || {})['report:' + w.start]) return '';
+  var r = weekReport(w) || {}; r.w = r.w || w; var f = fitWeek(w.start); if (!f || !f.p) return '';
+  return '<section class="card rpt"><div class="spread"><div class="eyebrow">Weekly report · ' + fmtD(w.start, { month: 'short', day: 'numeric' }) + '</div><button class="linkbtn tiny" data-act="report-hide" data-arg="' + jattr({ w: w.start }) + '">Done</button></div>' + reportHTML(r, false) + '<a class="tiny" href="#/report/' + w.start + '">Full report ›</a></section>';
+};
+var _weekly36 = VIEWS.weekly;
+VIEWS.weekly = function () {
+  var h = _weekly36.apply(this, arguments); if (!isFitOnly() || !App.plan) return h;
+  var ws = (h.match(/WEEK \d+|Week (\d+)/) || [])[1], W = ws ? App.plan.weeks[+ws - 1] : null, f = W && fitWeek(W.start); if (!f) return h;
+  var t = function (a, b, c) { return '<div class="tile"><span>' + a + '</span><b>' + b + '</b><em>' + c + '</em></div>'; };
+  h = h.replace(/<div class="tiles">[\s\S]*?<\/div><\/div>(?=<)/, '<div class="tiles">' + t('Workouts', f.d + '/' + f.p, 'done') + t('Lifts', f.ld + '/' + f.lp, 'done') + t('Cardio', f.c.min, 'minutes') + t('Sessions', f.c.n, 'cardio logged') + '</div>');
+  if (!(st().profile.cardio || []).some(function (k) { return k === 'run' || k === 'tread'; })) h = h.replace(/<section class="card"><h3>How training is going<\/h3>[\s\S]*?<\/section>/, '');
+  return h.replace(/ready for the miles ahead/g, 'ready for the training ahead').replace(/<li>[^<]*I still don't know your injury history or past mileage[\s\S]*?<\/li>/, '');
 };
 
 /* ================= Tailored strength programs, weight suggestions and cardio swaps =================
@@ -15214,43 +15320,15 @@ ACTIONS['sp-wiz-next'] = function () { var z = App.wiz, d = spDraft('wiz'); if (
 ACTIONS['sp-wiz-skip'] = function () { var z = App.wiz; delete z.profile.sp; z.step++; render(); window.scrollTo(0, 0); };
 
 /* ---- weight suggestions: starting weights, double progression, deloads, bodyweight ladders ---- */
-var SP_START = { 'Barbell hip thrust': [.6, .6], 'B-stance hip thrust': [.3, .3], 'Dumbbell hip thrust': [.25, .25], 'Back squat': [.5, .4], 'Front squat': [.4, .3], 'Leg press': [1, .8], 'Goblet squat': [.2, .15], 'Heel-elevated goblet squat': [.15, .12], 'Barbell Romanian deadlift': [.5, .4], 'Trap-bar deadlift': [.6, .5], 'Dumbbell Romanian deadlift': [.15, .12], 'Dumbbell single-leg Romanian deadlift': [.1, .08], 'Dumbbell Bulgarian split squat': [.08, .06], 'Dumbbell walking lunge': [.08, .06], 'Dumbbell step-up': [.08, .06], 'Dumbbell reverse lunge': [.08, .06], 'Barbell bench press': [.5, .3], 'Dumbbell bench press': [.18, .1], 'Incline dumbbell press': [.15, .08], 'Machine chest press': [.4, .25], 'Seated dumbbell overhead press': [.12, .07], 'Standing barbell overhead press': [.3, .18], 'Landmine press': [.15, .1], 'Dumbbell Arnold press': [.1, .06], 'Seated cable row': [.45, .3], 'Chest-supported dumbbell row': [.15, .1], 'One-arm dumbbell row': [.18, .12], 'Barbell bent-over row': [.4, .25], 'Lat pulldown': [.45, .3], 'Neutral-grip lat pulldown': [.45, .3], 'Dumbbell curl': [.07, .045], 'Hammer curl': [.08, .05], 'Cable curl': [.15, .1], 'Incline dumbbell curl': [.06, .04], 'Cable triceps pushdown': [.2, .12], 'Overhead dumbbell triceps extension': [.12, .07], 'Dumbbell skull crusher': [.06, .04], 'Dumbbell lateral raise': [.05, .03], 'Cable lateral raise': [.04, .03], 'Face pull': [.2, .12], 'Rear-delt dumbbell fly': [.04, .03], 'Cable fly': [.1, .06], 'Dumbbell fly': [.07, .04], 'Leg extension': [.35, .25], 'Seated leg curl': [.3, .2], 'Lying leg curl': [.25, .18], 'Hip abduction machine': [.5, .5], 'Cable hip abduction': [.05, .05], 'Cable kickback': [.06, .06], 'Kettlebell swing': [.15, .12], 'Soleus raise (bent knee)': [.2, .15], 'Cable crunch': [.25, .18] };
 function spBodyLb() { var p = st().profile || {}, kg = +p.weightKg || (GX().who && +GX().who.weightKg) || 0; return kg ? kg * 2.2046 : 0; }
-function spStartW(n) {
-  var t = SP_START[n], sp = (st().profile || {}).sp || {}, bw = spBodyLb(); if (!t || !bw) return null;
-  var w = bw * t[sp.sex === 'F' ? 1 : 0] * ({ new: 1, some: 1.3, exp: 1.6 })[sp.exp || 'new'], step = w < 25 ? 2.5 : 5;
-  return Math.max(step, Math.round(w / step) * step);
-}
-function ladderNext(n) {
-  var out = null; Object.keys(E.SP_POOL).forEach(function (k) { var L = E.SP_POOL[k].filter(function (e) { return e.lad; }); L.forEach(function (e, i) { if (e.n === n && L[i + 1] && !out) out = L[i + 1].n; }); });
-  return out;
-}
+function spCtx() { var sp = (st().profile || {}).sp || {}; return { bwLb: spBodyLb(), sex: sp.sex, exp: sp.exp }; }
+function spStartW(n) { return E.spStartLb(n, spCtx()); }
+function ladderNext(n) { return E.ladderNext(n); }
 var _ov37 = overload;
 overload = function (n, rx, date, lp) {
-  var m = /(\d+)\s*×\s*(\d+)\s*[–-]\s*(\d+)/.exec(String(rx || '')); if (!m) return _ov37(n, rx, date, lp);
-  var sets = +m[1], lo = +m[2], hi = +m[3], h = liftHistory(n, date), inc = DBELL.test(n) ? 5 : LOWER.test(n) ? 10 : 5, base = _ov37(n, sets + '×' + lo, date, 0);
-  var out = { text: '', w: null, r: lo, plateau: base.plateau, kind: 'start' };
-  if (!h.length) {
-    var sw = needsWeight(n) ? spStartW(n) : null;
-    out.w = sw; out.text = sw ? 'First time: start around ' + sw + ' lb' + (DBELL.test(n) ? ' per hand' : '') + ' for ' + lo + '–' + hi + ' reps (from your body weight and experience). The last rep should feel like a 7 out of 10. Adjust the next set if it\'s much easier or harder.' : needsWeight(n) ? 'First time: pick a weight you could lift about ' + (hi + 2) + ' times, and do ' + lo + '–' + hi + ' reps. Stop with 2 good reps left.' : 'First time: do ' + lo + '–' + hi + ' clean reps per set, stopping 1–2 short of failure.';
-    return out;
-  }
-  var last = h[h.length - 1], topW = last.sets.reduce(function (a, s) { return Math.max(a, +s.w || 0); }, 0), reps = last.sets.map(function (s) { return +s.r || 0; });
-  if (lp >= 3) { out.kind = 'hold'; out.w = topW ? (topW * 0.9 < 25 ? Math.round(topW * 0.9 / 2.5) * 2.5 : Math.round(topW * 0.9 / 5) * 5) : null; out.text = 'Deload: ' + (out.w ? out.w + ' lb, ' : '') + 'one fewer set, stop 3 reps short. Easy on purpose.'; return out; }
-  if (!topW) {
-    out.kind = 'bw'; var all = reps.length >= sets && reps.every(function (r) { return r >= hi; }), nx = ladderNext(n);
-    if (all && nx) { out.next = nx; out.text = 'You hit ' + sets + '×' + hi + '. Time to move up: ' + nx + ', starting at ' + sets + '×' + lo + '.'; }
-    else if (all) out.text = 'You hit ' + sets + '×' + hi + '. Hold a dumbbell or a loaded backpack, or slow the lowering to 4 s.';
-    else { out.r = Math.min(hi, Math.min.apply(null, reps) + 1); out.text = 'Last time: ' + reps.join(', ') + '. Add a rep per set (aim for ' + out.r + '+), working toward ' + sets + '×' + hi + '.'; }
-    return out;
-  }
-  var top = last.sets.filter(function (s) { return +s.w === topW; }), done = top.length >= sets && top.every(function (s) { return +s.r >= hi; });
-  var stuck = 0; for (var i = h.length - 1; i > 0; i--) { var a = h[i], b = h[i - 1], ta = a.sets.reduce(function (x, s) { return x + (+s.r || 0); }, 0), tb = b.sets.reduce(function (x, s) { return x + (+s.r || 0); }, 0), wa = a.sets.reduce(function (x, s) { return Math.max(x, +s.w || 0); }, 0), wb = b.sets.reduce(function (x, s) { return Math.max(x, +s.w || 0); }, 0); if (wa === wb && ta <= tb) stuck++; else break; }
-  if (topW < 40) inc = Math.min(inc, 5);
-  if (done) { out.kind = 'up'; out.w = topW + inc; out.r = lo; out.text = 'You reached ' + sets + '×' + hi + ' at ' + topW + ' lb. Go up to ' + out.w + ' lb' + (DBELL.test(n) ? ' per hand' : '') + ' for ' + lo + '+ reps, then build back to ' + hi + '.'; }
-  else if (stuck >= 2) { out.kind = 'reset'; out.w = Math.round(topW * 0.9 / 5) * 5 || topW; out.r = hi; out.text = 'No rep gains at ' + topW + ' lb for ' + (stuck + 1) + ' sessions. Drop to ' + out.w + ' lb, hit ' + hi + ' clean reps, and build back. Sleep and food matter here too.'; }
-  else { out.kind = 'reps'; out.w = topW; out.r = Math.min(hi, Math.min.apply(null, top.map(function (s) { return +s.r || 0; })) + 1); out.text = 'Stay at ' + topW + ' lb and add a rep per set (last: ' + top.map(function (s) { return s.r; }).join(', ') + '). When every set hits ' + hi + ', add ' + inc + ' lb.'; }
-  return out;
+  if (!/(\d+)\s*×\s*(\d+)\s*[–-]\s*(\d+)/.test(String(rx || ''))) return _ov37(n, rx, date, lp);
+  var m = /(\d+)\s*×\s*(\d+)/.exec(rx), o = E.progNext(n, rx, liftHistory(n, date), lp, Object.assign(spCtx(), { weighted: needsWeight(n) }));
+  o.plateau = _ov37(n, m[1] + '×' + m[2], date, 0).plateau; return o;
 };
 var _oh37 = overloadHTML;
 overloadHTML = function (x, i, date, lp) {
@@ -15353,6 +15431,91 @@ VIEWS.today = function () {
   var k = h.indexOf('</section>', h.search(/class="(hero|card hero)/)); return k > 0 ? h.slice(0, k + 10) + c + h.slice(k + 10) : h + c;
 };
 App.p37 = { spFindings: spFindings, overload: function () { return overload.apply(null, arguments); }, spStartW: spStartW, ladderNext: ladderNext };
+
+/* ================= Whose calendar is this? =================
+   The calendar sync now reports each calendar separately (name, its shifts and busy times). The app asks whose each
+   one is, labels it ("Alex's calendar"), and only your own calendars shape your plan, watch workouts and reminders.
+   Shifts someone else invited your calendar to are skipped by the sync itself. */
+App.calRaw = App.cal;
+function calApply() {
+  if (App.cal && !App.cal._f) App.calRaw = App.cal;   /* a raw file loaded by the original loader */
+  var c = App.calRaw ? E.calFor(App.calRaw, st().prefs || {}) : null;
+  if (c) { if (c === App.calRaw) c = Object.assign({}, c); Object.defineProperty(c, '_f', { value: true, enumerable: false }); }
+  App.cal = c;
+}
+function calSrcs() { return (App.calRaw && App.calRaw.by) || []; }
+function calWhoOf(b) {
+  var src = ((st().prefs || {}).calSrc || {})[b.key] || {}, me = (st().prefs || {}).myName;
+  if (src.who) return src.who;
+  if (src.mine === true) return me || 'You';
+  var n = String(b.name || b.key), at = n.indexOf('@'); n = at > 0 ? n.slice(0, at).split(/[._-]/)[0] : n;
+  return n.charAt(0).toUpperCase() + n.slice(1);
+}
+function calLabel(b) { var w = calWhoOf(b); return /s$/.test(w) ? w + '\' calendar' : w === 'You' ? 'Your calendar' : w + '\'s calendar'; }
+function calMineLabel() { var mine = calSrcs().filter(function (b) { var s = ((st().prefs || {}).calSrc || {})[b.key]; return s && s.mine; }); return mine.length ? mine.map(calLabel).join(' + ') : ''; }
+loadCal = function () {
+  if (Store.mode !== 'github' || (loadCal.busy && Date.now() - loadCal.busy < 45000)) return; loadCal.busy = Date.now();
+  Store.getFile('garmin/calendar.json').then(function (f) {
+    loadCal.busy = 0; if (!f || !f.text) return;
+    var j = JSON.parse(f.text), changed = f.text !== loadCal.last;
+    loadCal.last = f.text; App.calRaw = j; calApply(); LS.set('rp-gcal', f.text);
+    if (changed) { recompute(); if ($('#sheet').hidden) render(); else loadCal.last = null; }
+  }, function () { loadCal.busy = 0; });
+};
+var _recompute38 = recompute;
+recompute = function () { try { calApply(); } catch (e) { console.warn(e); } return _recompute38.apply(this, arguments); };
+try { calApply(); } catch (e) { /* no state yet */ }
+/* upcoming work shifts in one calendar, for the "whose is this?" question */
+function calPeek(b) {
+  var ds = Object.keys(b.shifts || {}).filter(function (d) { return d >= App.today; }).sort();
+  return { n: ds.length, first: ds.slice(0, 3).map(function (d) { return fmtD(d, { weekday: 'short', month: 'short', day: 'numeric' }) + ' (' + ({ day: 'day', eve: 'evening', night: 'night' })[b.shifts[d]] + ')'; }) };
+}
+function calAskCard() {
+  var pend = E.calPending(App.calRaw, st().prefs || {}); if (!pend.length || !st().profile) return '';
+  return '<section class="card stack calask"><div class="eyebrow">Work calendar</div><h3>Whose calendar is this?</h3><p class="small muted">Only your own calendar should move your training. A shared calendar (like a partner\'s work schedule) can stay connected without changing your plan.</p>' +
+    pend.map(function (b) { var pk = calPeek(b); return '<div class="calsrc"><p class="small"><b>' + esc(b.name) + '</b><br><span class="muted">' + (pk.n ? plural(pk.n, 'work shift') + ' ahead: ' + esc(pk.first.join(', ')) + (pk.n > 3 ? '…' : '') : 'No work shifts found ahead') + '</span></p><div class="btns"><button class="btn sm primary" data-act="cal-mine" data-arg="' + jattr({ key: b.key, mine: true }) + '">Mine</button><button class="btn sm" data-act="cal-mine" data-arg="' + jattr({ key: b.key, mine: false }) + '">Someone else\'s</button></div></div>'; }).join('') + '</section>';
+}
+ACTIONS['cal-mine'] = function (a) {
+  Store.edit('prefs', 'calSrc', function (S) { S.prefs = S.prefs || {}; var c = Object.assign({}, S.prefs.calSrc || {}); c[a.key] = Object.assign({}, c[a.key] || {}, { mine: a.mine }); S.prefs.calSrc = c; });
+  recompute(); render(); toast(a.mine ? 'Using it for your training' : 'Kept out of your training');
+};
+ACTIONS['cal-who'] = function (a) {
+  var v = ($('#calwho-' + a.i) || {}).value || ''; v = v.trim().slice(0, 30);
+  Store.edit('prefs', 'calSrc', function (S) { S.prefs = S.prefs || {}; var c = Object.assign({}, S.prefs.calSrc || {}); c[a.key] = Object.assign({}, c[a.key] || {}); if (v) c[a.key].who = v; else delete c[a.key].who; S.prefs.calSrc = c; });
+  render(); toast('Saved');
+};
+ACTIONS['cal-myname'] = function () { var v = ($('#cal-myname') || {}).value || ''; Store.edit('prefs', 'myName', function (S) { S.prefs = S.prefs || {}; if (v.trim()) S.prefs.myName = v.trim().slice(0, 30); else delete S.prefs.myName; }); render(); toast('Saved'); };
+var _today38 = VIEWS.today;
+VIEWS.today = function () {
+  var h = _today38(), c = calAskCard(); if (!c) return h;
+  var g = h.indexOf('class="greet"'), i = g >= 0 ? h.indexOf('</h1></div>', g) : -1;
+  return i > 0 ? h.slice(0, i + 11) + c + h.slice(i + 11) : c + h;
+};
+/* Google Calendar page: every connected calendar, whose it is, and whether it shapes your training */
+var _calsync38 = VIEWS.calsync;
+VIEWS.calsync = function () {
+  var h = _calsync38(), B = calSrcs(); if (!B.length) return h;
+  var src = (st().prefs || {}).calSrc || {};
+  var card = '<section class="card stack"><h3>Your calendars</h3><p class="small muted">Only calendars marked <b>mine</b> move your training. Others stay connected but are ignored.</p>' +
+    '<label class="f">Your name (for labels)<div style="display:flex;gap:8px;align-items:center"><input class="i" id="cal-myname" value="' + esc((st().prefs || {}).myName || '') + '" placeholder="Steph"><button class="btn sm" data-act="cal-myname">Save</button></div></label>' +
+    B.map(function (b, i) {
+      var s = src[b.key] || {}, pk = calPeek(b), st2 = s.mine === true ? '<span class="pill good">Used for your training</span>' : s.mine === false ? '<span class="pill">Not used</span>' : '<span class="pill warn">Not confirmed</span>';
+      return '<div class="calsrc"><div class="spread"><b class="small">' + esc(calLabel(b)) + '</b>' + st2 + '</div><p class="tiny muted">' + esc(b.name) + ' · ' + (pk.n ? plural(pk.n, 'shift') + ' ahead' : 'no shifts ahead') + (b.foreign ? ' · skipped ' + plural(b.foreign, 'shift') + ' someone else invited this calendar to' : '') + '</p>' +
+        '<div class="chips"><button class="chip" data-act="cal-mine" data-arg="' + jattr({ key: b.key, mine: true }) + '" aria-pressed="' + (s.mine === true) + '">Mine</button><button class="chip" data-act="cal-mine" data-arg="' + jattr({ key: b.key, mine: false }) + '" aria-pressed="' + (s.mine === false) + '">Someone else\'s</button></div>' +
+        '<label class="f">Whose is it?<div style="display:flex;gap:8px;align-items:center"><input class="i" id="calwho-' + i + '" value="' + esc(s.who || '') + '" placeholder="' + esc(calWhoOf(b)) + '"><button class="btn sm" data-act="cal-who" data-arg="' + jattr({ key: b.key, i: i }) + '">Save</button></div></label></div>';
+    }).join('') + '</section>';
+  var i = h.indexOf('<div class="sechead"><h2>One-time setup');
+  return i > 0 ? h.slice(0, i) + card + h.slice(i) : h + card;
+};
+/* label the calendar wherever shifts show */
+var _you38 = VIEWS.you;
+VIEWS.you = function () { var h = _you38(), m = calMineLabel(), pend = E.calPending(App.calRaw, st().prefs || {}).length; if (!calSrcs().length) return h; return h.replace(/(Google Calendar<span class="v">)[^<]*/, '$1' + (pend ? 'Confirm whose' : esc(m || 'Not used'))); };
+function calTag(h) { var m = calMineLabel(); if (!m) return h; return h.replace(/<div class="eyebrow">Work calendar<\/div>/g, '<div class="eyebrow">Work calendar · ' + esc(m) + '</div>').replace(/from your calendar/g, 'from ' + esc(m)); }
+var _today38b = VIEWS.today; VIEWS.today = function () { return calTag(_today38b()); };
+var _calrev38 = VIEWS.calreview;
+VIEWS.calreview = function () { var h = _calrev38(), m = calMineLabel(); return m ? h.replace('<p>Your work calendar changed.', '<p>' + esc(m) + ' changed.') : h; };
+var _plan38 = VIEWS.plan; VIEWS.plan = function () { return calTag(_plan38.apply(this, arguments)); };
+App.p38 = { calApply: calApply, calLabel: calLabel, calWhoOf: calWhoOf };
 
 
 /* ---------------- Garmin polling ---------------- */

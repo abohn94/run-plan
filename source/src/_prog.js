@@ -102,8 +102,8 @@ function spPick(pat, sp, k, used, role) {
   return null;
 }
 function spRx(sp, role, pat, n, bwx) {
-  var g = SP_GOALS[sp.goal] || SP_GOALS.health, r = g.rx[role] || g.rx.acc, sets = r[0] + (role === 'main' || role === 'sec' ? Math.min(2, +sp.vol || 0) : 0);
-  if (sp.exp === 'new' && sets > 3) sets = 3;
+  var g = SP_GOALS[sp.goal] || SP_GOALS.health, r = g.rx[role] || g.rx.acc, sets = sp.exp === 'new' ? Math.min(3, r[0]) : r[0];
+  if (role === 'main' || role === 'sec') sets += Math.min(2, +sp.vol || 0);   /* the coach adds sets once you're consistent */
   if (SP_TIMED.test(n)) { var t = sp.goal === 'endurance' ? 60 : sp.exp === 'new' ? 30 : 45; return [sets + '×' + t + ' s', sets + '×' + t + ' s', sets + '×' + t + ' s', Math.max(2, sets - 1) + '×' + t + ' s']; }
   var lo = r[1], hi = r[2];
   if (bwx && hi < 8) { lo = 5; hi = 8; }   /* bodyweight ladders: 5–8 reps, then move up a rung (Recommended Routine) */
@@ -179,3 +179,56 @@ function applySwaps(weeks, prof) {
   var S = prof.cswap; if (!S) return;
   weeks.forEach(function (w) { var ch = false; w.days.forEach(function (d) { d.parts = d.parts.map(function (p) { var k = S[d.date + '|' + (p.role || p.type)]; if (!k || p.type === 'strength' || p.type === 'race' || p.type === 'rest') return p; if (!(p.cardio || p.type === 'cross' || prof.focus === 'fitness')) return p; ch = true; return cardioSwap(p, k, d); }); }); if (ch) w.tot = totals(w.days); });
 }
+
+/* ---- weight suggestions shared by the app and the watch-workout script ---- */
+var SP_START = { 'Barbell hip thrust': [.6, .6], 'B-stance hip thrust': [.3, .3], 'Dumbbell hip thrust': [.25, .25], 'Back squat': [.5, .4], 'Front squat': [.4, .3], 'Leg press': [1, .8], 'Goblet squat': [.2, .15], 'Heel-elevated goblet squat': [.15, .12], 'Barbell Romanian deadlift': [.5, .4], 'Trap-bar deadlift': [.6, .5], 'Dumbbell Romanian deadlift': [.15, .12], 'Dumbbell single-leg Romanian deadlift': [.1, .08], 'Dumbbell Bulgarian split squat': [.08, .06], 'Dumbbell walking lunge': [.08, .06], 'Dumbbell step-up': [.08, .06], 'Dumbbell reverse lunge': [.08, .06], 'Barbell bench press': [.5, .3], 'Dumbbell bench press': [.18, .1], 'Incline dumbbell press': [.15, .08], 'Machine chest press': [.4, .25], 'Seated dumbbell overhead press': [.12, .07], 'Standing barbell overhead press': [.3, .18], 'Landmine press': [.15, .1], 'Dumbbell Arnold press': [.1, .06], 'Seated cable row': [.45, .3], 'Chest-supported dumbbell row': [.15, .1], 'One-arm dumbbell row': [.18, .12], 'Barbell bent-over row': [.4, .25], 'Lat pulldown': [.45, .3], 'Neutral-grip lat pulldown': [.45, .3], 'Dumbbell curl': [.07, .045], 'Hammer curl': [.08, .05], 'Cable curl': [.15, .1], 'Incline dumbbell curl': [.06, .04], 'Cable triceps pushdown': [.2, .12], 'Overhead dumbbell triceps extension': [.12, .07], 'Dumbbell skull crusher': [.06, .04], 'Dumbbell lateral raise': [.05, .03], 'Cable lateral raise': [.04, .03], 'Face pull': [.2, .12], 'Rear-delt dumbbell fly': [.04, .03], 'Cable fly': [.1, .06], 'Dumbbell fly': [.07, .04], 'Leg extension': [.35, .25], 'Seated leg curl': [.3, .2], 'Lying leg curl': [.25, .18], 'Hip abduction machine': [.5, .5], 'Cable hip abduction': [.05, .05], 'Cable kickback': [.06, .06], 'Kettlebell swing': [.15, .12], 'Soleus raise (bent knee)': [.2, .15], 'Cable crunch': [.25, .18] };
+function spStartLb(n, c) {
+  var t = SP_START[n]; c = c || {}; if (!t || !c.bwLb) return null;
+  var w = c.bwLb * t[c.sex === 'F' ? 1 : 0] * ({ new: 1, some: 1.3, exp: 1.6 })[c.exp || 'new'] || 0, step = w < 25 ? 2.5 : 5;
+  return Math.max(step, Math.round(w / step) * step);
+}
+function ladderNext(n) { var out = null; Object.keys(SP_POOL).forEach(function (k) { var L = SP_POOL[k].filter(function (e) { return e.lad; }); L.forEach(function (e, i) { if (e.n === n && L[i + 1] && !out) out = L[i + 1].n; }); }); return out; }
+var PN_LOWER = /squat|deadlift|lunge|leg press|hip thrust|rdl|romanian|step.?up|calf|glute bridge|good morning|hamstring|trap bar/i, PN_DB = /dumbbell|\bdb\b|kettlebell/i;
+/* double progression for a rep range ("3×8–12"): h = [{date, sets:[{w, r}]}] oldest first */
+function progNext(n, rx, h, lp, c) {
+  var m = /(\d+)\s*×\s*(\d+)\s*[–-]\s*(\d+)/.exec(String(rx || '')); c = c || {}; if (!m) return null;
+  var sets = +m[1], lo = +m[2], hi = +m[3], inc = PN_DB.test(n) ? 5 : PN_LOWER.test(n) ? 10 : 5, per = PN_DB.test(n) ? ' per hand' : '';
+  var out = { text: '', w: null, r: lo, kind: 'start' };
+  if (!h || !h.length) {
+    var sw = c.weighted ? spStartLb(n, c) : null; out.w = sw;
+    out.text = sw ? 'First time: start around ' + sw + ' lb' + per + ' for ' + lo + '–' + hi + ' reps (from your body weight and experience). The last rep should feel like a 7 out of 10. Adjust the next set if it\'s much easier or harder.' : c.weighted ? 'First time: pick a weight you could lift about ' + (hi + 2) + ' times, and do ' + lo + '–' + hi + ' reps. Stop with 2 good reps left.' : 'First time: do ' + lo + '–' + hi + ' clean reps per set, stopping 1–2 short of failure.';
+    return out;
+  }
+  var last = h[h.length - 1], topW = last.sets.reduce(function (a, s) { return Math.max(a, +s.w || 0); }, 0), reps = last.sets.map(function (s) { return +s.r || 0; });
+  if (lp >= 3) { out.kind = 'hold'; out.w = topW ? (topW * 0.9 < 25 ? Math.round(topW * 0.9 / 2.5) * 2.5 : Math.round(topW * 0.9 / 5) * 5) : null; out.text = 'Deload: ' + (out.w ? out.w + ' lb, ' : '') + 'one fewer set, stop 3 reps short. Easy on purpose.'; return out; }
+  if (!topW) {
+    out.kind = 'bw'; var all = reps.length >= sets && reps.every(function (r) { return r >= hi; }), nx = ladderNext(n);
+    if (all && nx) { out.next = nx; out.text = 'You hit ' + sets + '×' + hi + '. Time to move up: ' + nx + ', starting at ' + sets + '×' + lo + '.'; }
+    else if (all) { out.r = hi; out.text = 'You hit ' + sets + '×' + hi + '. Hold a dumbbell or a loaded backpack, or slow the lowering to 4 s.'; }
+    else { out.r = Math.min(hi, Math.min.apply(null, reps) + 1); out.text = 'Last time: ' + reps.join(', ') + '. Add a rep per set (aim for ' + out.r + '+), working toward ' + sets + '×' + hi + '.'; }
+    return out;
+  }
+  var top = last.sets.filter(function (s) { return +s.w === topW; }), done = top.length >= sets && top.every(function (s) { return +s.r >= hi; });
+  var tot = function (x) { return x.sets.reduce(function (a, s) { return a + (+s.r || 0); }, 0); }, mx = function (x) { return x.sets.reduce(function (a, s) { return Math.max(a, +s.w || 0); }, 0); };
+  var stuck = 0; for (var i = h.length - 1; i > 0; i--) { if (mx(h[i]) === mx(h[i - 1]) && tot(h[i]) <= tot(h[i - 1])) stuck++; else break; }
+  if (topW < 40) inc = Math.min(inc, 5);
+  if (done) { out.kind = 'up'; out.w = topW + inc; out.r = lo; out.text = 'You reached ' + sets + '×' + hi + ' at ' + topW + ' lb. Go up to ' + out.w + ' lb' + per + ' for ' + lo + '+ reps, then build back to ' + hi + '.'; }
+  else if (stuck >= 2) { out.kind = 'reset'; out.w = Math.round(topW * 0.9 / 5) * 5 || topW; out.r = hi; out.text = 'No rep gains at ' + topW + ' lb for ' + (stuck + 1) + ' sessions. Drop to ' + out.w + ' lb, hit ' + hi + ' clean reps, and build back. Sleep and food matter here too.'; }
+  else { out.kind = 'reps'; out.w = topW; out.r = Math.min(hi, Math.min.apply(null, top.map(function (s) { return +s.r || 0; })) + 1); out.text = 'Stay at ' + topW + ' lb and add a rep per set (last: ' + top.map(function (s) { return s.r; }).join(', ') + '). When every set hits ' + hi + ', add ' + inc + ' lb.'; }
+  return out;
+}
+
+/* ---- whose calendar: only calendars you've confirmed as yours shape your plan ----
+   prefs.calSrc = {calendar key: {mine: true|false, who: 'Steph'}}. Older calendar files (no per-calendar list) are used as they are. */
+var CAL_KEYS = ['shifts', 'busy', 'away', 'starts', 'ends', 'events', 'times'];
+function calFor(cal, prefs) {
+  if (!cal || !cal.by || !cal.by.length) return cal;
+  var src = (prefs && prefs.calSrc) || {}, use = cal.by.filter(function (b) { return src[b.key] && src[b.key].mine === true; });
+  var out = { updated: cal.updated, calendars: use.length, by: cal.by };
+  CAL_KEYS.forEach(function (k) {
+    var m = {}; use.forEach(function (b) { Object.keys(b[k] || {}).forEach(function (d) { var v = b[k][d]; if (k === 'busy' || k === 'events') m[d] = (m[d] || []).concat(v); else if (!(d in m)) m[d] = v; }); });
+    out[k] = m;
+  });
+  return out;
+}
+function calPending(cal, prefs) { var src = (prefs && prefs.calSrc) || {}; return cal && cal.by ? cal.by.filter(function (b) { return !src[b.key] || src[b.key].mine == null; }) : []; }

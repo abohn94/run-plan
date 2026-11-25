@@ -2394,7 +2394,7 @@ function applyShifts(w, shifts, zz, opts) {
   /* the day after a night shift: easy only */
   w.days.forEach(function (d) {
     var prev = addD(d.date, -1); if (shifts[prev] !== 'night' || d.date < today()) return;
-    d.parts = d.parts.map(function (p) { return p.type === 'speed' ? toEasy(p, 0.8, 'Easy run', 'Easy today: you came off a night shift.') : p; });
+    d.parts = d.parts.map(function (p) { return p.type === 'speed' ? toEasy(p, 0.8, 'Easy run', 'Easy today: you came off a night shift.') : p.cardio && / intervals$/.test(p.title) ? Object.assign({}, p, { title: p.title.replace(/ intervals$/, ', easy'), min: Math.round((p.min || 30) * 0.8 / 5) * 5, note: 'Easy today: you came off a night shift. Conversational effort (RPE 3–4).', changed: true }) : p.prog && p.lp !== 3 ? Object.assign({}, p, { lp: 3, note: 'Lighter today after your night shift: one fewer set, about 10% lighter. ' + (p.note || ''), changed: true }) : p; });
   });
   w.tot = totals(w.days);
 }
@@ -2510,7 +2510,7 @@ function applyDaylight(w, st, zz) {
 
 /* ---------------- exports ---------------- */
 var api = {
-  SP_GOALS: SP_GOALS, SP_EMPH: SP_EMPH, SP_POOL: SP_POOL, SP_SPLIT: SP_SPLIT, CARDIO: CARDIO, buildProgram: buildProgram, programOf: programOf, spDefaults: spDefaults, cardioSwap: cardioSwap,
+  SP_GOALS: SP_GOALS, SP_EMPH: SP_EMPH, SP_POOL: SP_POOL, SP_SPLIT: SP_SPLIT, CARDIO: CARDIO, buildProgram: buildProgram, programOf: programOf, spDefaults: spDefaults, cardioSwap: cardioSwap, progNext: progNext, calFor: calFor, calPending: calPending, spStartLb: spStartLb, ladderNext: ladderNext,
   MI_M: MI_M, DOW: DOW, DOW_LONG: DOW_LONG, DIST: DIST, METHODS: METHODS, STATUS: STATUS, LIFT: LIFT, LIFT_VARS: LIFT_VARS, liftVar: liftVar, liftMod: liftMod, LIFT_PHASES: LIFT_PHASES, ZONE_NAME: ZONE_NAME,
   ds: ds, pd: pd, addD: addD, dow: dow, monday: monday, diffD: diffD, today: today, fmtDate: fmtDate,
   clamp: clamp, round1: round1, half: half, mean: mean, clock: clock, fmtPace: fmtPace, parseClock: parseClock,
