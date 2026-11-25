@@ -1300,3 +1300,11 @@ input.i[data-dl] { padding-right: 40px; background-image: url("data:image/svg+xm
 .incprompt .grid2 { margin-top: 8px; }
 .wedit summary { cursor: pointer; margin-top: 6px; color: var(--muted); }
 .wnote { margin: 4px 2px 10px; }
+/* status */
+.banner.bad { box-shadow: inset 3px 0 0 var(--red); }
+.syshealth { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; margin-bottom: 10px; }
+.syshealth b { flex: 1; min-width: 0; }
+.shinrem2 { display: flex; align-items: center; gap: 10px; }
+.shinrem2 .shinlink { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
+.shinrem2 .shinlink > span:nth-child(2) { display: grid; flex: 1; min-width: 0; }
+.shinrem2 small { color: var(--muted); }

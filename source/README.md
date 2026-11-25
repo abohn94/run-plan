@@ -18,3 +18,5 @@ Build: `python3 build.py` writes `dist/index.html` (plus manifest and icons). Co
 - `test/`: engine tests (`node test/engine.test.js`), the onboarding flow (`test/flow.js`) and the features walkthroughs (`node test/features.js` / `test/features2.js state.json data.json shots/`, `REAL=1` to use the Garmin file unmodified), all with mocked GitHub and Garmin
 
 User data is not stored here. It lives in the private `run-plan-data` repository.
+
+Fixing or changing the app later: read `HANDOFF.md` in the private `run-plan-data` repository first (jobs, secrets, common failures, house rules). The app's More → Status page shows whether the background jobs are running.

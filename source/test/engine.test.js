@@ -1,5 +1,6 @@
 const E = require('../dist/engine.built.js');
 const seed = require('./seed.js');
+const FW = (q) => q.weeks.find(w => w.start > E.today() && w.days.some(d => d.parts.some(p => p.type === 'speed')) && w.days.some(d => d.parts.some(p => p.type === 'easy')) && w.days.some(d => d.parts.every(p => p.type === 'rest')));
 let bad = 0; const ok = (c, m) => { if (!c) { bad++; console.log('FAIL', m); } };
 const st = JSON.parse(JSON.stringify(seed));
 let p = E.generate(st);
@@ -22,13 +23,14 @@ p.weeks.forEach(w => w.days.forEach(d => d.parts.forEach(x => { if (E.isRun(x)) 
 // methods all generate
 Object.keys(E.METHODS).forEach(k => { const s2 = JSON.parse(JSON.stringify(seed)); s2.profile.method = k; s2.profile.crossDays = 1; const q = E.generate(s2); ok(q.weeks.length === 53, 'method ' + k); const pk = Math.max(...q.weeks.map(w => w.tot.mi)); console.log('method', k, 'peak', pk, 'runs@peak', q.weeks.find(w => w.tot.mi === pk).tot.runs, 'cross', q.weeks[20].tot.cross); });
 // statuses + life events
-st.life = [{ id: 'l1', kind: 'sick', level: 'mild', from: '2026-11-16', to: '2026-11-20' }, { id: 'l2', kind: 'busy', from: '2026-12-08', to: '2026-12-08' }];
+const SK = E.addD(E.monday(E.today()), 14), BZ = E.addD(SK, 22); st.life = [{ id: 'l1', kind: 'sick', level: 'mild', from: SK, to: E.addD(SK, 4) }, { id: 'l2', kind: 'busy', from: BZ, to: BZ }];
+const iSK = p.weeks.findIndex(w => w.start === SK), iBZ = p.weeks.findIndex(w => w.start <= BZ && w.end >= BZ);
 let a = E.analyze(p, st, null); E.adapt(p, st, a);
-ok(p.weeks[5].mod && p.weeks[5].mod.kind === 'sick', 'sick week');
-ok(p.weeks[6].mod && p.weeks[6].mod.phase === 'ramp', 'ramp after');
-ok(p.weeks[5].tot.mi < p.weeks[5].base, 'sick fewer miles');
-ok(!p.weeks[8].days[1].parts.some(E.isRun), 'busy day cleared');
-ok(p.weeks[8].days.some(d => d.parts.some(x => x.moved === '2026-12-08')), 'run moved');
+ok(p.weeks[iSK].mod && p.weeks[iSK].mod.kind === 'sick', 'sick week');
+ok(p.weeks[iSK + 1].mod && p.weeks[iSK + 1].mod.phase === 'ramp', 'ramp after');
+ok(p.weeks[iSK].tot.mi < p.weeks[iSK].base, 'sick fewer miles');
+ok(!p.weeks[iBZ].days.find(d => d.date === BZ).parts.some(E.isRun), 'busy day cleared');
+ok(p.weeks[iBZ].days.some(d => d.parts.some(x => x.moved === BZ)), 'run moved');
 // time trial -> paces move
 const st2 = JSON.parse(JSON.stringify(seed));
 st2.logs = { '2027-01-05': { run: { ptype: 'speed', mi: 5, sec: 2400, rpe: 9, seg: { mi: 3.10686, sec: 24 * 60 + 30, race: true } } } };
@@ -95,10 +97,10 @@ console.log(bad ? 'FAILURES ' + bad : 'ALL OK (fitness)');
   const w = E.weekOf(q, t); ok(w.mod && w.mod.phase === 'compliance' && w.tot.mi <= q.compliance.cap.mi + 1.5, 'week capped ' + w.tot.mi + ' vs ' + q.compliance.cap.mi);
   // drag the long run onto the day after a key workout -> back-to-back warning with a fix
   const s6 = JSON.parse(JSON.stringify(seed)); const q6 = E.generate(s6); E.adapt(q6, s6, E.analyze(q6, s6, null));
-  const w6 = q6.weeks[6]; const sp = w6.days.find(d => d.parts.some(p => p.type === 'speed')); const lg = w6.days.find(d => d.parts.some(p => p.type === 'long'));
+  const w6 = q6.weeks.find(w => w.n >= 3 && w.days.some(d => d.parts.some(p => p.type === 'speed')) && w.days.some(d => d.parts.some(p => p.type === 'long'))); const sp = w6.days.find(d => d.parts.some(p => p.type === 'speed')); const lg = w6.days.find(d => d.parts.some(p => p.type === 'long'));
   const target = w6.days[(sp.i + 1) % 7]; const lp = lg.parts.find(p => p.type === 'long');
   s6.arr = { [E.partKey(lg.date, lp)]: target.date };
-  const q7 = E.generate(s6); E.adapt(q7, s6, E.analyze(q7, s6, null)); const w7 = q7.weeks[6];
+  const q7 = E.generate(s6); E.adapt(q7, s6, E.analyze(q7, s6, null)); const w7 = q7.weeks.find(w => w.start === w6.start);
   ok(w7.days[target.i].parts.some(p => p.type === 'long' && p.akey), 'long run moved to ' + target.dow);
   ok(!w7.days[lg.i].parts.some(p => p.type === 'long'), 'long run left its day');
   const warns = E.weekIntensity(w7, s6.profile); ok(warns.some(x => /back to back/.test(x.text) && x.fix), 'back-to-back warning: ' + warns.map(x => x.text).join(' | '));
@@ -131,12 +133,12 @@ console.log(bad ? 'FAILURES ' + bad : 'ALL OK (week tools)');
   const t = E.today(), acts = []; for (let i = 1; i < 28; i += 2) acts.push({ date: E.addD(t, -i), run: true, distM: 8000, load: 90, teLabel: 'AEROBIC_BASE' });
   const lf = E.loadFocus({ activities: acts }, t); ok(lf && lf.nudge === 'anaerobic', 'load focus nudge ' + JSON.stringify(lf));
   // overrides
-  const s5 = JSON.parse(JSON.stringify(seed)); const q5 = E.generate(s5); const w5 = q5.weeks[6]; const ed5 = w5.days.find(d => d.parts.some(p => p.type === 'easy'));
+  const s5 = JSON.parse(JSON.stringify(seed)); const q5 = E.generate(s5); const w5 = FW(q5); const ed5 = w5.days.find(d => d.parts.some(p => p.type === 'easy'));
   const rd5 = w5.days.find(d => d.parts.every(p => p.type === 'rest'));
   s5.prefs = Object.assign({}, s5.prefs, { shinCap: false }); s5.overrides = { [ed5.date]: { action: 'add', mi: 1.5 } }; if (rd5) s5.overrides[rd5.date] = { action: 'addday', add: { run: 3, lift: 'UB' } };
   E.adapt(q5, s5, E.analyze(q5, s5, null));
-  ok(q5.weeks[6].days[ed5.i].parts.some(p => p.note && /Longer/.test(p.note)), 'add miles override');
-  if (rd5) ok(q5.weeks[6].days[rd5.i].parts.filter(p => p.added).length === 2, 'addday adds run+lift');
+  ok(q5.weeks.find(w => w.start === w5.start).days[ed5.i].parts.some(p => p.note && /Longer/.test(p.note)), 'add miles override');
+  if (rd5) ok(q5.weeks.find(w => w.start === w5.start).days[rd5.i].parts.filter(p => p.added).length === 2, 'addday adds run+lift');
 }
 console.log(bad ? 'FAILURES ' + bad : 'ALL OK (week start + alternatives)');
 // ---- individualization ----
@@ -147,8 +149,8 @@ console.log(bad ? 'FAILURES ' + bad : 'ALL OK (week start + alternatives)');
   const rp = E.racePacing(13.1094, 6300, Array.from({ length: 132 }, (_, i) => 900 + (i > 60 && i < 70 ? (i - 60) * 8 : i >= 70 ? 80 : 0)), 0.02);
   ok(Math.abs(rp.total - 6300 * 1.02) < 30 && rp.segs.length === 14 && rp.segs[6].pace > rp.segs[0].pace, 'race pacing ' + rp.total + ' ' + rp.segs.map(s => s.pace).join(','));
   const st = JSON.parse(JSON.stringify(seed)); const q = E.generate(st); E.adapt(q, st, E.analyze(q, st, null));
-  const w = q.weeks[6], sp = w.days.find(d => d.parts.some(p => p.type === 'speed'));
-  st.shifts = { [sp.date]: 'day' }; const q2 = E.generate(st); E.adapt(q2, st, E.analyze(q2, st, null)); const w2 = q2.weeks[6];
+  const w = FW(q), sp = w.days.find(d => d.parts.some(p => p.type === 'speed'));
+  st.shifts = { [sp.date]: 'day' }; const q2 = E.generate(st); E.adapt(q2, st, E.analyze(q2, st, null)); const w2 = q2.weeks.find(x => x.start === w.start);
   ok(!w2.days[sp.i].parts.some(p => p.type === 'speed'), 'shift moved the key workout');
   ok(w2.days.some(d => d.parts.some(p => p.type === 'speed')), 'key workout still in the week');
   const an = E.analyze(q, st, null), ev = st.events.find(e => e.goal) || Object.assign({}, st.events[0], { goal: '1:45:00' });
