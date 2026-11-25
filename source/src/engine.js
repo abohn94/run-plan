@@ -1315,6 +1315,22 @@ function adapt(plan, st, analysis) {
     /* personal shin-load ceiling: trims easy and long runs in this week and next when the plan asks for more */
     var sh = analysis && analysis.shin;
     if (sh && st.profile && st.profile.injuryProne && (st.prefs || {}).shinCap !== false && w.end >= today() && w.start <= addD(today(), 7) && w.phase.key !== 'race' && w.phase.key !== 'taper') guarded(w, 'Shin-load ceiling', function () { capWeek(w, sh.ceiling, zz); });
+    /* single-run spike guard: no easy or long run more than 10% longer than your longest run in the last 30 days
+       (Frandsen et al., BJSM 2025: single-session spikes, not weekly totals, predicted running injuries) */
+    if ((st.prefs || {}).spikeCap !== false && w.end >= today() && w.start <= addD(today(), 13)) guarded(w, 'Single-run spike guard', function () {
+      var RL = runLogs(st).filter(function (r) { return r.date <= today() && r.mi > 0; });
+      w.days.forEach(function (d) {
+        if (d.date < today() || d.date > addD(today(), 13)) return;
+        var win = RL.filter(function (r) { return r.date < d.date && diffD(r.date, d.date) <= 30; }); if (!win.length) return;
+        var longest = Math.max.apply(null, win.map(function (r) { return r.mi; })), lim = Math.max(2, Math.floor(longest * 1.1 * 10) / 10);
+        d.parts = d.parts.map(function (p) {
+          if (!isRun(p) || !/^(easy|long|recovery)$/.test(p.type) || !(p.mi > lim + 0.05)) return p;
+          var q = scaleRun(p, lim / p.mi, zz); q.mi = lim; q.steps = [run(lim, p.type === 'recovery' ? 'REC' : 'E')]; q.changed = true; q.spikeCap = { from: p.mi, longest: round1(longest) };
+          q.note = 'Capped at ' + lim + ' mi (planned ' + p.mi + '): no run more than 10% longer than your longest in the last 30 days (' + round1(longest) + ' mi). Longer runs come back as your longest run grows.';
+          return q;
+        });
+      });
+    });
     /* never show two rest cards on one day, and drop rest cards next to real sessions */
     w.days.forEach(function (d) {
       var real = d.parts.filter(function (p) { return p.type !== 'rest'; });

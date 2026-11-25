@@ -2857,6 +2857,22 @@ function adapt(plan, st, analysis) {
     /* personal shin-load ceiling: trims easy and long runs in this week and next when the plan asks for more */
     var sh = analysis && analysis.shin;
     if (sh && st.profile && st.profile.injuryProne && (st.prefs || {}).shinCap !== false && w.end >= today() && w.start <= addD(today(), 7) && w.phase.key !== 'race' && w.phase.key !== 'taper') guarded(w, 'Shin-load ceiling', function () { capWeek(w, sh.ceiling, zz); });
+    /* single-run spike guard: no easy or long run more than 10% longer than your longest run in the last 30 days
+       (Frandsen et al., BJSM 2025: single-session spikes, not weekly totals, predicted running injuries) */
+    if ((st.prefs || {}).spikeCap !== false && w.end >= today() && w.start <= addD(today(), 13)) guarded(w, 'Single-run spike guard', function () {
+      var RL = runLogs(st).filter(function (r) { return r.date <= today() && r.mi > 0; });
+      w.days.forEach(function (d) {
+        if (d.date < today() || d.date > addD(today(), 13)) return;
+        var win = RL.filter(function (r) { return r.date < d.date && diffD(r.date, d.date) <= 30; }); if (!win.length) return;
+        var longest = Math.max.apply(null, win.map(function (r) { return r.mi; })), lim = Math.max(2, Math.floor(longest * 1.1 * 10) / 10);
+        d.parts = d.parts.map(function (p) {
+          if (!isRun(p) || !/^(easy|long|recovery)$/.test(p.type) || !(p.mi > lim + 0.05)) return p;
+          var q = scaleRun(p, lim / p.mi, zz); q.mi = lim; q.steps = [run(lim, p.type === 'recovery' ? 'REC' : 'E')]; q.changed = true; q.spikeCap = { from: p.mi, longest: round1(longest) };
+          q.note = 'Capped at ' + lim + ' mi (planned ' + p.mi + '): no run more than 10% longer than your longest in the last 30 days (' + round1(longest) + ' mi). Longer runs come back as your longest run grows.';
+          return q;
+        });
+      });
+    });
     /* never show two rest cards on one day, and drop rest cards next to real sessions */
     w.days.forEach(function (d) {
       var real = d.parts.filter(function (p) { return p.type !== 'rest'; });
@@ -14435,7 +14451,7 @@ function prepTimeline(ev) {
   var days = E.diffD(App.today, ev.date), s = courseStats(ev), F = fuelLogSummary(), long = E.distOf(ev).mi >= 13, rows = [];
   var row = function (when, done, title, how) { rows.push('<div class="pt-row' + (done ? ' dn' : '') + '"><span class="pt-ck">' + (done ? '✓' : '') + '</span><div><b>' + title + '</b><small>' + when + (how ? ' · ' + how : '') + '</small></div></div>'); };
   row('12+ weeks out', !!s, 'Upload the course GPX', s ? E.round1(s.mi) + ' mi, ' + s.gain + ' ft of climbing' : 'see "Finding the course file" below');
-  row('12+ weeks out', !!ev.hour && (+ev.temp > 0 || days <= 14), 'Start time and expected temperature', (ev.hour ? clockOf(ev.hour * 60) : 'start time not set') + (+ev.temp > 0 ? ' · ' + ev.temp + '°F' : ' · temperature not set'));
+  row('12+ weeks out', !!ev.hour && (+ev.temp > 0 || days <= 14), 'Start time and expected temperature', (ev.hour ? clockOf(ev.hour * 60) : 'start time not set (assuming 7:00 AM)') + (+ev.temp > 0 ? ' · ' + ev.temp + '°F' : ' · temperature not set'));
   row('10–12 weeks out', (st().prefs || {}).hillPrep === ev.id || !s || s.terrain === 'flat', 'Course-matched hill training', s && s.terrain !== 'flat' ? 'accept it in Coach' : 'not needed on a flat course');
   if (long) row('From 10 weeks out', F && F.withGels >= 3, 'Rehearse fueling on every long run', F ? F.withGels + ' long runs with fuel logged' : 'log breakfast, gels and stomach on each long run');
   if (long) row('6 weeks out', F && F.good >= 2, 'Settle on your race breakfast and gel', F && F.good ? F.good + ' rehearsals went well' : 'two good rehearsals with the same foods');
@@ -14458,7 +14474,7 @@ function fuelHTML(ev) {
   var h = '<section class="card" id="rp-nutr"><h3>Your fueling plan</h3><p class="small muted" style="margin-top:2px">Sized for ' + f.lb + ' lb and a ' + E.clock(E.parseClock(ev.goal) || 0) + ' finish' + (f.sweatOz ? ', with your measured sweat rate' : '') + '.</p>' +
     '<p class="small" style="margin-top:8px"><b>Breakfast (' + clockOf(((start - f.preH * 60) % 1440 + 1440) % 1440) + ', ' + f.preH + ' hours before):</b> about <b>' + f.pre + ' g of carbs</b>, ' + (d.mi >= 13 ? '1.5' : '1') + ' g per kg of your weight, low in fat, fiber and protein. For example: ' + bf.items.map(function (x) { return x[0].toLowerCase() + ' (' + x[1] + ' g)'; }).join(', ') + '.</p>' +
     '<p class="small"><b>Why so much:</b> overnight your liver burns through much of its stored carbohydrate. Two slices of toast with honey is only about 50–60 g. That\'s a snack, not a race breakfast, and without gels during the race many runners hit empty around the halfway point.</p>' +
-    (f.gHr ? '<p class="small"><b>During the race:</b> about <b>' + f.gHr + ' g of carbs an hour</b>, starting at 30–40 minutes and then every ' + Math.round(f.gel / f.gHr * 60) + ' minutes: about ' + gels + ' × ' + f.gel + ' g gels' + (f.full ? '. At this rate, choose products that mix glucose and fructose (often labelled 2:1), which the gut absorbs faster' : '') + '. Take each one with water at an aid station.</p>' : '') +
+    (f.gHr ? '<p class="small"><b>During the race:</b> about <b>' + f.gHr + ' g of carbs an hour</b>, starting at 30–40 minutes and then every ' + Math.round(f.gel / f.gHr * 60) + ' minutes: about ' + gels + ' × ' + f.gel + ' g gels' + (f.full ? '. At this rate, choose products that mix glucose and fructose (often labelled 2:1), which the gut absorbs faster' : '') + '. Take each one with water at an aid station; sports drink from the aid stations counts toward the total.</p>' : '') +
     '<p class="small"><b>Last 15 minutes before the start:</b> one gel or a few chews' + (f.full ? '' : ' if breakfast was more than 3 hours ago') + '.</p>' +
     '<p class="small"><b>Fluids and salt:</b> about ' + f.drinkOz + ' oz an hour' + (f.sweatOz ? ' (you sweat about ' + f.sweatOz + ' oz an hour in similar weather)' : '') + ', drinking to thirst. Aim for about ' + f.sodium + ' mg of sodium an hour from sports drink, salty gels or a salt tab' + (f.sodium >= 500 ? ', since it\'ll be warm' : '') + '.</p>' +
     '<p class="small"><b>Nothing new on race day:</b> use the same breakfast, the same gel brand and flavor, and the same timing you rehearsed. Check which drink and gels the race hands out, and practise with those or carry your own.</p>';
@@ -14556,6 +14572,54 @@ raceMorning = function (ev) {
   var rows = _raceMorning34(ev), f = raceFuelPlan(ev), start = +(ev.hour || 7) * 60;
   return rows.map(function (r) { if (r.what !== 'Breakfast') return r; return { t: start - f.preH * 60, what: 'Breakfast', how: 'About ' + f.pre + ' g of carbs you\'ve rehearsed: for example, a bagel with honey, a banana and a sports drink. Coffee if you normally have it.' }; }).sort(function (a, b) { return a.t - b.t; });
 };
+
+/* ================= Intensity by weekly mileage (from the research review, Nov 2026) =================
+   Under ~30 mi a week: most running easy by effort (talk test, RPE 2–3) rather than a strict heart-rate ceiling,
+   with one threshold-type session a week (steady/tempo/cruise) plus strides or hills. Threshold-focused training gave
+   similar gains in less time in recreational runners (Festa 2020); mostly-easy training is not harmful (Muñoz 2014).
+   30+ mi a week: keep the mostly-easy pattern with the plan's varied quality sessions. */
+function mpwBand() { var m = recentMpw(); return m == null ? null : { mpw: Math.round(m * 10) / 10, low: m < 30 }; }
+function mixFindings() {
+  var out = [], p = st().profile || {}, prefs = st().prefs || {}, b = mpwBand(), mix = p.ctl && p.ctl.mix; if (!b || !App.plan) return out;
+  if (b.low && !mix && !prefs.mixAsked) out.push({ id: 'mixlow', pri: 3, tone: 'act', title: 'Make your weekly workout a threshold session', seen: 'You\'re averaging ' + b.mpw + ' mi a week. At this volume, studies of recreational runners found steady and tempo-type sessions give similar gains to faster intervals in less training time, and easy running isn\'t holding you back.', change: 'Swap fartleks and fast intervals for steady, tempo and cruise-interval sessions. Keep strides and hills, and keep easy days truly easy by effort.', plan: 'One quality session a week becomes threshold-style. Easy runs and long runs don\'t change. You can switch back in Plan settings.', expect: 'Threshold pace and your race predictions improve steadily, with less fatigue than hard intervals. Once you\'re above about 30 mi a week, I\'ll suggest adding variety back.', act: { mix: 'threshold' }, label: 'Switch to threshold sessions' });
+  if (!b.low && mix === 'threshold' && prefs.mixByCoach) { var W = lastWeeks(4).map(weekRunStats), hi = W.filter(function (w) { return w.mi >= 30; }).length; if (hi >= 3) out.push({ id: 'mixhigh', pri: 3, tone: 'act', title: 'Ready for more variety', seen: 'You\'ve run 30+ mi in ' + hi + ' of the last 4 weeks.', change: 'Go back to the plan\'s mix: mostly easy miles, plus fartleks, intervals and hills alongside threshold work.', plan: 'Quality sessions rotate again; easy volume stays the main ingredient.', expect: 'At higher volume, the extra easy miles carry your aerobic fitness, and the varied sessions sharpen speed and economy.', act: { mix: null }, label: 'Go back to the full mix' }); }
+  return out;
+}
+var _pnF35 = pnFindings;
+pnFindings = function () { var out = _pnF35(); try { out = out.concat(mixFindings()); } catch (e) { console.warn(e); } return out; };
+var _apply35 = applyCoachAct;
+applyCoachAct = function (f) {
+  var a = f.act || {};
+  if ('mix' in a) {
+    Store.editMany([['profile', null], ['prefs', 'mixByCoach'], ['prefs', 'mixAsked']], function (S) { var c = Object.assign({}, S.profile.ctl || {}); if (a.mix) c.mix = a.mix; else delete c.mix; if (Object.keys(c).length) S.profile.ctl = c; else delete S.profile.ctl; S.prefs = S.prefs || {}; S.prefs.mixByCoach = !!a.mix; S.prefs.mixAsked = true; });
+    if (typeof recompute === 'function') recompute();
+  }
+  return _apply35(f);
+};
+var _cfNo35 = ACTIONS['cf-no'];
+ACTIONS['cf-no'] = function (a) { if (/^mixlow/.test(a.id)) Store.edit('prefs', 'mixAsked', function (S) { S.prefs = S.prefs || {}; S.prefs.mixAsked = true; }); _cfNo35(a); };
+
+/* easy runs by effort under 30 mi a week: heart rate is a guide, not a hard stop */
+var _crl35 = coachRunLines;
+coachRunLines = function (x, date) {
+  var h = _crl35(x, date), b = mpwBand();
+  if (b && b.low) h = h.replace(/<p class="small capline">Keep heart rate under <b>(\d+) bpm<\/b>\. Slow down or walk hills to stay there\.<\/p>/, function (m, bpm) { return '<p class="small capline">Easy by feel: <b>RPE 2–3</b>, full sentences. Heart rate around <b>' + bpm + ' bpm</b> is a guide, not a hard stop. No need to walk hills to stay under it.</p>'; });
+  if (x && x.spikeCap && !partDone(date, x)) h += '<p class="small capline"><b>Capped at ' + x.mi + ' mi</b> (planned ' + x.spikeCap.from + '): no run more than 10% longer than your longest in the last 30 days (' + x.spikeCap.longest + ' mi). A single run that jumps past that was the clearest injury signal in a 5,200-runner study. <a href="#" data-act="spike-off">Turn this guard off</a></p>';
+  return h;
+};
+ACTIONS['spike-off'] = function () {
+  ASK({ title: 'Turn off the single-run guard?', text: 'Runs will no longer be capped at 10% over your longest run in the last 30 days. You can turn it back on in Plan settings.', ok: 'Turn it off', cancel: 'Keep it' }, function () {
+    Store.edit('prefs', 'spikeCap', function (S) { S.prefs = S.prefs || {}; S.prefs.spikeCap = false; }); toast('Guard off'); recompute(); render();
+  });
+};
+/* Plan settings: switches for the guard */
+var _planctl35 = VIEWS.planctl;
+if (_planctl35) VIEWS.planctl = function () {
+  var h = _planctl35(), on = (st().prefs || {}).spikeCap !== false;
+  return h + '<section class="card stack"><h3>Single-run guard</h3><label class="check"><input type="checkbox" id="spk-on"' + (on ? ' checked' : '') + '> <span><b>Cap each run at 10% over my longest in the last 30 days</b><br><span class="small muted">Applies to easy and long runs in the next two weeks. Based on a 2025 study of 5,200 runners, where one-off long jumps, not weekly mileage, predicted injury.</span></span></label></section>';
+};
+document.addEventListener('change', function (e) { if (e.target && e.target.id === 'spk-on') { var v = e.target.checked; Store.edit('prefs', 'spikeCap', function (S) { S.prefs = S.prefs || {}; if (v) delete S.prefs.spikeCap; else S.prefs.spikeCap = false; }); recompute(); toast(v ? 'Guard on' : 'Guard off'); } });
+App.p35 = { mixFindings: mixFindings, mpwBand: mpwBand };
 
 
 /* ---------------- Garmin polling ---------------- */
